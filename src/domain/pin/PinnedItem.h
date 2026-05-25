@@ -6,6 +6,7 @@
 #include <QSize>
 
 #include <algorithm>
+#include <cmath>
 
 namespace snappaste {
 
@@ -38,16 +39,12 @@ struct PinnedImageState final {
 
 inline PinnedImageState normalizedState(PinnedImageState state)
 {
-    state.transform.scale = std::max(0.1, std::min(state.transform.scale, 8.0));
-    state.opacity = std::max(0.2, std::min(state.opacity, 1.0));
+    state.transform.scale = std::isnan(state.transform.scale) ? 1.0 : std::max(0.1, std::min(state.transform.scale, 8.0));
+    state.opacity = std::isnan(state.opacity) ? 1.0 : std::max(0.2, std::min(state.opacity, 1.0));
 
     state.transform.rotationDegrees %= 360;
     if (state.transform.rotationDegrees < 0) {
         state.transform.rotationDegrees += 360;
-    }
-
-    if (state.size.width() < 24 || state.size.height() < 24) {
-        state.size = QSize(std::max(24, state.size.width()), std::max(24, state.size.height()));
     }
 
     return state;

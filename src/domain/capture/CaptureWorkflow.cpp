@@ -2,6 +2,8 @@
 
 #include "shared/utils/TimeProvider.h"
 
+constexpr int kMinCaptureSize = 8;
+
 namespace snappaste {
 
 CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
@@ -17,19 +19,27 @@ CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
 
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
 {
-    if (!region.isValid() || region.width() < 2 || region.height() < 2) {
+    if (!region.isValid()) {
+        return Result<QImage>::failure("Invalid capture region.");
+    }
+    if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
         return Result<QImage>::failure("Capture region is too small.");
     }
 
+    const std::lock_guard<std::mutex> lock(captureMutex_);
     return captureService_.captureRegion(region);
 }
 
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
 {
-    if (!region.isValid() || region.width() < 2 || region.height() < 2) {
+    if (!region.isValid()) {
+        return Result<QImage>::failure("Invalid capture region.");
+    }
+    if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
         return Result<QImage>::failure("Capture region is too small.");
     }
 
+    const std::lock_guard<std::mutex> lock(captureMutex_);
     return captureService_.captureRegion(region, segments);
 }
 

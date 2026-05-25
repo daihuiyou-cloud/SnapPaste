@@ -6,8 +6,8 @@
 
 namespace snappaste {
 
-SqliteHistoryRepository::SqliteHistoryRepository(QString databasePath)
-    : connection_(std::move(databasePath))
+SqliteHistoryRepository::SqliteHistoryRepository(SqliteConnection& connection)
+    : connection_(connection)
 {
 }
 
@@ -110,6 +110,7 @@ CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
     record.height = query.value(4).toInt();
     record.format = query.value(5).toString();
     record.createdAt = QDateTime::fromString(query.value(6).toString(), Qt::ISODate);
+    record.createdAt.setTimeSpec(Qt::UTC);
     record.sourceScreen = query.value(7).toString();
     record.deleted = query.value(8).toBool();
     return record;

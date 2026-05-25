@@ -1,5 +1,6 @@
 #include "infrastructure/persistence/SqliteConnection.h"
 
+#include <QSqlQuery>
 #include <QUuid>
 
 namespace snappaste {
@@ -34,6 +35,11 @@ Result<QSqlDatabase> SqliteConnection::database()
         if (!db.open()) {
             return Result<QSqlDatabase>::failure("Failed to open SQLite database.");
         }
+
+        QSqlQuery query(db);
+        query.exec("PRAGMA journal_mode = WAL");
+        query.exec("PRAGMA busy_timeout = 3000");
+
         opened_ = true;
     }
 

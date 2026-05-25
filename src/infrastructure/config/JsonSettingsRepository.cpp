@@ -103,10 +103,8 @@ Result<AppSettings> JsonSettingsRepository::load()
 
 Result<void> JsonSettingsRepository::save(const AppSettings& settings)
 {
-    QFile file(AppPaths::configFilePath());
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        return Result<void>::failure("Failed to write settings file.");
-    }
+    const auto path = AppPaths::configFilePath();
+    const auto tmpPath = path + ".tmp";
 
     const auto hotkeyToJson = [](const Hotkey& source) {
         QJsonObject hotkey;
@@ -126,12 +124,23 @@ Result<void> JsonSettingsRepository::save(const AppSettings& settings)
     object["pasteHotkey"] = hotkeyToJson(settings.pasteHotkey);
     object["hidePinsHotkey"] = hotkeyToJson(settings.hidePinsHotkey);
 
-    const auto bytes = QJsonDocument(object).toJson(QJsonDocument::Indented);
-    if (file.write(bytes) != bytes.size()) {
-        return Result<void>::failure("Failed to write settings file: " + file.errorString());
+    {
+        QFile file(tmpPath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            return Result<void>::failure("Failed to write settings file.");
+        }
+        const auto bytes = QJsonDocument(object).toJson(QJsonDocument::Indented);
+        if (file.write(bytes) != bytes.size()) {
+            return Result<void>::failure("Failed to write settings file: " + file.errorString());
+        }
+        if (!file.flush()) {
+            return Result<void>::failure("Failed to flush settings file: " + file.errorString());
+        }
     }
-    if (!file.flush()) {
-        return Result<void>::failure("Failed to flush settings file: " + file.errorString());
+
+    QFile::remove(path);
+    if (!QFile::rename(tmpPath, path)) {
+        return Result<void>::failure("Failed to atomically save settings file.");
     }
     return Result<void>::success();
 }

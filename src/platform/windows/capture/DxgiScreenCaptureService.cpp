@@ -253,13 +253,14 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
 
     D3D11_MAPPED_SUBRESOURCE mapped{};
     hr = context.Map(stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    duplication->ReleaseFrame();
     if (FAILED(hr)) {
+        duplication->ReleaseFrame();
         return Result<QImage>::failure("Failed to map DXGI readback texture.");
     }
 
     auto image = mappedTextureToImage(mapped, width, height);
     context.Unmap(stagingTexture.Get(), 0);
+    duplication->ReleaseFrame();
     return Result<QImage>::success(std::move(image));
 }
 #endif

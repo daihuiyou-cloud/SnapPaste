@@ -94,7 +94,7 @@ bool WinHotkeyService::nativeEventFilter(const QByteArray& eventType, void* mess
 
 unsigned int WinHotkeyService::modifiersFor(const Hotkey& hotkey)
 {
-    unsigned int modifiers = 0;
+    unsigned int modifiers = MOD_NOREPEAT;
 #ifdef Q_OS_WIN
     if (hotkey.ctrl) {
         modifiers |= MOD_CONTROL;
@@ -132,7 +132,9 @@ HotkeyAction WinHotkeyService::actionForId(int id)
     case kHidePinsHotkeyId:
         return HotkeyAction::HideAllPins;
     case kCaptureHotkeyId:
+        return HotkeyAction::Capture;
     default:
+        Q_ASSERT_X(false, "actionForId", "unknown hotkey id");
         return HotkeyAction::Capture;
     }
 }

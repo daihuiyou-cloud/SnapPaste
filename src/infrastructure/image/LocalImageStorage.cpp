@@ -27,6 +27,7 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
     const auto thumbnailPath = QDir(AppPaths::thumbnailDirectory()).filePath(baseName + ".jpg");
 
     if (!image.save(capturePath, normalizedFormat.toUpper().toUtf8().constData())) {
+        QFile::remove(capturePath);
         return Result<StoredImage>::failure("Failed to save capture image.");
     }
 

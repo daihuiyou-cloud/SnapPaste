@@ -7,8 +7,8 @@
 
 namespace snappaste {
 
-SqlitePinnedItemRepository::SqlitePinnedItemRepository(QString databasePath)
-    : connection_(std::move(databasePath))
+SqlitePinnedItemRepository::SqlitePinnedItemRepository(SqliteConnection& connection)
+    : connection_(connection)
 {
 }
 
@@ -88,7 +88,7 @@ Result<void> SqlitePinnedItemRepository::updateState(qint64 id, const PinnedImag
         "UPDATE pinned_items SET x = :x, y = :y, width = :width, height = :height, "
         "opacity = :opacity, scale = :scale, rotation = :rotation, flip_h = :flip_h, flip_v = :flip_v, "
         "always_on_top = :always_on_top, click_through = :click_through, visible = :visible, "
-        "updated_at = datetime('now') WHERE id = :id");
+        "updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') WHERE id = :id");
     query.bindValue(":id", id);
     query.bindValue(":x", state.position.x());
     query.bindValue(":y", state.position.y());
@@ -119,7 +119,7 @@ Result<void> SqlitePinnedItemRepository::setAllVisible(bool visible)
 
     QSqlQuery query(dbResult.value());
     query.prepare(
-        "UPDATE pinned_items SET visible = :visible, click_through = 0, updated_at = datetime('now') "
+        "UPDATE pinned_items SET visible = :visible, updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') "
         "WHERE closed = 0");
     query.bindValue(":visible", visible);
 
@@ -138,7 +138,7 @@ Result<void> SqlitePinnedItemRepository::close(qint64 id)
     }
 
     QSqlQuery query(dbResult.value());
-    query.prepare("UPDATE pinned_items SET closed = 1, updated_at = datetime('now') WHERE id = :id");
+    query.prepare("UPDATE pinned_items SET closed = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') WHERE id = :id");
     query.bindValue(":id", id);
 
     if (!query.exec()) {
@@ -168,6 +168,9 @@ Result<QSqlDatabase> SqlitePinnedItemRepository::readyDatabase()
 
 QByteArray SqlitePinnedItemRepository::encodeImage(const QImage& image)
 {
+    if (image.isNull()) {
+        return {};
+    }
     QByteArray bytes;
     QBuffer buffer(&bytes);
     buffer.open(QIODevice::WriteOnly);
@@ -177,6 +180,9 @@ QByteArray SqlitePinnedItemRepository::encodeImage(const QImage& image)
 
 QImage SqlitePinnedItemRepository::decodeImage(const QByteArray& bytes)
 {
+    if (bytes.isEmpty()) {
+        return {};
+    }
     QImage image;
     image.loadFromData(bytes, "PNG");
     return image;
@@ -187,6 +193,10 @@ PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
     PinnedItem item;
     item.id = query.value(0).toLongLong();
     item.image = decodeImage(query.value(1).toByteArray());
+    if (item.image.isNull()) {
+        item.image = QImage(1, 1, QImage::Format_ARGB32);
+        item.image.fill(Qt::transparent);
+    }
     item.source = static_cast<PinSource>(query.value(2).toInt());
     item.state.position = QPoint(query.value(3).toInt(), query.value(4).toInt());
     item.state.size = QSize(query.value(5).toInt(), query.value(6).toInt());
@@ -199,7 +209,9 @@ PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
     item.state.options.clickThrough = query.value(13).toBool();
     item.state.options.visible = query.value(14).toBool();
     item.createdAt = QDateTime::fromString(query.value(15).toString(), Qt::ISODate);
+    item.createdAt.setTimeSpec(Qt::UTC);
     item.updatedAt = QDateTime::fromString(query.value(16).toString(), Qt::ISODate);
+    item.updatedAt.setTimeSpec(Qt::UTC);
     return item;
 }
 

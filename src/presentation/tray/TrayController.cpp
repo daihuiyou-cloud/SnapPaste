@@ -10,7 +10,7 @@ namespace snappaste {
 TrayController::TrayController(QObject* parent)
     : QObject(parent)
     , trayIcon_(this)
-    , menu_(new QMenu())
+    , menu_(std::make_unique<QMenu>())
 {
     auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), "Capture");
     auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open SnapPaste");
@@ -19,7 +19,7 @@ TrayController::TrayController(QObject* parent)
     menu_->addSeparator();
     auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), "Quit");
 
-    trayIcon_.setContextMenu(menu_);
+    trayIcon_.setContextMenu(menu_.get());
     trayIcon_.setToolTip("SnapPaste");
     trayIcon_.setIcon(IconProvider::icon(IconName::App));
 

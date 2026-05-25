@@ -3,6 +3,8 @@
 #include "app/AppStartup.h"
 #include "infrastructure/logging/Logger.h"
 
+#include <QPointer>
+
 #include <QMessageBox>
 #include <QClipboard>
 #include <QCursor>
@@ -59,7 +61,6 @@ OcrOutcome recognizeTextFromImage(const QImage& source)
     }
 
     try {
-        winrt::init_apartment(winrt::apartment_type::single_threaded);
         const auto engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromUserProfileLanguages();
         if (engine == nullptr) {
             return {false, {}, "OCR is not available for the current Windows language profile."};
@@ -127,11 +128,25 @@ int Application::run()
     applyCurrentTheme();
     connectCoreSignals();
 
+#if defined(SNAPPASTE_HAS_WINRT_OCR)
+    try {
+        winrt::init_apartment(winrt::apartment_type::single_threaded);
+    } catch (...) {
+        Logger::warning("Failed to initialize WinRT apartment for OCR.");
+    }
+#endif
+
     trayController_.show();
     registerHotkey();
     context_.pinViewModel().restore();
 
-    return qtApplication_.exec();
+    const auto exitCode = qtApplication_.exec();
+
+#if defined(SNAPPASTE_HAS_WINRT_OCR)
+    winrt::uninit_apartment();
+#endif
+
+    return exitCode;
 }
 
 void Application::connectCoreSignals()
@@ -145,14 +160,15 @@ void Application::connectCoreSignals()
         preferLastPinnableImage_ = false;
     });
 
-    context_.hotkeyService().setActionCallback(HotkeyAction::Capture, [this] {
-        QMetaObject::invokeMethod(this, [this] { startCapture(); }, Qt::QueuedConnection);
+    QPointer<Application> guard(this);
+    context_.hotkeyService().setActionCallback(HotkeyAction::Capture, [guard] {
+        if (guard) QMetaObject::invokeMethod(guard, [guard] { if (guard) guard->startCapture(); }, Qt::QueuedConnection);
     });
-    context_.hotkeyService().setActionCallback(HotkeyAction::Paste, [this] {
-        QMetaObject::invokeMethod(this, [this] { pasteFromClipboard(); }, Qt::QueuedConnection);
+    context_.hotkeyService().setActionCallback(HotkeyAction::Paste, [guard] {
+        if (guard) QMetaObject::invokeMethod(guard, [guard] { if (guard) guard->pasteFromClipboard(); }, Qt::QueuedConnection);
     });
-    context_.hotkeyService().setActionCallback(HotkeyAction::HideAllPins, [this] {
-        QMetaObject::invokeMethod(this, [this] { hideAllPins(); }, Qt::QueuedConnection);
+    context_.hotkeyService().setActionCallback(HotkeyAction::HideAllPins, [guard] {
+        if (guard) QMetaObject::invokeMethod(guard, [guard] { if (guard) guard->hideAllPins(); }, Qt::QueuedConnection);
     });
 
     connect(&context_.captureViewModel(), &CaptureViewModel::errorOccurred, this, [this](const QString& message) {
@@ -283,7 +299,6 @@ void Application::editRegion(const QRect& region)
 
 void Application::ocrRegion(const QRect& region)
 {
-    context_.captureViewModel().setCurrentImage(QImage());
     captureAfterOverlayHidden(region, [this](const QImage& image) {
         const auto outcome = recognizeTextFromImage(image);
         if (!outcome.ok) {
@@ -304,12 +319,15 @@ void Application::showStatus(const QString& message)
 void Application::captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady)
 {
     overlay().hide();
-    QTimer::singleShot(kCaptureAfterHideDelayMs, this, [this, region, onReady = std::move(onReady)]() mutable {
-        context_.captureViewModel().captureRegionAsync(region, [this, onReady = std::move(onReady)](const QImage& image) mutable {
+    QPointer<Application> guard(this);
+    QTimer::singleShot(kCaptureAfterHideDelayMs, this, [guard, region, onReady = std::move(onReady)]() mutable {
+        if (guard.isNull()) return;
+        guard->context_.captureViewModel().captureRegionAsync(region, [guard, onReady = std::move(onReady)](const QImage& image) mutable {
+            if (guard.isNull()) return;
             if (!image.isNull()) {
-                lastPinnableImage_ = image;
-                lastPinnableSource_ = PinSource::Screenshot;
-                preferLastPinnableImage_ = true;
+                guard->lastPinnableImage_ = image;
+                guard->lastPinnableSource_ = PinSource::Screenshot;
+                guard->preferLastPinnableImage_ = true;
             }
             if (onReady) {
                 onReady(image);
@@ -380,6 +398,8 @@ void Application::openPinWindow(PinnedItem item)
 {
     if (item.image.isNull()) {
         Logger::warning("Ignoring empty pinned image.");
+        pendingPinPosition_.reset();
+        pendingPinAvoidRegion_.reset();
         return;
     }
 
@@ -397,7 +417,12 @@ void Application::openPinWindow(PinnedItem item)
     connect(window, &PinWindow::stateChanged, &context_.pinViewModel(), &PinViewModel::updateState);
     connect(window, &PinWindow::closeRequested, this, [this](qint64 id) {
         context_.pinViewModel().close(id);
-        pinWindows_.erase(id);
+        QPointer<Application> guard(this);
+        QTimer::singleShot(0, this, [guard, id] {
+            if (guard) {
+                guard->pinWindows_.erase(id);
+            }
+        });
     });
     connect(window, &PinWindow::copyRequested, this, [this, source = item.source](const QImage& image) {
         if (image.isNull()) {
@@ -434,7 +459,10 @@ QPoint Application::pinnedPositionFor(const QSize& imageSize,
     constexpr int kMargin = 12;
     auto position = preferredPosition;
     const auto screen = QGuiApplication::screenAt(preferredPosition);
-    const auto bounds = screen != nullptr ? screen->availableGeometry() : QGuiApplication::primaryScreen()->availableGeometry();
+    const auto fallback = QGuiApplication::primaryScreen();
+    const auto bounds = screen != nullptr ? screen->availableGeometry()
+        : fallback != nullptr ? fallback->availableGeometry()
+        : QRect(0, 0, 1920, 1080);
     QRect pinRect(position, imageSize);
 
     if (avoidRegion.has_value() && pinRect.intersects(avoidRegion.value())) {
@@ -474,6 +502,10 @@ CaptureOverlay& Application::overlay()
         connect(overlay_.get(), &CaptureOverlay::saveRequested, this, &Application::saveRegion);
         connect(overlay_.get(), &CaptureOverlay::editRequested, this, &Application::editRegion);
         connect(overlay_.get(), &CaptureOverlay::ocrRequested, this, &Application::ocrRegion);
+        connect(overlay_.get(), &CaptureOverlay::cancelled, this, [this] {
+            pendingPinPosition_.reset();
+            pendingPinAvoidRegion_.reset();
+        });
     }
     return *overlay_;
 }

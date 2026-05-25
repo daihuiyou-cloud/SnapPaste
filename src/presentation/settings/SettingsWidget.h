@@ -9,6 +9,8 @@ class QLineEdit;
 
 namespace snappaste {
 
+class HotkeyInput;
+
 class SettingsWidget final : public QWidget {
     Q_OBJECT
 
@@ -22,6 +24,9 @@ private:
     QLineEdit* saveDirectoryEdit_ = nullptr;
     QComboBox* imageFormatCombo_ = nullptr;
     QComboBox* themeCombo_ = nullptr;
+    HotkeyInput* captureHotkeyInput_ = nullptr;
+    HotkeyInput* pasteHotkeyInput_ = nullptr;
+    HotkeyInput* hidePinsHotkeyInput_ = nullptr;
 };
 
 } // namespace snappaste

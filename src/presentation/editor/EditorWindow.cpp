@@ -74,6 +74,21 @@ QIcon makeEraserIcon()
     return QIcon(pix);
 }
 
+QIcon makeEyedropperIcon()
+{
+    QPixmap pix(20, 20);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(QColor("#bcbec6"), 2, Qt::SolidLine, Qt::RoundCap));
+    p.drawEllipse(QPointF(6, 16), 3, 3);
+    p.drawLine(7, 15, 15, 4);
+    p.setBrush(QColor("#bcbec6"));
+    p.drawRect(QRectF(12, 1, 6, 5));
+    p.end();
+    return QIcon(pix);
+}
+
 QIcon makeColorIcon(const QColor& color)
 {
     QPixmap pix(16, 16);
@@ -83,6 +98,57 @@ QIcon makeColorIcon(const QColor& color)
     p.drawRect(QRectF(0.5, 0.5, 15, 15));
     p.end();
     return QIcon(pix);
+}
+
+static void blurHorizontal(const QImage& src, QImage& dst, int radius)
+{
+    const int w = src.width(), h = src.height();
+    for (int y = 0; y < h; ++y) {
+        const auto* in = reinterpret_cast<const QRgb*>(src.constScanLine(y));
+        auto* out = reinterpret_cast<QRgb*>(dst.scanLine(y));
+        int a = 0, r = 0, g = 0, b = 0, cnt = 0;
+        for (int x = 0; x <= radius && x < w; ++x) {
+            auto px = in[x]; a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt;
+        }
+        for (int x = 0; x < w; ++x) {
+            if (cnt > 0) out[x] = qRgba(r / cnt, g / cnt, b / cnt, a / cnt);
+            int left = x - radius;
+            if (left >= 0) { auto px = in[left]; a -= qAlpha(px); r -= qRed(px); g -= qGreen(px); b -= qBlue(px); --cnt; }
+            int right = x + radius + 1;
+            if (right < w) { auto px = in[right]; a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt; }
+        }
+    }
+}
+
+static void blurVertical(const QImage& src, QImage& dst, int radius)
+{
+    const int w = src.width(), h = src.height();
+    for (int x = 0; x < w; ++x) {
+        int a = 0, r = 0, g = 0, b = 0, cnt = 0;
+        for (int y = 0; y <= radius && y < h; ++y) {
+            auto px = src.pixel(x, y);
+            a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt;
+        }
+        for (int y = 0; y < h; ++y) {
+            if (cnt > 0) dst.setPixel(x, y, qRgba(r / cnt, g / cnt, b / cnt, a / cnt));
+            int top = y - radius;
+            if (top >= 0) { auto px = src.pixel(x, top); a -= qAlpha(px); r -= qRed(px); g -= qGreen(px); b -= qBlue(px); --cnt; }
+            int bottom = y + radius + 1;
+            if (bottom < h) { auto px = src.pixel(x, bottom); a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt; }
+        }
+    }
+}
+
+static QImage blurImage(QImage source, int radius)
+{
+    if (radius <= 0 || source.isNull()) return source;
+    source = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    QImage tmp(source.size(), QImage::Format_ARGB32_Premultiplied);
+    for (int i = 0; i < 3; ++i) {
+        blurHorizontal(source, tmp, radius);
+        blurVertical(tmp, source, radius);
+    }
+    return source;
 }
 
 } // namespace
@@ -116,7 +182,7 @@ public:
 
         QImage output = image_.convertToFormat(QImage::Format_ARGB32_Premultiplied);
         QPainter painter(&output);
-        drawAnnotations(&painter, false);
+        drawAnnotations(&painter, image_, false);
         return output;
     }
 
@@ -137,6 +203,18 @@ public:
     void setStrokeWidth(int width)
     {
         currentStrokeWidth_ = std::clamp(width, 1, 12);
+    }
+
+    void setPickingColor(bool picking)
+    {
+        pickingColor_ = picking;
+        setCursor(picking ? Qt::CrossCursor : Qt::ArrowCursor);
+        update();
+    }
+
+    void setMosaicBlurred(bool blurred)
+    {
+        mosaicBlurred_ = blurred;
     }
 
     void undo()
@@ -169,6 +247,23 @@ protected:
             return;
         }
 
+        const auto pos = event->pos();
+
+        for (int i = annotations_.size() - 1; i >= 0; --i) {
+            if (annotations_[i].tool == AnnotationTool::Text && annotations_[i].bounds.contains(pos)) {
+                bool ok = false;
+                const auto newText = QInputDialog::getMultiLineText(
+                    static_cast<QWidget*>(parent()), "Edit Text", "Edit text:", annotations_[i].text, &ok);
+                if (ok && !newText.isEmpty() && newText != annotations_[i].text) {
+                    undoStack_.push_back(annotations_);
+                    redoStack_.clear();
+                    annotations_[i].text = newText;
+                    update();
+                }
+                return;
+            }
+        }
+
         bool ok = false;
         const auto text = QInputDialog::getMultiLineText(
             static_cast<QWidget*>(parent()), "Text Input", "Enter text:", QString(), &ok);
@@ -176,11 +271,11 @@ protected:
             return;
         }
 
-        const auto pos = event->pos();
+        const auto clickPos = event->pos();
         QFont font("Segoe UI", 14);
         QFontMetrics fm(font);
         const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, text);
-        QRect bounds(pos.x(), pos.y(), qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20));
+        QRect bounds(clickPos.x(), clickPos.y(), qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20));
         if (bounds.right() > width()) {
             bounds.moveRight(width() - 4);
         }
@@ -210,6 +305,20 @@ protected:
         }
 
         const auto pos = event->pos();
+
+        if (pickingColor_) {
+            pickingColor_ = false;
+            setCursor(Qt::ArrowCursor);
+            if (image_.rect().contains(pos)) {
+                QImage composited = image_.copy();
+                QPainter p(&composited);
+                drawAnnotations(&p, image_, false);
+                p.end();
+                currentColor_ = QColor::fromRgba(composited.pixel(pos));
+            }
+            update();
+            return;
+        }
 
         if (currentTool_ == AnnotationTool::Select) {
             if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
@@ -263,6 +372,7 @@ protected:
         draft_.tool = currentTool_;
         draft_.color = currentColor_;
         draft_.strokeWidth = currentStrokeWidth_;
+        draft_.blurRadius = (currentTool_ == AnnotationTool::Mosaic && mosaicBlurred_) ? 6 : 0;
         draft_.bounds = QRect(start_, current_);
         draft_.points = {start_};
         update();
@@ -342,6 +452,9 @@ protected:
         drawing_ = false;
         current_ = event->pos();
         draft_.bounds = QRect(start_, current_).normalized();
+        if (draft_.tool == AnnotationTool::Arrow) {
+            draft_.points = {start_, current_};
+        }
         if (draft_.bounds.width() > 2 || draft_.bounds.height() > 2 || draft_.tool == AnnotationTool::Pen) {
             undoStack_.push_back(annotations_);
             redoStack_.clear();
@@ -375,17 +488,17 @@ protected:
             painter.drawImage(QPoint(0, 0), image_);
         }
 
-        drawAnnotations(&painter, true);
+        drawAnnotations(&painter, image_, true);
         if (drawing_) {
-            drawAnnotation(&painter, draft_);
+            drawAnnotation(&painter, image_, draft_);
         }
     }
 
 private:
-    void drawAnnotations(QPainter* painter, bool includeSelectionChrome) const
+    void drawAnnotations(QPainter* painter, const QImage& sourceImage, bool includeSelectionChrome) const
     {
         for (int i = 0; i < annotations_.size(); ++i) {
-            drawAnnotation(painter, annotations_.at(i));
+            drawAnnotation(painter, sourceImage, annotations_.at(i));
             if (includeSelectionChrome && i == selectedIndex_) {
                 painter->setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
                 painter->setBrush(Qt::NoBrush);
@@ -416,7 +529,7 @@ private:
         return annotation.bounds.adjusted(-kMargin, -kMargin, kMargin, kMargin).contains(pos);
     }
 
-    static void drawAnnotation(QPainter* painter, const Annotation& annotation)
+    static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation)
     {
         painter->setRenderHint(QPainter::Antialiasing, true);
 
@@ -431,8 +544,8 @@ private:
             break;
         case AnnotationTool::Arrow: {
             painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-            const auto from = annotation.bounds.topLeft();
-            const auto to = annotation.bounds.bottomRight();
+            const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
+            const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
             painter->drawLine(from, to);
             constexpr double kArrowSize = 12.0;
             const auto angle = std::atan2(to.y() - from.y(), to.x() - from.x());
@@ -457,11 +570,27 @@ private:
             painter->drawText(annotation.bounds, Qt::AlignLeft | Qt::AlignTop, annotation.text);
             break;
         }
-        case AnnotationTool::Mosaic:
-            painter->fillRect(annotation.bounds, QColor(120, 120, 120, 160));
+        case AnnotationTool::Mosaic: {
+            const auto clipped = annotation.bounds.intersected(sourceImage.rect());
+            if (clipped.isEmpty()) {
+                break;
+            }
+            if (annotation.blurRadius > 0) {
+                auto region = sourceImage.copy(clipped);
+                painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+            } else {
+                constexpr int kBlockSize = 8;
+                const int bw = qMax(1, clipped.width() / kBlockSize);
+                const int bh = qMax(1, clipped.height() / kBlockSize);
+                auto region = sourceImage.copy(clipped);
+                auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                                      .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                painter->drawImage(clipped.topLeft(), pixelated);
+            }
             break;
+        }
         case AnnotationTool::Highlight:
-            painter->fillRect(annotation.bounds, QColor(255, 230, 0, 100));
+            painter->fillRect(annotation.bounds, QColor(annotation.color.red(), annotation.color.green(), annotation.color.blue(), 100));
             break;
         case AnnotationTool::Select:
         case AnnotationTool::Eraser:
@@ -487,6 +616,8 @@ private:
     QPoint start_;
     QPoint current_;
     bool drawing_ = false;
+    bool pickingColor_ = false;
+    bool mosaicBlurred_ = false;
 };
 
 EditorWindow::EditorWindow(QWidget* parent)
@@ -589,6 +720,9 @@ void EditorWindow::createToolbar()
         toolbar->addWidget(btn);
     }
 
+    auto* eyedropper = toolbar->addAction(makeEyedropperIcon(), "Eyedropper");
+    eyedropper->setToolTip("Pick color from image");
+
     toolbar->addSeparator();
     auto* copy = toolbar->addAction(IconProvider::icon(IconName::Copy), "Copy");
     auto* save = toolbar->addAction(IconProvider::icon(IconName::Save), "Save");
@@ -611,9 +745,23 @@ void EditorWindow::createToolbar()
     connect(pen, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Pen); });
     connect(textB, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
     connect(highlight, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Highlight); });
+    auto* mosaicBlurBtn = new QToolButton(toolbar);
+    mosaicBlurBtn->setText("Blur");
+    mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");
+    mosaicBlurBtn->setFixedSize(32, 24);
+    mosaicBlurBtn->setCheckable(true);
+    mosaicBlurBtn->setStyleSheet(
+        "QToolButton { font: bold 9px; color: #bcbec6; }"
+        "QToolButton:checked { color: #2fbf9f; }");
+    connect(mosaicBlurBtn, &QToolButton::clicked, this, [this](bool checked) {
+        canvas_->setMosaicBlurred(checked);
+    });
+    toolbar->addWidget(mosaicBlurBtn);
+
     connect(mosaic, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Mosaic); });
     connect(select, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Select); });
     connect(eraser, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Eraser); });
+    connect(eyedropper, &QAction::triggered, this, [this] { canvas_->setPickingColor(true); });
     connect(copy, &QAction::triggered, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();

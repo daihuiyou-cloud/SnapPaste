@@ -51,4 +51,15 @@ std::optional<QColor> QtScreenPixelSampler::sample(const QPoint& globalPosition)
     return QColor::fromRgba(snapshot_.pixel(local));
 }
 
+QImage QtScreenPixelSampler::sampleRegion(const QPoint& center, int halfSize) const
+{
+    if (snapshot_.isNull() || !bounds_.isValid()) {
+        return {};
+    }
+    const auto local = center - bounds_.topLeft();
+    const auto rect = QRect(local.x() - halfSize, local.y() - halfSize,
+                            2 * halfSize + 1, 2 * halfSize + 1);
+    return snapshot_.copy(rect);
+}
+
 } // namespace snappaste

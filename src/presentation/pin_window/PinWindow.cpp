@@ -30,7 +30,7 @@ constexpr int kToolbarHeight = 28;
 constexpr int kToolbarBtnSize = 20;
 constexpr int kToolbarIconSize = 14;
 constexpr int kToolbarBtnPad = 4;
-constexpr int kToolbarButtonCount = 6;
+constexpr int kToolbarButtonCount = 7;
 constexpr int kMinPinSize = 40;
 
 } // namespace
@@ -322,7 +322,6 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_R:
-        invalidateRenderedCache();
         rotateBy(event->modifiers().testFlag(Qt::ShiftModifier) ? -90 : 90);
         return;
     case Qt::Key_H:
@@ -414,6 +413,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
                 case 3: flipH(); break;
                 case 4: flipV(); break;
                 case 5: toggleClickThrough(); break;
+                case 6: toggleAlwaysOnTop(); break;
                 }
                 event->accept();
                 return;
@@ -473,7 +473,8 @@ void PinWindow::paintEvent(QPaintEvent* event)
                 IconName::RotateRight,
                 IconName::FlipHorizontal,
                 IconName::FlipVertical,
-                IconName::ClickThrough
+                IconName::ClickThrough,
+                IconName::Pin
             };
             for (int i = 0; i < btns.size(); ++i) {
                 painter.fillRect(btns[i], QColor(255, 255, 255, 24));
@@ -534,7 +535,7 @@ void PinWindow::applyState()
 {
     item_.state = normalizedState(item_.state);
     applyWindowFlags();
-    resize(item_.state.size * item_.state.transform.scale);
+    resize(renderedImage().size() * item_.state.transform.scale);
     move(item_.state.position);
     setWindowOpacity(item_.state.opacity);
     windowInteraction_.setClickThrough(this, item_.state.options.clickThrough);
@@ -550,16 +551,14 @@ void PinWindow::applyWindowFlags()
     setWindowFlags(flags);
     if (wasVisible) {
         show();
-        if (item_.state.options.alwaysOnTop) {
-            raise();
-        }
+        raise();
     }
 }
 
 void PinWindow::emitStateChanged()
 {
     item_.state.position = frameGeometry().topLeft();
-    item_.state.size = item_.image.size();
+    item_.state.size = renderedImage().size();
     item_.state = normalizedState(item_.state);
     setWindowOpacity(item_.state.opacity);
     emit stateChanged(item_.id, item_.state);
@@ -585,6 +584,7 @@ void PinWindow::rotateBy(int degrees)
     item_.state.transform.rotationDegrees += degrees;
     item_.state = normalizedState(item_.state);
     invalidateRenderedCache();
+    resize(renderedImage().size() * item_.state.transform.scale);
     update();
     emitStateChanged();
 }

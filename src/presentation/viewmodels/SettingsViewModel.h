@@ -2,6 +2,7 @@
 
 #include "domain/settings/SettingsService.h"
 #include "shared/events/EventHub.h"
+#include "shared/types/Hotkey.h"
 
 #include <QObject>
 
@@ -17,7 +18,8 @@ public:
 
 public slots:
     void load();
-    void save(QString saveDirectory, QString imageFormat, int themeIndex);
+    void save(QString saveDirectory, QString imageFormat, int themeIndex,
+              Hotkey captureHotkey = {}, Hotkey pasteHotkey = {}, Hotkey hidePinsHotkey = {});
 
 signals:
     void loaded(const AppSettings& settings);

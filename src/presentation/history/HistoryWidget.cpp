@@ -34,7 +34,12 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
 
     connect(refreshButton, &QPushButton::clicked, &viewModel_, &HistoryViewModel::refresh);
     connect(deleteButton, &QPushButton::clicked, this, [this] {
-        viewModel_.deleteByRow(listView_->currentIndex().row());
+        const auto index = listView_->currentIndex();
+        if (!index.isValid()) {
+            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+            return;
+        }
+        viewModel_.deleteByRow(index.row());
     });
     connect(openButton, &QPushButton::clicked, this, [this] {
         const auto index = listView_->currentIndex();

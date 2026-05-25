@@ -6,9 +6,10 @@ namespace snappaste {
 
 AppContext::AppContext()
     : eventHub_(std::make_unique<EventHub>())
+    , databaseConnection_(std::make_unique<SqliteConnection>(AppPaths::databaseFilePath()))
     , settingsRepository_(std::make_unique<JsonSettingsRepository>())
-    , historyRepository_(std::make_unique<SqliteHistoryRepository>(AppPaths::databaseFilePath()))
-    , pinnedItemRepository_(std::make_unique<SqlitePinnedItemRepository>(AppPaths::databaseFilePath()))
+    , historyRepository_(std::make_unique<SqliteHistoryRepository>(*databaseConnection_))
+    , pinnedItemRepository_(std::make_unique<SqlitePinnedItemRepository>(*databaseConnection_))
     , clipboardImageProvider_(std::make_unique<ClipboardImageProvider>())
     , captureService_(std::make_unique<GdiScreenCaptureService>())
     , screenRegionDetector_(std::make_unique<WinScreenRegionDetector>())

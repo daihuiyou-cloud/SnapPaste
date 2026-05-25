@@ -8,7 +8,7 @@ namespace snappaste {
 
 class SqlitePinnedItemRepository final : public IPinnedItemRepository {
 public:
-    explicit SqlitePinnedItemRepository(QString databasePath);
+    explicit SqlitePinnedItemRepository(SqliteConnection& connection);
 
     Result<PinnedItem> add(const PinnedItem& item) override;
     Result<QVector<PinnedItem>> restoreActive() override;
@@ -22,7 +22,7 @@ private:
     static QImage decodeImage(const QByteArray& bytes);
     static PinnedItem readItem(const QSqlQuery& query);
 
-    SqliteConnection connection_;
+    SqliteConnection& connection_;
     SqliteMigrator migrator_;
     bool migrated_ = false;
 };

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <QObject>
+#include <QMenu>
 #include <QSystemTrayIcon>
 
+#include <memory>
+
 class QAction;
-class QMenu;
 
 namespace snappaste {
 
@@ -26,7 +28,7 @@ signals:
 
 private:
     QSystemTrayIcon trayIcon_;
-    QMenu* menu_ = nullptr;
+    std::unique_ptr<QMenu> menu_;
 };
 
 } // namespace snappaste

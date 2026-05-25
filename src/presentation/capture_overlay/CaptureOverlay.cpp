@@ -12,6 +12,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointer>
 #include <QScreen>
 #include <QTimer>
 
@@ -201,6 +202,7 @@ void CaptureOverlay::showEvent(QShowEvent* event)
     selection_ = {};
     origin_ = {};
     current_ = {};
+    lastMouseGlobal_ = {};
     smartCandidates_.clear();
     smartCandidateIndex_ = -1;
     pressedCandidate_ = {};
@@ -248,12 +250,12 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    if (event->key() == Qt::Key_Comma || event->key() == Qt::Key_BracketLeft) {
+    if (state_ == State::Idle && (event->key() == Qt::Key_Comma || event->key() == Qt::Key_BracketLeft)) {
         applyHistorySelection(false);
         return;
     }
 
-    if (event->key() == Qt::Key_Period || event->key() == Qt::Key_BracketRight) {
+    if (state_ == State::Idle && (event->key() == Qt::Key_Period || event->key() == Qt::Key_BracketRight)) {
         applyHistorySelection(true);
         return;
     }
@@ -876,10 +878,12 @@ void CaptureOverlay::scheduleOverlayUpdate()
 
     repaintQueued_ = true;
     const auto delay = static_cast<int>(std::max<qint64>(1, kOverlayFrameIntervalMs - frameLimiter_.elapsed()));
-    QTimer::singleShot(delay, this, [this] {
-        repaintQueued_ = false;
-        frameLimiter_.restart();
-        update();
+    QPointer<CaptureOverlay> guard(this);
+    QTimer::singleShot(delay, this, [guard] {
+        if (guard.isNull()) return;
+        guard->repaintQueued_ = false;
+        guard->frameLimiter_.restart();
+        guard->update();
     });
 }
 
@@ -945,32 +949,74 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
         return;
     }
 
+    constexpr int kZoom = 8;
+    constexpr int kPixels = 11;
+    constexpr int kGrid = kPixels * kZoom;
+    constexpr int kPad = 8;
+    constexpr int kInfoH = 48;
+    constexpr int kSpacing = 6;
+    constexpr int kW = kPad * 2 + kGrid;
+    constexpr int kH = kPad * 2 + kGrid + kSpacing + kInfoH;
+
     const auto local = lastMouseGlobal_ - geometry().topLeft();
-    auto magnifier = QRect(local + QPoint(18, 18), QSize(126, 104));
-    if (magnifier.right() > width() - kOverlayMargin) {
-        magnifier.moveRight(local.x() - 18);
+    const QPoint offsets[] = {QPoint(18, 18), QPoint(-18 - kW, -18 - kH),
+                              QPoint(-18 - kW, 18), QPoint(18, -18 - kH)};
+    auto rect = QRect(local + offsets[0], QSize(kW, kH));
+    for (int i = 0; i < 4; ++i) {
+        const auto test = QRect(local + offsets[i], QSize(kW, kH));
+        if (test.right() <= width() - kOverlayMargin && test.bottom() <= height() - kOverlayMargin
+            && test.left() >= kOverlayMargin && test.top() >= kOverlayMargin) {
+            rect = test;
+            break;
+        }
     }
-    if (magnifier.bottom() > height() - kOverlayMargin) {
-        magnifier.moveBottom(local.y() - 18);
-    }
-    if (magnifier.left() < kOverlayMargin || magnifier.top() < kOverlayMargin) {
+    rect = rect.intersected(QRect(kOverlayMargin, kOverlayMargin,
+                                  width() - 2 * kOverlayMargin, height() - 2 * kOverlayMargin));
+    if (rect.isEmpty()) {
         return;
     }
 
     painter.setPen(QPen(kSelectionColor, 1));
     painter.setBrush(QColor(14, 20, 26, 224));
-    painter.drawRoundedRect(magnifier, 6, 6);
+    painter.drawRoundedRect(rect, 6, 6);
+
+    const int half = kPixels / 2;
+    auto pixels = pixelSampler_.sampleRegion(lastMouseGlobal_, half);
+    if (!pixels.isNull()) {
+        const auto gridRect = QRect(rect.left() + kPad, rect.top() + kPad, kGrid, kGrid);
+        painter.drawImage(gridRect, pixels.scaled(kGrid, kGrid, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        painter.setPen(QPen(QColor(255, 255, 255, 30), 1));
+        for (int i = 1; i < kPixels; ++i) {
+            int x = gridRect.left() + i * kZoom;
+            painter.drawLine(x, gridRect.top(), x, gridRect.bottom());
+            int y = gridRect.top() + i * kZoom;
+            painter.drawLine(gridRect.left(), y, gridRect.right(), y);
+        }
+
+        const auto cx = gridRect.left() + half * kZoom + kZoom / 2;
+        const auto cy = gridRect.top() + half * kZoom + kZoom / 2;
+        painter.setPen(QPen(kLabelTextColor, 2));
+        painter.drawLine(gridRect.left() + half * kZoom, cy,
+                         gridRect.left() + half * kZoom + kZoom - 1, cy);
+        painter.drawLine(cx, gridRect.top() + half * kZoom,
+                         cx, gridRect.top() + half * kZoom + kZoom - 1);
+    }
+
     painter.setPen(kLabelTextColor);
-    auto text = QString("x %1\ny %2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y());
+    const auto infoRect = rect.adjusted(kPad, rect.top() + kPad + kGrid + kSpacing, -kPad, -kPad);
     if (sampledColor_.has_value()) {
         const auto color = sampledColor_.value();
-        text += QString("\n%1\nrgb %2 %3 %4")
-                    .arg(color.name(QColor::HexRgb).toUpper())
-                    .arg(color.red())
-                    .arg(color.green())
-                    .arg(color.blue());
+        painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
+            QString("%1\nrgb(%2,%3,%4)\n%5,%6")
+                .arg(color.name(QColor::HexRgb).toUpper())
+                .arg(color.red()).arg(color.green()).arg(color.blue())
+                .arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+    } else {
+        painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
+            QString("%1,%2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     }
-    painter.drawText(magnifier.adjusted(8, 6, -8, -6), Qt::AlignLeft | Qt::AlignTop, text);
 }
 
 } // namespace snappaste

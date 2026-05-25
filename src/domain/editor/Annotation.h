@@ -27,6 +27,7 @@ struct Annotation final {
     QString text;
     QColor color = QColor("#ff3b30");
     int strokeWidth = 3;
+    int blurRadius = 0; // 0=pixel-block mosaic, >0=gaussian blur radius
 };
 
 } // namespace snappaste

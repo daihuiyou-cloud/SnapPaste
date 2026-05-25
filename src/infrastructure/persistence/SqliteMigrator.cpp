@@ -29,7 +29,11 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
         version = 2;
     }
     if (version < 3) {
-        return applyVersion3(database);
+        const auto result = applyVersion3(database);
+        if (result.isError()) {
+            return result;
+        }
+        version = 3;
     }
 
     return Result<void>::success();

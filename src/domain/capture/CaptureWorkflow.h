@@ -10,6 +10,8 @@
 #include <QImage>
 #include <QRect>
 
+#include <mutex>
+
 namespace snappaste {
 
 class CaptureWorkflow final {
@@ -24,6 +26,7 @@ public:
     Result<CaptureRecord> saveCapturedImage(const QImage& image, const QString& sourceScreen = "primary");
 
 private:
+    std::mutex captureMutex_;
     IScreenCaptureService& captureService_;
     IImageStorage& imageStorage_;
     IHistoryRepository& historyRepository_;

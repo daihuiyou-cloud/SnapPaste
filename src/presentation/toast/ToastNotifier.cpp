@@ -28,7 +28,7 @@ ToastNotifier::ToastNotifier(QObject* parent)
 {
     hideTimer_->setSingleShot(true);
     connect(hideTimer_, &QTimer::timeout, this, [this] {
-        if (toast_ == nullptr) {
+        if (toast_ == nullptr || fadeAnimation_ == nullptr) {
             return;
         }
         fadeAnimation_->stop();

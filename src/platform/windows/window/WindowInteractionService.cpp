@@ -18,7 +18,7 @@ void WindowInteractionService::setClickThrough(QWidget* widget, bool enabled) co
     if (enabled) {
         style |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
     } else {
-        style &= ~WS_EX_TRANSPARENT;
+        style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED);
     }
     SetWindowLong(hwnd, GWL_EXSTYLE, style);
 #else

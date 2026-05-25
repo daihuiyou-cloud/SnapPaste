@@ -11,6 +11,7 @@
 #include "infrastructure/clipboard/ClipboardImageProvider.h"
 #include "infrastructure/config/JsonSettingsRepository.h"
 #include "infrastructure/image/LocalImageStorage.h"
+#include "infrastructure/persistence/SqliteConnection.h"
 #include "infrastructure/persistence/SqliteHistoryRepository.h"
 #include "infrastructure/persistence/SqlitePinnedItemRepository.h"
 #include "platform/windows/capture/GdiScreenCaptureService.h"
@@ -48,6 +49,7 @@ public:
 private:
     std::unique_ptr<EventHub> eventHub_;
 
+    std::unique_ptr<SqliteConnection> databaseConnection_;
     std::unique_ptr<JsonSettingsRepository> settingsRepository_;
     std::unique_ptr<SqliteHistoryRepository> historyRepository_;
     std::unique_ptr<SqlitePinnedItemRepository> pinnedItemRepository_;

@@ -15,6 +15,7 @@ public:
     const QVector<Annotation>& annotations() const noexcept;
 
     Result<QJsonArray> toJson() const;
+    Result<void> fromJson(const QJsonArray& array);
 
 private:
     QVector<Annotation> annotations_;

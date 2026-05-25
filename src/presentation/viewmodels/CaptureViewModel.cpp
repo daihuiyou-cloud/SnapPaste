@@ -80,28 +80,29 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
     workerPool_.clear();
 
     QPointer<CaptureViewModel> self(this);
-    auto task = [this, self, region, segments, requestId, onReady = std::move(onReady)]() mutable {
-        const auto result = workflow_.captureRegion(region, segments);
-        if (shuttingDown_.load() || requestGeneration_.load() != requestId || self.isNull()) {
+    auto task = [self, region, segments, requestId, onReady = std::move(onReady)]() mutable {
+        if (self.isNull()) return;
+        const auto result = self->workflow_.captureRegion(region, segments);
+        if (self.isNull() || self->shuttingDown_.load() || self->requestGeneration_.load() != requestId) {
             return;
         }
 
-        QMetaObject::invokeMethod(self.data(), [this, self, region, requestId, result, onReady = std::move(onReady)]() mutable {
-            if (self.isNull() || shuttingDown_.load() || requestGeneration_.load() != requestId) {
+        QMetaObject::invokeMethod(self.data(), [self, region, requestId, result, onReady = std::move(onReady)]() mutable {
+            if (self.isNull() || self->shuttingDown_.load() || self->requestGeneration_.load() != requestId) {
                 return;
             }
 
             if (result.isError()) {
-                emit errorOccurred(result.error());
+                emit self->errorOccurred(result.error());
                 return;
             }
 
-            currentImage_ = result.value();
+            self->currentImage_ = result.value();
             const auto screen = QGuiApplication::screenAt(region.center());
-            sourceScreen_ = screen != nullptr ? screen->name() : "primary";
-            emit imageReady(currentImage_);
+            self->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
+            emit self->imageReady(self->currentImage_);
             if (onReady) {
-                onReady(currentImage_);
+                onReady(self->currentImage_);
             }
         }, Qt::QueuedConnection);
     };

@@ -26,18 +26,24 @@ void SettingsViewModel::load()
     emit loaded(settings_);
 }
 
-void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int themeIndex)
+void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int themeIndex,
+                             Hotkey captureHotkey, Hotkey pasteHotkey, Hotkey hidePinsHotkey)
 {
-    settings_.saveDirectory = std::move(saveDirectory);
-    settings_.imageFormat = std::move(imageFormat).toLower();
-    settings_.themeMode = themeFromIndex(themeIndex);
+    AppSettings newSettings;
+    newSettings.saveDirectory = std::move(saveDirectory);
+    newSettings.imageFormat = std::move(imageFormat).toLower();
+    newSettings.themeMode = themeFromIndex(themeIndex);
+    newSettings.captureHotkey = std::move(captureHotkey);
+    newSettings.pasteHotkey = std::move(pasteHotkey);
+    newSettings.hidePinsHotkey = std::move(hidePinsHotkey);
 
-    const auto result = service_.save(settings_);
+    const auto result = service_.save(newSettings);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
     }
 
+    settings_ = std::move(newSettings);
     emit saved();
     emit eventHub_.settingsChanged();
 }
