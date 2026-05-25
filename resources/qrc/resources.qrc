@@ -1,0 +1,24 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="themes/light.qss">../themes/light.qss</file>
+        <file alias="themes/dark.qss">../themes/dark.qss</file>
+        <file alias="icons/app.svg">../icons/app.svg</file>
+        <file alias="icons/capture.svg">../icons/capture.svg</file>
+        <file alias="icons/pin.svg">../icons/pin.svg</file>
+        <file alias="icons/copy.svg">../icons/copy.svg</file>
+        <file alias="icons/save.svg">../icons/save.svg</file>
+        <file alias="icons/edit.svg">../icons/edit.svg</file>
+        <file alias="icons/close.svg">../icons/close.svg</file>
+        <file alias="icons/rotate-left.svg">../icons/rotate-left.svg</file>
+        <file alias="icons/rotate-right.svg">../icons/rotate-right.svg</file>
+        <file alias="icons/flip-horizontal.svg">../icons/flip-horizontal.svg</file>
+        <file alias="icons/flip-vertical.svg">../icons/flip-vertical.svg</file>
+        <file alias="icons/opacity.svg">../icons/opacity.svg</file>
+        <file alias="icons/click-through.svg">../icons/click-through.svg</file>
+        <file alias="icons/rectangle.svg">../icons/rectangle.svg</file>
+        <file alias="icons/arrow.svg">../icons/arrow.svg</file>
+        <file alias="icons/pen.svg">../icons/pen.svg</file>
+        <file alias="icons/text.svg">../icons/text.svg</file>
+        <file alias="icons/mosaic.svg">../icons/mosaic.svg</file>
+    </qresource>
+</RCC>

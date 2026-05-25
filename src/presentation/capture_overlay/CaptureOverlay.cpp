@@ -1,0 +1,976 @@
+#include "presentation/capture_overlay/CaptureOverlay.h"
+
+#include "domain/capture/CaptureSelectionHistory.h"
+#include "domain/capture/IScreenPixelSampler.h"
+#include "domain/capture/IScreenRegionDetector.h"
+#include "presentation/capture_actions/CaptureActionBar.h"
+
+#include <QApplication>
+#include <QClipboard>
+#include <QEasingCurve>
+#include <QGuiApplication>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QScreen>
+#include <QTimer>
+
+#include <algorithm>
+#include <cmath>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+namespace nanosnap {
+
+namespace {
+
+constexpr int kHandleSize = 8;
+constexpr int kHandleHitSlop = 5;
+constexpr int kMinSelectionSize = 8;
+constexpr int kNudgeStep = 1;
+constexpr int kFastNudgeStep = 10;
+constexpr int kDragThreshold = 4;
+constexpr int kOverlayFrameIntervalMs = 6;
+constexpr int kSmartCandidateIntervalMs = 120;
+constexpr int kFullScreenSelectionInset = 1;
+constexpr int kOverlayMaskAlpha = 96;
+constexpr int kSizeLabelHeight = 20;
+constexpr int kSizeLabelPaddingX = 10;
+constexpr int kOverlayMargin = 8;
+
+const QColor kSelectionColor("#2fbf9f");
+const QColor kSelectionShadowColor(8, 12, 16, 170);
+const QColor kHandleBorderColor(12, 18, 24, 190);
+const QColor kLabelBackgroundColor(14, 20, 26, 218);
+const QColor kLabelTextColor("#f4fbff");
+const QColor kCandidateColor(47, 191, 159, 155);
+const QColor kCandidateFillColor(47, 191, 159, 22);
+
+QRect normalizedWithMinimum(QRect rect)
+{
+    rect = rect.normalized();
+    if (rect.width() < kMinSelectionSize) {
+        rect.setWidth(kMinSelectionSize);
+    }
+    if (rect.height() < kMinSelectionSize) {
+        rect.setHeight(kMinSelectionSize);
+    }
+    return rect;
+}
+
+QRect clampedTo(QRect rect, const QRect& bounds)
+{
+    if (rect.width() > bounds.width()) {
+        rect.setWidth(bounds.width());
+    }
+    if (rect.height() > bounds.height()) {
+        rect.setHeight(bounds.height());
+    }
+    if (rect.left() < bounds.left()) {
+        rect.moveLeft(bounds.left());
+    }
+    if (rect.top() < bounds.top()) {
+        rect.moveTop(bounds.top());
+    }
+    if (rect.right() > bounds.right()) {
+        rect.moveRight(bounds.right());
+    }
+    if (rect.bottom() > bounds.bottom()) {
+        rect.moveBottom(bounds.bottom());
+    }
+    return rect;
+}
+
+QRect insetIfFullScreen(QRect rect, const QRect& desktopBounds)
+{
+    rect = rect.normalized();
+    if (!rect.isValid()) {
+        return rect;
+    }
+
+    auto inset = [](const QRect& region) {
+        if (region.width() <= kFullScreenSelectionInset * 2
+            || region.height() <= kFullScreenSelectionInset * 2) {
+            return region;
+        }
+        return region.adjusted(kFullScreenSelectionInset,
+                               kFullScreenSelectionInset,
+                               -kFullScreenSelectionInset,
+                               -kFullScreenSelectionInset);
+    };
+
+    if (rect == desktopBounds) {
+        return inset(rect);
+    }
+
+    for (auto* screen : QGuiApplication::screens()) {
+        if (screen != nullptr && rect == screen->geometry()) {
+            return inset(rect);
+        }
+    }
+
+    return rect;
+}
+
+QRect selectableRegion(QRect rect, const QRect& bounds)
+{
+    return insetIfFullScreen(clampedTo(rect, bounds), bounds);
+}
+
+void applyNativeDesktopBounds(QWidget& widget)
+{
+#ifdef Q_OS_WIN
+    const auto hwnd = reinterpret_cast<HWND>(widget.winId());
+    if (hwnd == nullptr) {
+        return;
+    }
+
+    SetWindowPos(hwnd,
+                 HWND_TOPMOST,
+                 GetSystemMetrics(SM_XVIRTUALSCREEN),
+                 GetSystemMetrics(SM_YVIRTUALSCREEN),
+                 GetSystemMetrics(SM_CXVIRTUALSCREEN),
+                 GetSystemMetrics(SM_CYVIRTUALSCREEN),
+                 SWP_SHOWWINDOW);
+#else
+    Q_UNUSED(widget)
+#endif
+}
+
+} // namespace
+
+CaptureOverlay::CaptureOverlay(IScreenRegionDetector& regionDetector,
+                               IScreenPixelSampler& pixelSampler,
+                               CaptureSelectionHistory& selectionHistory,
+                               QWidget* parent)
+    : QWidget(parent)
+    , regionDetector_(regionDetector)
+    , pixelSampler_(pixelSampler)
+    , selectionHistory_(selectionHistory)
+    , actionBar_(new CaptureActionBar(this))
+{
+    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+    setCursor(Qt::ArrowCursor);
+
+    connect(actionBar_, &CaptureActionBar::copyRequested, this, [this] { confirmSelection(&CaptureOverlay::emitCopy); });
+    connect(actionBar_, &CaptureActionBar::pinRequested, this, [this] { confirmSelection(&CaptureOverlay::emitPin); });
+    connect(actionBar_, &CaptureActionBar::saveRequested, this, [this] { confirmSelection(&CaptureOverlay::emitSave); });
+    connect(actionBar_, &CaptureActionBar::editRequested, this, [this] { confirmSelection(&CaptureOverlay::emitEdit); });
+    connect(actionBar_, &CaptureActionBar::ocrRequested, this, [this] { confirmSelection(&CaptureOverlay::emitOcr); });
+    connect(actionBar_, &CaptureActionBar::cancelRequested, this, [this] { cancel(); });
+    actionBar_->hide();
+
+    fadeAnimation_ = new QPropertyAnimation(this, "windowOpacity", this);
+    fadeAnimation_->setDuration(80);
+    fadeAnimation_->setEasingCurve(QEasingCurve::OutCubic);
+}
+
+void CaptureOverlay::prepareForCapture()
+{
+    pixelSampler_.refresh(desktopBounds());
+}
+
+void CaptureOverlay::showForCapture()
+{
+    const auto bounds = desktopBounds();
+    if (bounds.isValid()) {
+        setGeometry(bounds);
+    }
+
+    show();
+    applyNativeDesktopBounds(*this);
+    raise();
+    activateWindow();
+    setFocus();
+}
+
+void CaptureOverlay::showEvent(QShowEvent* event)
+{
+    Q_UNUSED(event)
+
+    const auto bounds = desktopBounds();
+    if (bounds.isValid() && geometry() != bounds) {
+        setGeometry(bounds);
+    }
+    applyNativeDesktopBounds(*this);
+    selection_ = {};
+    origin_ = {};
+    current_ = {};
+    smartCandidates_.clear();
+    smartCandidateIndex_ = -1;
+    pressedCandidate_ = {};
+    sampledColor_ = std::nullopt;
+    state_ = State::Idle;
+    activeHandle_ = Handle::None;
+    actionBar_->hide();
+    setCursor(Qt::ArrowCursor);
+    setFocus();
+    fadeAnimation_->stop();
+    setWindowOpacity(0.0);
+    fadeAnimation_->setStartValue(0.0);
+    fadeAnimation_->setEndValue(1.0);
+    fadeAnimation_->start();
+    smartCandidateLimiter_.invalidate();
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::keyPressEvent(QKeyEvent* event)
+{
+    const auto region = selectedRegion();
+
+    if (event->key() == Qt::Key_Escape) {
+        if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
+            state_ = State::Idle;
+            clearSmartCandidates();
+            selection_ = {};
+            origin_ = {};
+            current_ = {};
+            setCursor(Qt::ArrowCursor);
+            scheduleOverlayUpdate();
+        } else {
+            cancel();
+        }
+        return;
+    }
+
+    if (event->key() == Qt::Key_C && sampledColor_.has_value()) {
+        copySampledColor();
+        return;
+    }
+
+    if (event->key() == Qt::Key_Tab && state_ == State::Idle && !smartCandidates_.isEmpty()) {
+        cycleCandidate(event->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1);
+        return;
+    }
+
+    if (event->key() == Qt::Key_Comma || event->key() == Qt::Key_BracketLeft) {
+        applyHistorySelection(false);
+        return;
+    }
+
+    if (event->key() == Qt::Key_Period || event->key() == Qt::Key_BracketRight) {
+        applyHistorySelection(true);
+        return;
+    }
+
+    if (state_ == State::Idle && candidateRegion().isValid()) {
+        switch (event->key()) {
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+            selection_ = candidateRegion();
+            finishReady();
+            confirmSelection(&CaptureOverlay::emitCopy);
+            return;
+        case Qt::Key_F3:
+            selection_ = candidateRegion();
+            finishReady();
+            confirmSelection(&CaptureOverlay::emitPin);
+            return;
+        case Qt::Key_Space:
+            selection_ = candidateRegion();
+            finishReady();
+            confirmSelection(&CaptureOverlay::emitEdit);
+            return;
+        case Qt::Key_O:
+            selection_ = candidateRegion();
+            finishReady();
+            confirmSelection(&CaptureOverlay::emitOcr);
+            return;
+        case Qt::Key_S:
+            if (event->modifiers().testFlag(Qt::ControlModifier)) {
+                selection_ = candidateRegion();
+                finishReady();
+                confirmSelection(&CaptureOverlay::emitSave);
+                return;
+            }
+            break;
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+            cycleCandidate(event->key() == Qt::Key_Left || event->key() == Qt::Key_Up ? -1 : 1);
+            return;
+        default:
+            break;
+        }
+    }
+
+    if (state_ != State::Ready || !region.isValid()) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+        confirmSelection(&CaptureOverlay::emitCopy);
+        return;
+    case Qt::Key_F3:
+        confirmSelection(&CaptureOverlay::emitPin);
+        return;
+    case Qt::Key_Space:
+        confirmSelection(&CaptureOverlay::emitEdit);
+        return;
+    case Qt::Key_O:
+        confirmSelection(&CaptureOverlay::emitOcr);
+        return;
+    case Qt::Key_S:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            confirmSelection(&CaptureOverlay::emitSave);
+            return;
+        }
+        break;
+    case Qt::Key_Left:
+    case Qt::Key_Right:
+    case Qt::Key_Up:
+    case Qt::Key_Down: {
+        const auto step = event->modifiers().testFlag(Qt::ControlModifier) ? kFastNudgeStep : kNudgeStep;
+        const auto dx = event->key() == Qt::Key_Left ? -step : event->key() == Qt::Key_Right ? step : 0;
+        const auto dy = event->key() == Qt::Key_Up ? -step : event->key() == Qt::Key_Down ? step : 0;
+        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            resizeSelectionBy(dx, dy);
+        } else {
+            moveSelectionBy(dx, dy);
+        }
+        return;
+    }
+    default:
+        break;
+    }
+
+    QWidget::keyPressEvent(event);
+}
+
+void CaptureOverlay::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton) {
+        return;
+    }
+
+    actionBar_->hide();
+    lastMouseGlobal_ = event->globalPos();
+    updateSampledColor(lastMouseGlobal_);
+
+    if (state_ == State::Ready && selectedRegion().isValid()) {
+        activeHandle_ = hitTest(event->globalPos());
+        dragStart_ = event->globalPos();
+        dragStartSelection_ = selection_;
+        if (activeHandle_ == Handle::Inside) {
+            state_ = State::Moving;
+            return;
+        }
+        if (activeHandle_ != Handle::None) {
+            state_ = State::Resizing;
+            return;
+        }
+    }
+
+    const auto candidate = candidateRegion();
+    if (state_ == State::Idle && candidate.isValid()) {
+        state_ = State::CandidatePressed;
+        pressGlobal_ = event->globalPos();
+        pressedCandidate_ = candidate;
+        origin_ = pressGlobal_;
+        current_ = pressGlobal_;
+        return;
+    }
+
+    state_ = State::Selecting;
+    clearSmartCandidates();
+    origin_ = event->globalPos();
+    current_ = origin_;
+    selection_ = QRect(origin_, current_).normalized();
+    setCursor(Qt::ArrowCursor);
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::mouseMoveEvent(QMouseEvent* event)
+{
+    lastMouseGlobal_ = event->globalPos();
+    updateSampledColor(lastMouseGlobal_);
+
+    if (state_ == State::CandidatePressed) {
+        const auto distance = event->globalPos() - pressGlobal_;
+        if (std::abs(distance.x()) <= kDragThreshold && std::abs(distance.y()) <= kDragThreshold) {
+            scheduleOverlayUpdate();
+            return;
+        }
+        state_ = State::Selecting;
+        clearSmartCandidates();
+        origin_ = pressGlobal_;
+        current_ = event->globalPos();
+        selection_ = QRect(origin_, current_).normalized();
+        scheduleOverlayUpdate();
+        return;
+    }
+
+    if (state_ == State::Selecting) {
+        current_ = event->globalPos();
+        selection_ = QRect(origin_, current_).normalized();
+        scheduleOverlayUpdate();
+        return;
+    }
+    if (state_ == State::Moving) {
+        applyDrag(event->globalPos());
+        scheduleOverlayUpdate();
+        return;
+    }
+    if (state_ == State::Resizing) {
+        applyResize(event->globalPos());
+        scheduleOverlayUpdate();
+        return;
+    }
+
+    if (state_ == State::Idle) {
+        refreshSmartCandidates(event->globalPos());
+    }
+    updateCursorFor(event->globalPos());
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (state_ == State::CandidatePressed) {
+        selection_ = pressedCandidate_;
+        clearSmartCandidates();
+        finishReady();
+        return;
+    }
+
+    if (state_ == State::Selecting) {
+        const auto distance = event->globalPos() - origin_;
+        if (std::abs(distance.x()) <= kDragThreshold && std::abs(distance.y()) <= kDragThreshold) {
+            state_ = State::Idle;
+            selection_ = {};
+            origin_ = {};
+            current_ = {};
+            clearSmartCandidates();
+            actionBar_->hide();
+            scheduleOverlayUpdate();
+            return;
+        }
+    }
+
+    if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing) {
+        finishReady();
+    }
+}
+
+void CaptureOverlay::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton || state_ != State::Idle) {
+        return;
+    }
+
+    selection_ = desktopBounds();
+    clearSmartCandidates();
+    actionBar_->hide();
+    selectionHistory_.add(selection_);
+    state_ = State::ActionPending;
+    event->accept();
+    hide();
+    emit copyRequested(selection_);
+}
+
+void CaptureOverlay::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.fillRect(rect(), QColor(0, 0, 0, kOverlayMaskAlpha));
+
+    const auto globalRegion = selectedRegion();
+    if (!globalRegion.isValid()) {
+        const auto candidate = candidateRegion();
+        if (candidate.isValid()) {
+            drawCandidate(painter, candidate);
+        }
+        drawMagnifier(painter);
+        return;
+    }
+
+    const auto localRegion = localSelectedRegion();
+    painter.setCompositionMode(QPainter::CompositionMode_Clear);
+    painter.fillRect(localRegion, Qt::transparent);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+    painter.setPen(QPen(kSelectionShadowColor, 4));
+    painter.drawRect(localRegion.adjusted(-1, -1, 0, 0));
+    painter.setPen(QPen(kSelectionColor, 2));
+    painter.drawRect(localRegion.adjusted(0, 0, -1, -1));
+
+    painter.setBrush(kSelectionColor);
+    painter.setPen(QPen(kHandleBorderColor, 1));
+    const auto handles = {Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
+                          Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left};
+    for (const auto handle : handles) {
+        const auto handleLocal = handleRect(handle).translated(-geometry().topLeft());
+        painter.drawRoundedRect(handleLocal, 2, 2);
+    }
+
+    drawSizeLabel(painter, localRegion, globalRegion.size());
+    if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
+        drawMagnifier(painter);
+    }
+}
+
+QRect CaptureOverlay::selectedRegion() const noexcept
+{
+    return selection_.normalized();
+}
+
+QRect CaptureOverlay::localSelectedRegion() const
+{
+    return selectedRegion().translated(-geometry().topLeft());
+}
+
+QRect CaptureOverlay::localScreenGeometryFor(const QRect& globalRegion) const
+{
+    QScreen* screen = QGuiApplication::screenAt(globalRegion.center());
+    if (screen == nullptr) {
+        int largestIntersection = 0;
+        for (auto* candidate : QGuiApplication::screens()) {
+            if (candidate == nullptr) {
+                continue;
+            }
+            const auto intersection = candidate->geometry().intersected(globalRegion);
+            const auto area = intersection.width() * intersection.height();
+            if (area > largestIntersection) {
+                largestIntersection = area;
+                screen = candidate;
+            }
+        }
+    }
+
+    const auto screenGeometry = screen != nullptr ? screen->geometry() : desktopBounds();
+    return screenGeometry.translated(-geometry().topLeft());
+}
+
+QRect CaptureOverlay::availableGeometry() const
+{
+    return geometry();
+}
+
+QRect CaptureOverlay::desktopBounds() const
+{
+    QRect bounds;
+    for (auto* screen : QGuiApplication::screens()) {
+        if (screen != nullptr) {
+            bounds = bounds.united(screen->geometry());
+        }
+    }
+    if (!bounds.isValid() && QGuiApplication::primaryScreen() != nullptr) {
+        bounds = QGuiApplication::primaryScreen()->geometry();
+    }
+    return bounds;
+}
+
+QRect CaptureOverlay::candidateRegion() const
+{
+    if (smartCandidateIndex_ < 0 || smartCandidateIndex_ >= smartCandidates_.size()) {
+        return {};
+    }
+    return selectableRegion(smartCandidates_.at(smartCandidateIndex_), availableGeometry());
+}
+
+QRect CaptureOverlay::handleRect(Handle handle) const
+{
+    const auto region = selectedRegion();
+    const auto half = kHandleSize / 2;
+    QPoint center;
+    switch (handle) {
+    case Handle::TopLeft:
+        center = region.topLeft();
+        break;
+    case Handle::Top:
+        center = QPoint(region.center().x(), region.top());
+        break;
+    case Handle::TopRight:
+        center = region.topRight();
+        break;
+    case Handle::Right:
+        center = QPoint(region.right(), region.center().y());
+        break;
+    case Handle::BottomRight:
+        center = region.bottomRight();
+        break;
+    case Handle::Bottom:
+        center = QPoint(region.center().x(), region.bottom());
+        break;
+    case Handle::BottomLeft:
+        center = region.bottomLeft();
+        break;
+    case Handle::Left:
+        center = QPoint(region.left(), region.center().y());
+        break;
+    case Handle::Inside:
+    case Handle::None:
+        return {};
+    }
+    return QRect(center.x() - half, center.y() - half, kHandleSize, kHandleSize);
+}
+
+CaptureOverlay::Handle CaptureOverlay::hitTest(const QPoint& globalPosition) const
+{
+    const auto handles = {Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
+                          Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left};
+    for (const auto handle : handles) {
+        if (handleRect(handle).adjusted(-kHandleHitSlop, -kHandleHitSlop, kHandleHitSlop, kHandleHitSlop).contains(globalPosition)) {
+            return handle;
+        }
+    }
+    if (selectedRegion().contains(globalPosition)) {
+        return Handle::Inside;
+    }
+    return Handle::None;
+}
+
+void CaptureOverlay::refreshSmartCandidates(const QPoint& globalPosition)
+{
+    if (smartCandidateLimiter_.isValid()
+        && smartCandidateLimiter_.elapsed() < kSmartCandidateIntervalMs) {
+        return;
+    }
+
+    smartCandidateLimiter_.restart();
+    smartCandidates_ = regionDetector_.regionsAt(globalPosition, availableGeometry());
+    smartCandidateIndex_ = smartCandidates_.isEmpty() ? -1 : 0;
+}
+
+void CaptureOverlay::clearSmartCandidates()
+{
+    smartCandidates_.clear();
+    smartCandidateIndex_ = -1;
+    smartCandidateLimiter_.invalidate();
+}
+
+void CaptureOverlay::selectCandidate(int index)
+{
+    if (smartCandidates_.isEmpty()) {
+        smartCandidateIndex_ = -1;
+        return;
+    }
+    const auto size = static_cast<int>(smartCandidates_.size());
+    smartCandidateIndex_ = ((index % size) + size) % size;
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::cycleCandidate(int step)
+{
+    if (smartCandidates_.isEmpty()) {
+        return;
+    }
+    const auto base = smartCandidateIndex_ < 0 ? 0 : smartCandidateIndex_;
+    selectCandidate(base + step);
+}
+
+void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&))
+{
+    const auto region = selectedRegion();
+    if (!region.isValid()) {
+        return;
+    }
+
+    state_ = State::ActionPending;
+    actionBar_->hide();
+    selectionHistory_.add(region);
+    hide();
+    (this->*signalEmitter)(region);
+}
+
+void CaptureOverlay::emitCopy(const QRect& region)
+{
+    emit copyRequested(region);
+}
+
+void CaptureOverlay::emitPin(const QRect& region)
+{
+    emit pinRequested(region);
+}
+
+void CaptureOverlay::emitSave(const QRect& region)
+{
+    emit saveRequested(region);
+}
+
+void CaptureOverlay::emitEdit(const QRect& region)
+{
+    emit editRequested(region);
+}
+
+void CaptureOverlay::emitOcr(const QRect& region)
+{
+    emit ocrRequested(region);
+}
+
+void CaptureOverlay::applyHistorySelection(bool forward)
+{
+    const auto region = forward ? selectionHistory_.next() : selectionHistory_.previous();
+    if (!region.isValid()) {
+        return;
+    }
+
+    clearSmartCandidates();
+    actionBar_->hide();
+    selection_ = selectableRegion(region, availableGeometry());
+    state_ = State::Ready;
+    activeHandle_ = Handle::None;
+    showActionBar();
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::updateSampledColor(const QPoint& globalPosition)
+{
+    sampledColor_ = pixelSampler_.sample(globalPosition);
+}
+
+void CaptureOverlay::copySampledColor()
+{
+    if (!sampledColor_.has_value()) {
+        return;
+    }
+    QApplication::clipboard()->setText(sampledColor_->name(QColor::HexRgb).toUpper());
+}
+
+void CaptureOverlay::applyDrag(const QPoint& globalPosition)
+{
+    const auto delta = globalPosition - dragStart_;
+    selection_ = selectableRegion(dragStartSelection_.translated(delta), availableGeometry());
+}
+
+void CaptureOverlay::applyResize(const QPoint& globalPosition)
+{
+    auto rect = dragStartSelection_;
+    switch (activeHandle_) {
+    case Handle::TopLeft:
+        rect.setTopLeft(globalPosition);
+        break;
+    case Handle::Top:
+        rect.setTop(globalPosition.y());
+        break;
+    case Handle::TopRight:
+        rect.setTopRight(globalPosition);
+        break;
+    case Handle::Right:
+        rect.setRight(globalPosition.x());
+        break;
+    case Handle::BottomRight:
+        rect.setBottomRight(globalPosition);
+        break;
+    case Handle::Bottom:
+        rect.setBottom(globalPosition.y());
+        break;
+    case Handle::BottomLeft:
+        rect.setBottomLeft(globalPosition);
+        break;
+    case Handle::Left:
+        rect.setLeft(globalPosition.x());
+        break;
+    case Handle::Inside:
+    case Handle::None:
+        break;
+    }
+    selection_ = selectableRegion(normalizedWithMinimum(rect), availableGeometry());
+}
+
+void CaptureOverlay::cancel()
+{
+    state_ = State::Cancelled;
+    clearSmartCandidates();
+    actionBar_->hide();
+    hide();
+    emit cancelled();
+}
+
+void CaptureOverlay::finishReady()
+{
+    const auto rawSelection = selection_.normalized();
+    if (!availableGeometry().intersects(rawSelection) || rawSelection.width() <= kMinSelectionSize || rawSelection.height() <= kMinSelectionSize) {
+        cancel();
+        return;
+    }
+    selection_ = selectableRegion(normalizedWithMinimum(rawSelection), availableGeometry());
+    state_ = State::Ready;
+    activeHandle_ = Handle::None;
+    clearSmartCandidates();
+    showActionBar();
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::moveSelectionBy(int dx, int dy)
+{
+    selection_ = selectableRegion(selection_.translated(dx, dy), availableGeometry());
+    showActionBar();
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::resizeSelectionBy(int dx, int dy)
+{
+    auto rect = selection_;
+    if (dx < 0) {
+        rect.setLeft(rect.left() + dx);
+    } else if (dx > 0) {
+        rect.setRight(rect.right() + dx);
+    }
+    if (dy < 0) {
+        rect.setTop(rect.top() + dy);
+    } else if (dy > 0) {
+        rect.setBottom(rect.bottom() + dy);
+    }
+    selection_ = selectableRegion(normalizedWithMinimum(rect), availableGeometry());
+    showActionBar();
+    scheduleOverlayUpdate();
+}
+
+void CaptureOverlay::showActionBar()
+{
+    actionBar_->showForRegion(localSelectedRegion(), localScreenGeometryFor(selectedRegion()));
+}
+
+void CaptureOverlay::updateCursorFor(const QPoint& globalPosition)
+{
+    switch (hitTest(globalPosition)) {
+    case Handle::TopLeft:
+    case Handle::BottomRight:
+        setCursor(Qt::SizeFDiagCursor);
+        break;
+    case Handle::TopRight:
+    case Handle::BottomLeft:
+        setCursor(Qt::SizeBDiagCursor);
+        break;
+    case Handle::Top:
+    case Handle::Bottom:
+        setCursor(Qt::SizeVerCursor);
+        break;
+    case Handle::Left:
+    case Handle::Right:
+        setCursor(Qt::SizeHorCursor);
+        break;
+    case Handle::Inside:
+        setCursor(Qt::SizeAllCursor);
+        break;
+    case Handle::None:
+        setCursor(Qt::ArrowCursor);
+        break;
+    }
+}
+
+void CaptureOverlay::scheduleOverlayUpdate()
+{
+    if (!frameLimiter_.isValid() || frameLimiter_.elapsed() >= kOverlayFrameIntervalMs) {
+        repaintQueued_ = false;
+        frameLimiter_.restart();
+        update();
+        return;
+    }
+
+    if (repaintQueued_) {
+        return;
+    }
+
+    repaintQueued_ = true;
+    const auto delay = static_cast<int>(std::max<qint64>(1, kOverlayFrameIntervalMs - frameLimiter_.elapsed()));
+    QTimer::singleShot(delay, this, [this] {
+        repaintQueued_ = false;
+        frameLimiter_.restart();
+        update();
+    });
+}
+
+void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)
+{
+    const auto localRegion = globalRegion.translated(-geometry().topLeft());
+
+    painter.setPen(QPen(kCandidateColor, 1, Qt::DashLine));
+    painter.setBrush(kCandidateFillColor);
+    painter.drawRect(localRegion.adjusted(0, 0, -1, -1));
+    drawSizeLabel(painter, localRegion, globalRegion.size());
+}
+
+void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize)
+{
+    const auto text = QString("%1 x %2").arg(regionSize.width()).arg(regionSize.height());
+    const auto metrics = painter.fontMetrics();
+    const auto labelWidth = metrics.horizontalAdvance(text) + (kSizeLabelPaddingX * 2);
+
+    const auto clampedX = std::max(kOverlayMargin,
+                                   std::min(localRegion.left(), width() - labelWidth - kOverlayMargin));
+    QRect label(clampedX,
+                localRegion.top() - kSizeLabelHeight - kOverlayMargin,
+                labelWidth,
+                kSizeLabelHeight);
+    if (!rect().contains(label)) {
+        label.moveTop(localRegion.bottom() + kOverlayMargin);
+    }
+    if (!rect().contains(label)) {
+        label.moveTop(localRegion.top() + kOverlayMargin);
+    }
+    if (label.bottom() > height() - kOverlayMargin) {
+        label.moveBottom(height() - kOverlayMargin);
+    }
+    if (label.top() < kOverlayMargin) {
+        label.moveTop(kOverlayMargin);
+    }
+    if (label.right() > width() - kOverlayMargin) {
+        label.moveRight(width() - kOverlayMargin);
+    }
+    if (label.left() < kOverlayMargin) {
+        label.moveLeft(kOverlayMargin);
+    }
+
+    if (localRegion.height() < kSizeLabelHeight + (kOverlayMargin * 2) && label.intersects(localRegion)) {
+        if (localRegion.bottom() + kOverlayMargin + kSizeLabelHeight <= height() - kOverlayMargin) {
+            label.moveTop(localRegion.bottom() + kOverlayMargin);
+        } else if (localRegion.top() - kOverlayMargin - kSizeLabelHeight >= kOverlayMargin) {
+            label.moveTop(localRegion.top() - kOverlayMargin - kSizeLabelHeight);
+        }
+    }
+
+    painter.setPen(QPen(QColor(255, 255, 255, 36), 1));
+    painter.setBrush(kLabelBackgroundColor);
+    painter.drawRoundedRect(label, 10, 10);
+    painter.setPen(kLabelTextColor);
+    painter.drawText(label, Qt::AlignCenter, text);
+}
+
+void CaptureOverlay::drawMagnifier(QPainter& painter)
+{
+    if (lastMouseGlobal_.isNull() || state_ == State::Ready || state_ == State::ActionPending) {
+        return;
+    }
+
+    const auto local = lastMouseGlobal_ - geometry().topLeft();
+    auto magnifier = QRect(local + QPoint(18, 18), QSize(126, 104));
+    if (magnifier.right() > width() - kOverlayMargin) {
+        magnifier.moveRight(local.x() - 18);
+    }
+    if (magnifier.bottom() > height() - kOverlayMargin) {
+        magnifier.moveBottom(local.y() - 18);
+    }
+    if (magnifier.left() < kOverlayMargin || magnifier.top() < kOverlayMargin) {
+        return;
+    }
+
+    painter.setPen(QPen(kSelectionColor, 1));
+    painter.setBrush(QColor(14, 20, 26, 224));
+    painter.drawRoundedRect(magnifier, 6, 6);
+    painter.setPen(kLabelTextColor);
+    auto text = QString("x %1\ny %2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y());
+    if (sampledColor_.has_value()) {
+        const auto color = sampledColor_.value();
+        text += QString("\n%1\nrgb %2 %3 %4")
+                    .arg(color.name(QColor::HexRgb).toUpper())
+                    .arg(color.red())
+                    .arg(color.green())
+                    .arg(color.blue());
+    }
+    painter.drawText(magnifier.adjusted(8, 6, -8, -6), Qt::AlignLeft | Qt::AlignTop, text);
+}
+
+} // namespace nanosnap

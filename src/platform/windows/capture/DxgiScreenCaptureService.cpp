@@ -1,0 +1,383 @@
+#include "platform/windows/capture/DxgiScreenCaptureService.h"
+
+#include "shared/screen/ScreenSegmentUtil.h"
+
+#include <QGuiApplication>
+#include <QPainter>
+#include <QScreen>
+#include <QVector>
+
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+
+#ifdef Q_OS_WIN
+#include <d3d11.h>
+#include <dxgi1_2.h>
+#include <wrl/client.h>
+#include <windows.h>
+#endif
+
+namespace nanosnap {
+
+namespace {
+
+#ifdef Q_OS_WIN
+using Microsoft::WRL::ComPtr;
+
+struct OutputMatch {
+    ComPtr<IDXGIOutput1> output;
+    DXGI_OUTPUT_DESC desc{};
+};
+
+bool rectContains(const RECT& rect, const POINT& point)
+{
+    return point.x >= rect.left && point.x < rect.right && point.y >= rect.top && point.y < rect.bottom;
+}
+
+QString deviceNameFrom(const DXGI_OUTPUT_DESC& desc)
+{
+    return QString::fromWCharArray(desc.DeviceName);
+}
+
+Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physicalCenter)
+{
+    ComPtr<IDXGIFactory1> factory;
+    auto hr = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(factory.GetAddressOf()));
+    if (FAILED(hr)) {
+        return Result<OutputMatch>::failure("Failed to create DXGI factory.");
+    }
+
+    OutputMatch fallback;
+    bool hasFallback = false;
+
+    for (UINT adapterIndex = 0;; ++adapterIndex) {
+        ComPtr<IDXGIAdapter1> adapter;
+        if (factory->EnumAdapters1(adapterIndex, adapter.GetAddressOf()) == DXGI_ERROR_NOT_FOUND) {
+            break;
+        }
+
+        for (UINT outputIndex = 0;; ++outputIndex) {
+            ComPtr<IDXGIOutput> output;
+            if (adapter->EnumOutputs(outputIndex, output.GetAddressOf()) == DXGI_ERROR_NOT_FOUND) {
+                break;
+            }
+
+            ComPtr<IDXGIOutput1> output1;
+            if (FAILED(output.As(&output1))) {
+                continue;
+            }
+
+            DXGI_OUTPUT_DESC desc{};
+            if (FAILED(output->GetDesc(&desc))) {
+                continue;
+            }
+
+            OutputMatch match;
+            match.output = output1;
+            match.desc = desc;
+
+            if (!qtScreenName.isEmpty() && deviceNameFrom(desc).compare(qtScreenName, Qt::CaseInsensitive) == 0) {
+                return Result<OutputMatch>::success(std::move(match));
+            }
+
+            if (!hasFallback && rectContains(desc.DesktopCoordinates, physicalCenter)) {
+                fallback = std::move(match);
+                hasFallback = true;
+            }
+        }
+    }
+
+    if (hasFallback) {
+        return Result<OutputMatch>::success(std::move(fallback));
+    }
+
+    return Result<OutputMatch>::failure("No matching DXGI output was found.");
+}
+
+Result<ComPtr<ID3D11Device>> createD3dDevice(ComPtr<ID3D11DeviceContext>& context)
+{
+    constexpr D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_1,
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0,
+    };
+
+    ComPtr<ID3D11Device> device;
+    D3D_FEATURE_LEVEL selectedLevel{};
+    const auto flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    auto hr = D3D11CreateDevice(nullptr,
+                                D3D_DRIVER_TYPE_HARDWARE,
+                                nullptr,
+                                flags,
+                                featureLevels,
+                                ARRAYSIZE(featureLevels),
+                                D3D11_SDK_VERSION,
+                                device.GetAddressOf(),
+                                &selectedLevel,
+                                context.GetAddressOf());
+    if (FAILED(hr)) {
+        hr = D3D11CreateDevice(nullptr,
+                               D3D_DRIVER_TYPE_WARP,
+                               nullptr,
+                               flags,
+                               featureLevels,
+                               ARRAYSIZE(featureLevels),
+                               D3D11_SDK_VERSION,
+                               device.GetAddressOf(),
+                               &selectedLevel,
+                               context.GetAddressOf());
+    }
+
+    if (FAILED(hr)) {
+        return Result<ComPtr<ID3D11Device>>::failure("Failed to create D3D11 device.");
+    }
+
+    return Result<ComPtr<ID3D11Device>>::success(std::move(device));
+}
+
+QRect toPhysicalRegion(const QRect& logicalRegion,
+                       const QRect& logicalScreenGeometry,
+                       qreal devicePixelRatio,
+                       const RECT& outputRect)
+{
+    const auto scale = std::max<qreal>(devicePixelRatio, 1.0);
+    const auto left = outputRect.left + static_cast<int>(std::floor((logicalRegion.left() - logicalScreenGeometry.left()) * scale));
+    const auto top = outputRect.top + static_cast<int>(std::floor((logicalRegion.top() - logicalScreenGeometry.top()) * scale));
+    const auto right = outputRect.left + static_cast<int>(std::ceil((logicalRegion.right() + 1 - logicalScreenGeometry.left()) * scale));
+    const auto bottom = outputRect.top + static_cast<int>(std::ceil((logicalRegion.bottom() + 1 - logicalScreenGeometry.top()) * scale));
+    return QRect(QPoint(left, top), QPoint(right - 1, bottom - 1)).normalized();
+}
+
+QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, int height)
+{
+    QImage image(width, height, QImage::Format_RGB32);
+    const auto rowBytes = width * 4;
+    for (int y = 0; y < height; ++y) {
+        const auto* source = static_cast<const uchar*>(mapped.pData) + (static_cast<size_t>(y) * mapped.RowPitch);
+        std::memcpy(image.scanLine(y), source, rowBytes);
+        auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+        for (int x = 0; x < width; ++x) {
+            pixels[x] |= 0xff000000;
+        }
+    }
+    return image;
+}
+
+Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
+                                      ID3D11Device& device,
+                                      ID3D11DeviceContext& context)
+{
+    const auto& region = segment.logicalRegion;
+    if (!region.isValid() || region.width() < 1 || region.height() < 1) {
+        return Result<QImage>::failure("Capture region is invalid.");
+    }
+
+    const auto approximateScale = std::max<qreal>(segment.devicePixelRatio, 1.0);
+    const POINT approximateCenter{
+        static_cast<LONG>(std::llround(region.center().x() * approximateScale)),
+        static_cast<LONG>(std::llround(region.center().y() * approximateScale)),
+    };
+
+    auto outputResult = findOutput(segment.screenName, approximateCenter);
+    if (outputResult.isError()) {
+        return Result<QImage>::failure(outputResult.error());
+    }
+
+    auto output = outputResult.value();
+    const auto physicalRegion = toPhysicalRegion(region,
+                                                 segment.logicalScreenGeometry,
+                                                 segment.devicePixelRatio,
+                                                 output.desc.DesktopCoordinates)
+                                    .intersected(QRect(QPoint(output.desc.DesktopCoordinates.left, output.desc.DesktopCoordinates.top),
+                                                       QPoint(output.desc.DesktopCoordinates.right - 1,
+                                                              output.desc.DesktopCoordinates.bottom - 1)));
+    if (!physicalRegion.isValid()) {
+        return Result<QImage>::failure("Capture region is outside the selected output.");
+    }
+
+    ComPtr<IDXGIOutputDuplication> duplication;
+    auto hr = output.output->DuplicateOutput(&device, duplication.GetAddressOf());
+    if (FAILED(hr)) {
+        return Result<QImage>::failure("DXGI desktop duplication is not available.");
+    }
+
+    DXGI_OUTDUPL_FRAME_INFO frameInfo{};
+    ComPtr<IDXGIResource> desktopResource;
+    hr = duplication->AcquireNextFrame(100, &frameInfo, desktopResource.GetAddressOf());
+    if (FAILED(hr)) {
+        return Result<QImage>::failure("Failed to acquire a DXGI desktop frame.");
+    }
+
+    ComPtr<ID3D11Texture2D> desktopTexture;
+    hr = desktopResource.As(&desktopTexture);
+    if (FAILED(hr)) {
+        duplication->ReleaseFrame();
+        return Result<QImage>::failure("DXGI desktop frame is not a D3D11 texture.");
+    }
+
+    const auto width = physicalRegion.width();
+    const auto height = physicalRegion.height();
+
+    D3D11_TEXTURE2D_DESC stagingDesc{};
+    desktopTexture->GetDesc(&stagingDesc);
+    stagingDesc.Width = static_cast<UINT>(width);
+    stagingDesc.Height = static_cast<UINT>(height);
+    stagingDesc.MipLevels = 1;
+    stagingDesc.ArraySize = 1;
+    stagingDesc.SampleDesc.Count = 1;
+    stagingDesc.SampleDesc.Quality = 0;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    stagingDesc.MiscFlags = 0;
+
+    ComPtr<ID3D11Texture2D> stagingTexture;
+    hr = device.CreateTexture2D(&stagingDesc, nullptr, stagingTexture.GetAddressOf());
+    if (FAILED(hr)) {
+        duplication->ReleaseFrame();
+        return Result<QImage>::failure("Failed to allocate DXGI readback texture.");
+    }
+
+    const D3D11_BOX sourceBox{
+        static_cast<UINT>(physicalRegion.left() - output.desc.DesktopCoordinates.left),
+        static_cast<UINT>(physicalRegion.top() - output.desc.DesktopCoordinates.top),
+        0,
+        static_cast<UINT>(physicalRegion.right() + 1 - output.desc.DesktopCoordinates.left),
+        static_cast<UINT>(physicalRegion.bottom() + 1 - output.desc.DesktopCoordinates.top),
+        1,
+    };
+
+    context.CopySubresourceRegion(stagingTexture.Get(), 0, 0, 0, 0, desktopTexture.Get(), 0, &sourceBox);
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    hr = context.Map(stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    duplication->ReleaseFrame();
+    if (FAILED(hr)) {
+        return Result<QImage>::failure("Failed to map DXGI readback texture.");
+    }
+
+    auto image = mappedTextureToImage(mapped, width, height);
+    context.Unmap(stagingTexture.Get(), 0);
+    return Result<QImage>::success(std::move(image));
+}
+#endif
+
+QImage scaledToLogicalSize(QImage image, const QSize& logicalSize)
+{
+    if (image.size() == logicalSize) {
+        return image;
+    }
+    return image.scaled(logicalSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
+
+} // namespace
+
+Result<QImage> DxgiScreenCaptureService::capturePrimaryScreen()
+{
+    auto* screen = QGuiApplication::primaryScreen();
+    if (screen == nullptr) {
+        return Result<QImage>::failure("No primary screen is available.");
+    }
+
+    return captureRegion(screen->geometry());
+}
+
+Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region)
+{
+    return captureRegion(region, captureSegmentsFor(region));
+}
+
+Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
+{
+    if (!region.isValid() || region.width() < 1 || region.height() < 1) {
+        return Result<QImage>::failure("Capture region is invalid.");
+    }
+
+    if (segments.isEmpty()) {
+        auto fallbackResult = fallback_.captureRegion(region);
+        if (fallbackResult.isError()) {
+            return fallbackResult;
+        }
+        auto image = scaledToLogicalSize(fallbackResult.value(), region.size());
+        return Result<QImage>::success(std::move(image));
+    }
+
+#ifdef Q_OS_WIN
+    std::scoped_lock lock(mutex_);
+
+    ComPtr<ID3D11DeviceContext> context;
+    auto deviceResult = createD3dDevice(context);
+    const auto dxgiReady = deviceResult.isOk();
+    ComPtr<ID3D11Device> device;
+    if (dxgiReady) {
+        device = deviceResult.value();
+    }
+
+    if (segments.size() > 1) {
+        QImage composite(region.size(), QImage::Format_RGB32);
+        composite.fill(Qt::black);
+        QPainter painter(&composite);
+
+        for (const auto& segment : segments) {
+            auto segmentResult = dxgiReady
+                ? captureSegmentWithDxgi(segment, *device.Get(), *context.Get())
+                : Result<QImage>::failure(deviceResult.error());
+            if (segmentResult.isError()) {
+                segmentResult = fallback_.captureRegion(segment.logicalRegion);
+            }
+            if (segmentResult.isError()) {
+                return Result<QImage>::failure(segmentResult.error());
+            }
+
+            auto segmentImage = segmentResult.value();
+            if (segmentImage.size() != segment.logicalRegion.size()) {
+                segmentImage = segmentImage.scaled(segment.logicalRegion.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            }
+            painter.drawImage(segment.logicalRegion.topLeft() - region.topLeft(), segmentImage);
+        }
+
+        return Result<QImage>::success(std::move(composite));
+    }
+
+    auto dxgiResult = dxgiReady
+        ? captureSegmentWithDxgi(segments.first(), *device.Get(), *context.Get())
+        : Result<QImage>::failure(deviceResult.error());
+    if (dxgiResult.isError()) {
+        dxgiResult = fallback_.captureRegion(region);
+    }
+    if (dxgiResult.isError()) {
+        return dxgiResult;
+    }
+
+    auto image = scaledToLogicalSize(dxgiResult.value(), region.size());
+    return Result<QImage>::success(std::move(image));
+#else
+    if (segments.size() > 1) {
+        QImage composite(region.size(), QImage::Format_RGB32);
+        composite.fill(Qt::black);
+        QPainter painter(&composite);
+        for (const auto& segment : segments) {
+            auto segmentResult = fallback_.captureRegion(segment.logicalRegion);
+            if (segmentResult.isError()) {
+                return Result<QImage>::failure(segmentResult.error());
+            }
+            auto segmentImage = segmentResult.value();
+            if (segmentImage.size() != segment.logicalRegion.size()) {
+                segmentImage = segmentImage.scaled(segment.logicalRegion.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            }
+            painter.drawImage(segment.logicalRegion.topLeft() - region.topLeft(), segmentImage);
+        }
+        return Result<QImage>::success(std::move(composite));
+    }
+    auto fallbackResult = fallback_.captureRegion(region);
+    if (fallbackResult.isError()) {
+        return fallbackResult;
+    }
+    auto image = scaledToLogicalSize(fallbackResult.value(), region.size());
+    return Result<QImage>::success(std::move(image));
+#endif
+}
+
+} // namespace nanosnap

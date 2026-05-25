@@ -1,0 +1,100 @@
+QWidget {
+    background: #f6f7f9;
+    color: #20242a;
+    font-size: 13px;
+}
+
+QMainWindow, QDialog {
+    background: #f6f7f9;
+}
+
+QPushButton {
+    background: #ffffff;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    padding: 7px 12px;
+}
+
+QPushButton#CaptureActionButton {
+    background: #fbfdff;
+    border: 1px solid #c7d2dd;
+    border-radius: 7px;
+    padding: 0;
+}
+
+QPushButton:hover {
+    background: #eef4ff;
+    border-color: #7aa7ff;
+}
+
+QPushButton:pressed {
+    background: #dfeaff;
+}
+
+QLineEdit, QComboBox, QListView {
+    background: #ffffff;
+    border: 1px solid #cfd6df;
+    border-radius: 5px;
+    padding: 6px;
+}
+
+QToolBar {
+    background: #ffffff;
+    border-bottom: 1px solid #d9dee7;
+    spacing: 6px;
+    padding: 5px;
+}
+
+QToolButton {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 5px;
+}
+
+QToolButton:hover {
+    background: #eef4ff;
+    border-color: #b8cffc;
+}
+
+QToolButton:pressed {
+    background: #dfeaff;
+}
+
+QWidget#CaptureActionBar {
+    background: rgba(250, 253, 255, 238);
+    border: 1px solid #aebdcb;
+    border-radius: 8px;
+}
+
+QWidget#CaptureActionBar QPushButton#CaptureActionButton:hover {
+    background: #e9f7f4;
+    border-color: #2fbf9f;
+}
+
+QWidget#CaptureActionBar QPushButton#CaptureActionButton:pressed {
+    background: #d6f0ea;
+    border-color: #269d84;
+}
+
+QMenu {
+    background: #ffffff;
+    border: 1px solid #cfd6df;
+    padding: 5px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 8px;
+    border-radius: 5px;
+}
+
+QMenu::item:selected {
+    background: #eef4ff;
+    color: #172033;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #d9dee7;
+    margin: 5px 4px;
+}

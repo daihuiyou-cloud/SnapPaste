@@ -1,0 +1,118 @@
+#include "infrastructure/persistence/SqliteHistoryRepository.h"
+
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QVariant>
+
+namespace nanosnap {
+
+SqliteHistoryRepository::SqliteHistoryRepository(QString databasePath)
+    : connection_(std::move(databasePath))
+{
+}
+
+Result<CaptureRecord> SqliteHistoryRepository::add(const CaptureRecord& record)
+{
+    auto dbResult = readyDatabase();
+    if (dbResult.isError()) {
+        return Result<CaptureRecord>::failure(dbResult.error());
+    }
+
+    QSqlQuery query(dbResult.value());
+    query.prepare(
+        "INSERT INTO captures(file_path, thumbnail_path, width, height, format, created_at, source_screen, deleted) "
+        "VALUES(:file_path, :thumbnail_path, :width, :height, :format, :created_at, :source_screen, 0)");
+    query.bindValue(":file_path", record.filePath);
+    query.bindValue(":thumbnail_path", record.thumbnailPath);
+    query.bindValue(":width", record.width);
+    query.bindValue(":height", record.height);
+    query.bindValue(":format", record.format);
+    query.bindValue(":created_at", record.createdAt.toUTC().toString(Qt::ISODate));
+    query.bindValue(":source_screen", record.sourceScreen);
+
+    if (!query.exec()) {
+        return Result<CaptureRecord>::failure(query.lastError().text());
+    }
+
+    auto saved = record;
+    saved.id = query.lastInsertId().toLongLong();
+    return Result<CaptureRecord>::success(saved);
+}
+
+Result<QVector<CaptureRecord>> SqliteHistoryRepository::recent(int limit)
+{
+    auto dbResult = readyDatabase();
+    if (dbResult.isError()) {
+        return Result<QVector<CaptureRecord>>::failure(dbResult.error());
+    }
+
+    QSqlQuery query(dbResult.value());
+    query.prepare(
+        "SELECT id, file_path, thumbnail_path, width, height, format, created_at, source_screen, deleted "
+        "FROM captures WHERE deleted = 0 ORDER BY created_at DESC LIMIT :limit");
+    query.bindValue(":limit", limit);
+
+    if (!query.exec()) {
+        return Result<QVector<CaptureRecord>>::failure(query.lastError().text());
+    }
+
+    QVector<CaptureRecord> records;
+    while (query.next()) {
+        records.push_back(readRecord(query));
+    }
+
+    return Result<QVector<CaptureRecord>>::success(records);
+}
+
+Result<void> SqliteHistoryRepository::markDeleted(qint64 id)
+{
+    auto dbResult = readyDatabase();
+    if (dbResult.isError()) {
+        return Result<void>::failure(dbResult.error());
+    }
+
+    QSqlQuery query(dbResult.value());
+    query.prepare("UPDATE captures SET deleted = 1 WHERE id = :id");
+    query.bindValue(":id", id);
+
+    if (!query.exec()) {
+        return Result<void>::failure(query.lastError().text());
+    }
+
+    return Result<void>::success();
+}
+
+Result<QSqlDatabase> SqliteHistoryRepository::readyDatabase()
+{
+    auto dbResult = connection_.database();
+    if (dbResult.isError()) {
+        return dbResult;
+    }
+
+    if (!migrated_) {
+        const auto migrateResult = migrator_.migrate(dbResult.value());
+        if (migrateResult.isError()) {
+            return Result<QSqlDatabase>::failure(migrateResult.error());
+        }
+        migrated_ = true;
+    }
+
+    return dbResult;
+}
+
+CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
+{
+    CaptureRecord record;
+    record.id = query.value(0).toLongLong();
+    record.filePath = query.value(1).toString();
+    record.thumbnailPath = query.value(2).toString();
+    record.width = query.value(3).toInt();
+    record.height = query.value(4).toInt();
+    record.format = query.value(5).toString();
+    record.createdAt = QDateTime::fromString(query.value(6).toString(), Qt::ISODate);
+    record.sourceScreen = query.value(7).toString();
+    record.deleted = query.value(8).toBool();
+    return record;
+}
+
+} // namespace nanosnap

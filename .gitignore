@@ -1,0 +1,16 @@
+build*/
+*.user
+*.suo
+*.vcxproj.user
+*.VC.db
+*.opensdf
+*.sdf
+*.ipch
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.log
+Testing/

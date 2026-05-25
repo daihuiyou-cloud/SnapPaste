@@ -1,0 +1,140 @@
+#include "platform/windows/hotkey/WinHotkeyService.h"
+
+#include <QCoreApplication>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+namespace nanosnap {
+
+namespace {
+constexpr int kCaptureHotkeyId = 1001;
+constexpr int kPasteHotkeyId = 1002;
+constexpr int kHidePinsHotkeyId = 1003;
+}
+
+WinHotkeyService::WinHotkeyService()
+{
+    QCoreApplication::instance()->installNativeEventFilter(this);
+}
+
+WinHotkeyService::~WinHotkeyService()
+{
+    unregisterAll();
+    if (QCoreApplication::instance() != nullptr) {
+        QCoreApplication::instance()->removeNativeEventFilter(this);
+    }
+}
+
+bool WinHotkeyService::registerHotkey(HotkeyAction action, const Hotkey& hotkey)
+{
+    unregisterHotkey(action);
+
+#ifdef Q_OS_WIN
+    const auto id = idFor(action);
+    const auto registered = RegisterHotKey(nullptr, id, modifiersFor(hotkey), static_cast<UINT>(hotkey.key)) != FALSE;
+    if (registered) {
+        registeredActions_.insert(action);
+    }
+    return registered;
+#else
+    Q_UNUSED(action)
+    Q_UNUSED(hotkey)
+    return false;
+#endif
+}
+
+void WinHotkeyService::unregisterHotkey(HotkeyAction action)
+{
+#ifdef Q_OS_WIN
+    if (registeredActions_.find(action) != registeredActions_.end()) {
+        UnregisterHotKey(nullptr, idFor(action));
+        registeredActions_.erase(action);
+    }
+#else
+    Q_UNUSED(action)
+#endif
+}
+
+void WinHotkeyService::unregisterAll()
+{
+    const auto actions = registeredActions_;
+    for (const auto action : actions) {
+        unregisterHotkey(action);
+    }
+}
+
+void WinHotkeyService::setActionCallback(HotkeyAction action, Callback callback)
+{
+    callbacks_[action] = std::move(callback);
+}
+
+bool WinHotkeyService::nativeEventFilter(const QByteArray& eventType, void* message, long* result)
+{
+    Q_UNUSED(eventType)
+    Q_UNUSED(result)
+
+#ifdef Q_OS_WIN
+    auto* msg = static_cast<MSG*>(message);
+    if (msg != nullptr && msg->message == WM_HOTKEY) {
+        const auto action = actionForId(static_cast<int>(msg->wParam));
+        const auto callback = callbacks_.find(action);
+        if (callback != callbacks_.end() && callback->second) {
+            callback->second();
+        }
+        return true;
+    }
+#else
+    Q_UNUSED(message)
+#endif
+
+    return false;
+}
+
+unsigned int WinHotkeyService::modifiersFor(const Hotkey& hotkey)
+{
+    unsigned int modifiers = 0;
+#ifdef Q_OS_WIN
+    if (hotkey.ctrl) {
+        modifiers |= MOD_CONTROL;
+    }
+    if (hotkey.alt) {
+        modifiers |= MOD_ALT;
+    }
+    if (hotkey.shift) {
+        modifiers |= MOD_SHIFT;
+    }
+#else
+    Q_UNUSED(hotkey)
+#endif
+    return modifiers;
+}
+
+int WinHotkeyService::idFor(HotkeyAction action)
+{
+    switch (action) {
+    case HotkeyAction::Paste:
+        return kPasteHotkeyId;
+    case HotkeyAction::HideAllPins:
+        return kHidePinsHotkeyId;
+    case HotkeyAction::Capture:
+    default:
+        return kCaptureHotkeyId;
+    }
+}
+
+HotkeyAction WinHotkeyService::actionForId(int id)
+{
+    switch (id) {
+    case kPasteHotkeyId:
+        return HotkeyAction::Paste;
+    case kHidePinsHotkeyId:
+        return HotkeyAction::HideAllPins;
+    case kCaptureHotkeyId:
+    default:
+        return HotkeyAction::Capture;
+    }
+}
+
+} // namespace nanosnap
