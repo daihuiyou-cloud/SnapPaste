@@ -4,7 +4,7 @@
 #include <QSqlQuery>
 #include <QVariant>
 
-namespace nanosnap {
+namespace snappaste {
 
 SqliteHistoryRepository::SqliteHistoryRepository(QString databasePath)
     : connection_(std::move(databasePath))
@@ -115,4 +115,4 @@ CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
     return record;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

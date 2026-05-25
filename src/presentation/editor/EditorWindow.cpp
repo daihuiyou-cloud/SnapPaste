@@ -15,7 +15,7 @@
 #include <QToolBar>
 #include <QToolButton>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -493,7 +493,7 @@ EditorWindow::EditorWindow(QWidget* parent)
     : QMainWindow(parent)
     , canvas_(new AnnotationCanvas(this))
 {
-    setWindowTitle("NanoSnap Editor");
+    setWindowTitle("SnapPaste Editor");
     resize(980, 680);
 
     auto* scrollArea = new QScrollArea(this);
@@ -624,4 +624,4 @@ void EditorWindow::createToolbar()
     });
 }
 
-} // namespace nanosnap
+} // namespace snappaste

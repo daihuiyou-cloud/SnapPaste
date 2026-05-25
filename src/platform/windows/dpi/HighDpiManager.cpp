@@ -7,7 +7,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 void HighDpiManager::configureBeforeApplication()
 {
@@ -27,4 +27,4 @@ void HighDpiManager::configureBeforeApplication()
 #endif
 }
 
-} // namespace nanosnap
+} // namespace snappaste

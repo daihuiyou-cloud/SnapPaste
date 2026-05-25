@@ -17,7 +17,7 @@
 #include <memory>
 #include <optional>
 
-namespace nanosnap {
+namespace snappaste {
 
 class Application final : public QObject {
     Q_OBJECT
@@ -69,4 +69,4 @@ private:
     bool preferLastPinnableImage_ = false;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

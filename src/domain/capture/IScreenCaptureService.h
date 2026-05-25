@@ -8,7 +8,7 @@
 #include <QtGlobal>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 struct ScreenCaptureSegment final {
     QRect logicalRegion;
@@ -30,4 +30,4 @@ public:
     }
 };
 
-} // namespace nanosnap
+} // namespace snappaste

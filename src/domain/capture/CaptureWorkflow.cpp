@@ -2,7 +2,7 @@
 
 #include "shared/utils/TimeProvider.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
                                  IImageStorage& imageStorage,
@@ -62,4 +62,4 @@ Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, co
     return historyRepository_.add(record);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

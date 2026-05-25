@@ -2,7 +2,7 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 class Logger final {
 public:
@@ -11,4 +11,4 @@ public:
     static void warning(const QString& message);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

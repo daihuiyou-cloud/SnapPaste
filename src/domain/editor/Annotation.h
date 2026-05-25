@@ -6,7 +6,7 @@
 #include <QString>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 enum class AnnotationTool {
     Select,
@@ -29,4 +29,4 @@ struct Annotation final {
     int strokeWidth = 3;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

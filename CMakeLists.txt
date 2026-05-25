@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(NanoSnap VERSION 0.1.0 LANGUAGES CXX)
+project(SnapPaste VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,7 +12,7 @@ set(CMAKE_AUTOUIC OFF)
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets Sql)
 
-set(NANOSNAP_CORE_SOURCES
+set(SNAPPASTE_CORE_SOURCES
     src/shared/events/EventHub.h
     src/shared/screen/ScreenSegmentUtil.h
 
@@ -63,27 +63,27 @@ set(NANOSNAP_CORE_SOURCES
     src/presentation/pin_window/PinWindow.cpp
 )
 
-add_library(NanoSnapCore STATIC ${NANOSNAP_CORE_SOURCES})
+add_library(SnapPasteCore STATIC ${SNAPPASTE_CORE_SOURCES})
 
-target_include_directories(NanoSnapCore PUBLIC src)
+target_include_directories(SnapPasteCore PUBLIC src)
 
-target_link_libraries(NanoSnapCore PUBLIC Qt5::Widgets Qt5::Sql)
+target_link_libraries(SnapPasteCore PUBLIC Qt5::Widgets Qt5::Sql)
 
-add_executable(NanoSnap WIN32
+add_executable(SnapPaste WIN32
     resources/qrc/resources.qrc
     src/app/main.cpp
 )
 
-target_link_libraries(NanoSnap PRIVATE NanoSnapCore)
+target_link_libraries(SnapPaste PRIVATE SnapPasteCore)
 
 if (WIN32)
-    target_compile_definitions(NanoSnapCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
-    target_link_libraries(NanoSnapCore PUBLIC user32 gdi32 shell32 shcore dwmapi ole32 oleaut32 uiautomationcore d3d11 dxgi)
+    target_compile_definitions(SnapPasteCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(SnapPasteCore PUBLIC user32 gdi32 shell32 shcore dwmapi ole32 oleaut32 uiautomationcore d3d11 dxgi)
 endif()
 
-option(NANOSNAP_BUILD_TESTS "Build NanoSnap tests" OFF)
+option(SNAPPASTE_BUILD_TESTS "Build SnapPaste tests" OFF)
 
-if (NANOSNAP_BUILD_TESTS)
+if (SNAPPASTE_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()

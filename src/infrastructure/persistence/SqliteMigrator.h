@@ -4,7 +4,7 @@
 
 #include <QSqlDatabase>
 
-namespace nanosnap {
+namespace snappaste {
 
 class SqliteMigrator final {
 public:
@@ -17,4 +17,4 @@ private:
     Result<void> applyVersion3(QSqlDatabase database);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

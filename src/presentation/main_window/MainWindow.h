@@ -5,7 +5,7 @@
 
 #include <QMainWindow>
 
-namespace nanosnap {
+namespace snappaste {
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -19,4 +19,4 @@ signals:
     void captureRequested();
 };
 
-} // namespace nanosnap
+} // namespace snappaste

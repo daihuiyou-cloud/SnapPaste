@@ -3,7 +3,7 @@
 #include "shared/result/Result.h"
 #include "shared/types/AppSettings.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class ISettingsRepository {
 public:
@@ -13,4 +13,4 @@ public:
     virtual Result<void> save(const AppSettings& settings) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

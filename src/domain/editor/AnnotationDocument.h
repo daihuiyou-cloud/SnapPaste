@@ -6,7 +6,7 @@
 #include <QJsonArray>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 class AnnotationDocument final {
 public:
@@ -20,4 +20,4 @@ private:
     QVector<Annotation> annotations_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

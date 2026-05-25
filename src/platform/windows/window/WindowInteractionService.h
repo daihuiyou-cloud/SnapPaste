@@ -2,11 +2,11 @@
 
 #include <QWidget>
 
-namespace nanosnap {
+namespace snappaste {
 
 class WindowInteractionService final {
 public:
     void setClickThrough(QWidget* widget, bool enabled) const;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

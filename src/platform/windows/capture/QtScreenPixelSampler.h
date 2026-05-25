@@ -5,7 +5,7 @@
 #include <QImage>
 #include <QPoint>
 
-namespace nanosnap {
+namespace snappaste {
 
 class QtScreenPixelSampler final : public IScreenPixelSampler {
 public:
@@ -17,4 +17,4 @@ private:
     QImage snapshot_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

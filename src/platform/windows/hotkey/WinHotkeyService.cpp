@@ -6,7 +6,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 constexpr int kCaptureHotkeyId = 1001;
@@ -137,4 +137,4 @@ HotkeyAction WinHotkeyService::actionForId(int id)
     }
 }
 
-} // namespace nanosnap
+} // namespace snappaste

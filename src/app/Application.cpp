@@ -18,7 +18,7 @@
 #include <cstring>
 
 #if defined(_WIN32) && __has_include(<winrt/Windows.Media.Ocr.h>)
-#define NANOSNAP_HAS_WINRT_OCR 1
+#define SNAPPASTE_HAS_WINRT_OCR 1
 #include <unknwn.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -30,7 +30,7 @@
 #endif
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -45,7 +45,7 @@ struct OcrOutcome {
     QString message;
 };
 
-#if defined(NANOSNAP_HAS_WINRT_OCR)
+#if defined(SNAPPASTE_HAS_WINRT_OCR)
 struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByteAccess : ::IUnknown {
     virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
 };
@@ -53,7 +53,7 @@ struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByt
 
 OcrOutcome recognizeTextFromImage(const QImage& source)
 {
-#if defined(NANOSNAP_HAS_WINRT_OCR)
+#if defined(SNAPPASTE_HAS_WINRT_OCR)
     if (source.isNull()) {
         return {false, {}, "No image is available for OCR."};
     }
@@ -156,7 +156,7 @@ void Application::connectCoreSignals()
     });
 
     connect(&context_.captureViewModel(), &CaptureViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(mainWindow_.get(), "NanoSnap", message);
+        QMessageBox::warning(mainWindow_.get(), "SnapPaste", message);
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::copied, this, [this] {
         showStatus("Screenshot copied. Press F3 to pin.");
@@ -179,7 +179,7 @@ void Application::connectCoreSignals()
     connect(&context_.pinViewModel(), &PinViewModel::errorOccurred, this, [this](const QString& message) {
         pendingPinPosition_.reset();
         pendingPinAvoidRegion_.reset();
-        QMessageBox::warning(mainWindow_.get(), "NanoSnap", message);
+        QMessageBox::warning(mainWindow_.get(), "SnapPaste", message);
     });
     connect(&context_.eventHub(), &EventHub::historyChanged, &context_.historyViewModel(), &HistoryViewModel::refresh);
     connect(&context_.eventHub(), &EventHub::settingsChanged, this, [this] {
@@ -348,17 +348,17 @@ void Application::registerHotkey()
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Capture, settings.captureHotkey)) {
         const auto message = "Failed to register capture hotkey: " + settings.captureHotkey.toDisplayString();
         Logger::warning(message);
-        trayController_.showMessage("NanoSnap", message);
+        trayController_.showMessage("SnapPaste", message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Paste, settings.pasteHotkey)) {
         const auto message = "Failed to register paste hotkey: " + settings.pasteHotkey.toDisplayString();
         Logger::warning(message);
-        trayController_.showMessage("NanoSnap", message);
+        trayController_.showMessage("SnapPaste", message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
         const auto message = "Failed to register hide-pins hotkey: " + settings.hidePinsHotkey.toDisplayString();
         Logger::warning(message);
-        trayController_.showMessage("NanoSnap", message);
+        trayController_.showMessage("SnapPaste", message);
     }
 }
 
@@ -492,4 +492,4 @@ EditorWindow& Application::editorWindow()
     return *editorWindow_;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

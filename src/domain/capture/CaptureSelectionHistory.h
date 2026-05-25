@@ -3,7 +3,7 @@
 #include <QRect>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 class CaptureSelectionHistory final {
 public:
@@ -22,4 +22,4 @@ private:
     int cursor_ = -1;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

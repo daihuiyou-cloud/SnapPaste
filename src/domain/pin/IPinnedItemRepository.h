@@ -5,7 +5,7 @@
 
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 class IPinnedItemRepository {
 public:
@@ -18,4 +18,4 @@ public:
     virtual Result<void> close(qint64 id) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include "domain/pin/IClipboardImageProvider.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class ClipboardImageProvider final : public IClipboardImageProvider {
 public:
@@ -14,4 +14,4 @@ private:
     static Result<QImage> colorImageFromText(const QString& text);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

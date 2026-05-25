@@ -5,7 +5,7 @@
 
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 class IHistoryRepository {
 public:
@@ -16,4 +16,4 @@ public:
     virtual Result<void> markDeleted(qint64 id) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

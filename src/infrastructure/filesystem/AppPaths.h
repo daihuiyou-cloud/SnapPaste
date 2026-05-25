@@ -2,7 +2,7 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 class AppPaths final {
 public:
@@ -15,4 +15,4 @@ public:
     static bool ensureDirectory(const QString& path);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

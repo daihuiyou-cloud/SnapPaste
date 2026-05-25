@@ -2,10 +2,10 @@
 
 #include <QUuid>
 
-namespace nanosnap {
+namespace snappaste {
 
 SqliteConnection::SqliteConnection(QString databasePath)
-    : connectionName_("nanosnap_" + QUuid::createUuid().toString(QUuid::Id128))
+    : connectionName_("snappaste_" + QUuid::createUuid().toString(QUuid::Id128))
     , databasePath_(std::move(databasePath))
 {
 }
@@ -40,4 +40,4 @@ Result<QSqlDatabase> SqliteConnection::database()
     return Result<QSqlDatabase>::success(db);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

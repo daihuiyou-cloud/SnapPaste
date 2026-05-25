@@ -1,9 +1,9 @@
 find_package(Qt5 REQUIRED COMPONENTS Test)
 
-add_executable(NanoSnapUnitTests
-    unit/NanoSnapTests.cpp
+add_executable(SnapPasteUnitTests
+    unit/SnapPasteTests.cpp
 )
 
-target_link_libraries(NanoSnapUnitTests PRIVATE NanoSnapCore Qt5::Test)
+target_link_libraries(SnapPasteUnitTests PRIVATE SnapPasteCore Qt5::Test)
 
-add_test(NAME NanoSnapUnitTests COMMAND NanoSnapUnitTests)
+add_test(NAME SnapPasteUnitTests COMMAND SnapPasteUnitTests)

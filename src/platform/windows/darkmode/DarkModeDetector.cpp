@@ -2,7 +2,7 @@
 
 #include <QSettings>
 
-namespace nanosnap {
+namespace snappaste {
 
 bool DarkModeDetector::isSystemDarkMode() const
 {
@@ -15,4 +15,4 @@ bool DarkModeDetector::isSystemDarkMode() const
 #endif
 }
 
-} // namespace nanosnap
+} // namespace snappaste

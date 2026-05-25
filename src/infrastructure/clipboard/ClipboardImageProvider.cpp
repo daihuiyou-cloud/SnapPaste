@@ -10,7 +10,7 @@
 #include <QTextDocument>
 #include <QVariant>
 
-namespace nanosnap {
+namespace snappaste {
 
 Result<QImage> ClipboardImageProvider::imageFromClipboard()
 {
@@ -116,4 +116,4 @@ Result<QImage> ClipboardImageProvider::colorImageFromText(const QString& text)
     return Result<QImage>::success(output);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

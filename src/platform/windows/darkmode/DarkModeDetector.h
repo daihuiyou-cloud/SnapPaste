@@ -1,10 +1,10 @@
 #pragma once
 
-namespace nanosnap {
+namespace snappaste {
 
 class DarkModeDetector final {
 public:
     bool isSystemDarkMode() const;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

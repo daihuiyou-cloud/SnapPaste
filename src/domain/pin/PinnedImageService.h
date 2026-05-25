@@ -5,7 +5,7 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 class PinnedImageService final {
 public:
@@ -27,4 +27,4 @@ private:
     IPinnedItemRepository& repository_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

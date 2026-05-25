@@ -10,7 +10,7 @@
 #include <QImage>
 #include <QRect>
 
-namespace nanosnap {
+namespace snappaste {
 
 class CaptureWorkflow final {
 public:
@@ -30,4 +30,4 @@ private:
     ISettingsRepository& settingsRepository_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

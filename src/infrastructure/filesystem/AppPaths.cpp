@@ -3,11 +3,11 @@
 #include <QDir>
 #include <QStandardPaths>
 
-namespace nanosnap {
+namespace snappaste {
 
 QString AppPaths::dataDirectory()
 {
-    const auto overridePath = qEnvironmentVariable("NANOSNAP_DATA_DIR");
+    const auto overridePath = qEnvironmentVariable("SNAPPASTE_DATA_DIR");
     const auto path = overridePath.isEmpty()
         ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
         : overridePath;
@@ -28,7 +28,7 @@ QString AppPaths::databaseFilePath()
 QString AppPaths::defaultCaptureDirectory()
 {
     const auto pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-    const auto path = QDir(pictures).filePath("NanoSnap");
+    const auto path = QDir(pictures).filePath("SnapPaste");
     ensureDirectory(path);
     return path;
 }
@@ -49,4 +49,4 @@ bool AppPaths::ensureDirectory(const QString& path)
     return dir.exists() || dir.mkpath(".");
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include "infrastructure/filesystem/AppPaths.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 AppContext::AppContext()
     : eventHub_(std::make_unique<EventHub>())
@@ -84,4 +84,4 @@ CaptureSelectionHistory& AppContext::captureSelectionHistory() noexcept
     return *captureSelectionHistory_;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

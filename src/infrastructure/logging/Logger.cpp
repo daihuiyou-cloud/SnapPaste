@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QLoggingCategory>
 
-namespace nanosnap {
+namespace snappaste {
 
 void Logger::install()
 {
@@ -20,4 +20,4 @@ void Logger::warning(const QString& message)
     qWarning().noquote() << message;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

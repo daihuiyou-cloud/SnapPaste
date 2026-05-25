@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace nanosnap {
+namespace snappaste {
 
 enum class HotkeyAction {
     Capture,
@@ -24,4 +24,4 @@ public:
     virtual void setActionCallback(HotkeyAction action, Callback callback) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

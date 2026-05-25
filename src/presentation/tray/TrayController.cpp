@@ -5,7 +5,7 @@
 #include <QAction>
 #include <QMenu>
 
-namespace nanosnap {
+namespace snappaste {
 
 TrayController::TrayController(QObject* parent)
     : QObject(parent)
@@ -13,14 +13,14 @@ TrayController::TrayController(QObject* parent)
     , menu_(new QMenu())
 {
     auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), "Capture");
-    auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open NanoSnap");
+    auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open SnapPaste");
     auto* hidePinsAction = menu_->addAction("Hide Pins");
     auto* showPinsAction = menu_->addAction("Show Pins");
     menu_->addSeparator();
     auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), "Quit");
 
     trayIcon_.setContextMenu(menu_);
-    trayIcon_.setToolTip("NanoSnap");
+    trayIcon_.setToolTip("SnapPaste");
     trayIcon_.setIcon(IconProvider::icon(IconName::App));
 
     connect(captureAction, &QAction::triggered, this, &TrayController::captureRequested);
@@ -45,4 +45,4 @@ void TrayController::showMessage(const QString& title, const QString& message)
     trayIcon_.showMessage(title, message, QSystemTrayIcon::Information, 2500);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

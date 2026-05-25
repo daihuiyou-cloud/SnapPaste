@@ -4,7 +4,7 @@
 
 #include <QFile>
 
-namespace nanosnap {
+namespace snappaste {
 
 Result<void> AppStartup::applyTheme(QApplication& application,
                                     const AppSettings& settings,
@@ -30,4 +30,4 @@ QString AppStartup::themePath(const AppSettings& settings, const DarkModeDetecto
     return darkModeDetector.isSystemDarkMode() ? ":/themes/dark.qss" : ":/themes/light.qss";
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include "domain/capture/IImageStorage.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class LocalImageStorage final : public IImageStorage {
 public:
@@ -14,4 +14,4 @@ private:
     QString nextBaseName() const;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

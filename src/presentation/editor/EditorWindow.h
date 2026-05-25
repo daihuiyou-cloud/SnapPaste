@@ -5,7 +5,7 @@
 #include <QImage>
 #include <QMainWindow>
 
-namespace nanosnap {
+namespace snappaste {
 
 class AnnotationCanvas;
 
@@ -29,4 +29,4 @@ private:
     AnnotationCanvas* canvas_ = nullptr;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

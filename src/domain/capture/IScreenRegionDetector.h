@@ -4,7 +4,7 @@
 #include <QRect>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 class IScreenRegionDetector {
 public:
@@ -13,4 +13,4 @@ public:
     virtual QVector<QRect> regionsAt(const QPoint& globalPosition, const QRect& desktopBounds) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,11 +2,11 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 class WindowsShellService final {
 public:
     void revealInExplorer(const QString& filePath) const;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -6,7 +6,7 @@
 #include <map>
 #include <set>
 
-namespace nanosnap {
+namespace snappaste {
 
 class WinHotkeyService final : public QAbstractNativeEventFilter, public IHotkeyService {
 public:
@@ -29,4 +29,4 @@ private:
     std::set<HotkeyAction> registeredActions_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

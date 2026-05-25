@@ -22,7 +22,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -973,4 +973,4 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     painter.drawText(magnifier.adjusted(8, 6, -8, -6), Qt::AlignLeft | Qt::AlignTop, text);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

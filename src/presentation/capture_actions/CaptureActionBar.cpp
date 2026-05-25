@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -143,4 +143,4 @@ void CaptureActionBar::keyPressEvent(QKeyEvent* event)
     QWidget::keyPressEvent(event);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

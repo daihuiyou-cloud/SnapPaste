@@ -3,7 +3,7 @@
 #include <QString>
 #include <QStringList>
 
-namespace nanosnap {
+namespace snappaste {
 
 struct Hotkey final {
     bool ctrl = false;
@@ -32,4 +32,4 @@ struct Hotkey final {
     }
 };
 
-} // namespace nanosnap
+} // namespace snappaste

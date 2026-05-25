@@ -10,7 +10,7 @@
 
 #include <optional>
 
-namespace nanosnap {
+namespace snappaste {
 
 class CaptureSelectionHistory;
 class CaptureActionBar;
@@ -129,4 +129,4 @@ private:
     bool repaintQueued_ = false;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

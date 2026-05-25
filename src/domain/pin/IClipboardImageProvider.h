@@ -4,7 +4,7 @@
 
 #include <QImage>
 
-namespace nanosnap {
+namespace snappaste {
 
 class IClipboardImageProvider {
 public:
@@ -13,4 +13,4 @@ public:
     virtual Result<QImage> imageFromClipboard() = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

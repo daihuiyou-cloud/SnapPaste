@@ -3,7 +3,7 @@
 #include <QString>
 #include <utility>
 
-namespace nanosnap {
+namespace snappaste {
 
 template <typename T>
 class Result final {
@@ -58,4 +58,4 @@ private:
     QString error_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

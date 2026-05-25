@@ -10,7 +10,7 @@
 #include <atomic>
 #include <functional>
 
-namespace nanosnap {
+namespace snappaste {
 
 class CaptureViewModel final : public QObject {
     Q_OBJECT
@@ -45,4 +45,4 @@ private:
     std::atomic_int requestGeneration_{0};
 };
 
-} // namespace nanosnap
+} // namespace snappaste

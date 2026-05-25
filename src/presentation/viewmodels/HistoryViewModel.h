@@ -4,7 +4,7 @@
 
 #include <QStandardItemModel>
 
-namespace nanosnap {
+namespace snappaste {
 
 class HistoryViewModel final : public QObject {
     Q_OBJECT
@@ -27,4 +27,4 @@ private:
     QVector<CaptureRecord> records_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

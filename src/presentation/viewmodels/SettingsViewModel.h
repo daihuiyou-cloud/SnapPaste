@@ -5,7 +5,7 @@
 
 #include <QObject>
 
-namespace nanosnap {
+namespace snappaste {
 
 class SettingsViewModel final : public QObject {
     Q_OBJECT
@@ -32,4 +32,4 @@ private:
     AppSettings settings_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

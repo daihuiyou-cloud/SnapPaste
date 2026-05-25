@@ -1,6 +1,6 @@
 #include "domain/settings/SettingsService.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 SettingsService::SettingsService(ISettingsRepository& repository)
     : repository_(repository)
@@ -24,4 +24,4 @@ Result<void> SettingsService::save(const AppSettings& settings)
     return repository_.save(settings);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

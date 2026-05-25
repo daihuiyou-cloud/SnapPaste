@@ -8,7 +8,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -145,4 +145,4 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 #endif
 }
 
-} // namespace nanosnap
+} // namespace snappaste

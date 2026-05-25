@@ -5,7 +5,7 @@
 #include <QSqlDatabase>
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 class SqliteConnection final {
 public:
@@ -20,4 +20,4 @@ private:
     bool opened_ = false;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

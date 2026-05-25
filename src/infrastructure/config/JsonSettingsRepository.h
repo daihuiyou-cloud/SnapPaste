@@ -2,7 +2,7 @@
 
 #include "domain/settings/ISettingsRepository.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class JsonSettingsRepository final : public ISettingsRepository {
 public:
@@ -13,4 +13,4 @@ private:
     AppSettings defaultSettings() const;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

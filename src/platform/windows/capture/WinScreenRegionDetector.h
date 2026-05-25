@@ -9,7 +9,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 class WinScreenRegionDetector final : public IScreenRegionDetector {
 public:
@@ -29,4 +29,4 @@ private:
 #endif
 };
 
-} // namespace nanosnap
+} // namespace snappaste

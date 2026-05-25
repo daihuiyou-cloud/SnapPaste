@@ -7,7 +7,7 @@
 #include <QFile>
 #include <QUuid>
 
-namespace nanosnap {
+namespace snappaste {
 
 Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
                                                    const QString& directory,
@@ -42,7 +42,7 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
 QString LocalImageStorage::nextBaseName() const
 {
     const auto suffix = QUuid::createUuid().toString(QUuid::Id128).left(8);
-    return "NanoSnap_" + QDateTime::currentDateTimeUtc().toString("yyyyMMdd_HHmmss_zzz") + "_" + suffix;
+    return "SnapPaste_" + QDateTime::currentDateTimeUtc().toString("yyyyMMdd_HHmmss_zzz") + "_" + suffix;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

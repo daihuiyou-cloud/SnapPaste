@@ -4,7 +4,7 @@
 #include "infrastructure/persistence/SqliteConnection.h"
 #include "infrastructure/persistence/SqliteMigrator.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class SqlitePinnedItemRepository final : public IPinnedItemRepository {
 public:
@@ -27,4 +27,4 @@ private:
     bool migrated_ = false;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

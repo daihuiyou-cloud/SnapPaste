@@ -4,7 +4,7 @@
 
 #include <utility>
 
-namespace nanosnap {
+namespace snappaste {
 
 PinnedImageService::PinnedImageService(IClipboardImageProvider& clipboardProvider,
                                        IPinnedItemRepository& repository)
@@ -90,4 +90,4 @@ PinnedImageState PinnedImageService::defaultStateFor(const QImage& image)
     return normalizedState(state);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

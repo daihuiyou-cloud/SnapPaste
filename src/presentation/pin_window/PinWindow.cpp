@@ -21,7 +21,7 @@
 #include <cmath>
 #include <utility>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -653,4 +653,4 @@ QImage PinWindow::renderedImage() const
     return renderedCache_;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

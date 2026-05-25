@@ -5,14 +5,14 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-namespace nanosnap {
+namespace snappaste {
 
 MainWindow::MainWindow(HistoryViewModel& historyViewModel,
                        SettingsViewModel& settingsViewModel,
                        QWidget* parent)
     : QMainWindow(parent)
 {
-    setWindowTitle("NanoSnap");
+    setWindowTitle("SnapPaste");
     resize(860, 560);
 
     auto* tabs = new QTabWidget(this);
@@ -35,4 +35,4 @@ MainWindow::MainWindow(HistoryViewModel& historyViewModel,
     connect(captureButton, &QPushButton::clicked, this, &MainWindow::captureRequested);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

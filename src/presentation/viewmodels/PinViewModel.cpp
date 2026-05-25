@@ -1,6 +1,6 @@
 #include "presentation/viewmodels/PinViewModel.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 PinViewModel::PinViewModel(PinnedImageService& service, QObject* parent)
     : QObject(parent)
@@ -67,4 +67,4 @@ void PinViewModel::close(qint64 id)
     }
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -5,13 +5,13 @@
 
 int main(int argc, char* argv[])
 {
-    nanosnap::HighDpiManager::configureBeforeApplication();
+    snappaste::HighDpiManager::configureBeforeApplication();
 
     QApplication qtApplication(argc, argv);
-    QCoreApplication::setOrganizationName("NanoSnap");
-    QCoreApplication::setApplicationName("NanoSnap");
+    QCoreApplication::setOrganizationName("SnapPaste");
+    QCoreApplication::setApplicationName("SnapPaste");
     QCoreApplication::setApplicationVersion("0.1.0");
 
-    nanosnap::Application application(qtApplication);
+    snappaste::Application application(qtApplication);
     return application.run();
 }

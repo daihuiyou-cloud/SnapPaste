@@ -1,6 +1,6 @@
 #include "presentation/icons/IconProvider.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -54,4 +54,4 @@ QIcon IconProvider::icon(IconName name)
     return QIcon(pathFor(name));
 }
 
-} // namespace nanosnap
+} // namespace snappaste

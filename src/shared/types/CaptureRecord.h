@@ -3,7 +3,7 @@
 #include <QDateTime>
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 struct CaptureRecord final {
     qint64 id = 0;
@@ -17,4 +17,4 @@ struct CaptureRecord final {
     bool deleted = false;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

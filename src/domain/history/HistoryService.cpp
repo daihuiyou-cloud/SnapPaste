@@ -1,6 +1,6 @@
 #include "domain/history/HistoryService.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 HistoryService::HistoryService(IHistoryRepository& repository)
     : repository_(repository)
@@ -25,4 +25,4 @@ Result<void> HistoryService::deleteCapture(qint64 id)
     return repository_.markDeleted(id);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -6,7 +6,7 @@
 
 #include <optional>
 
-namespace nanosnap {
+namespace snappaste {
 
 class IScreenPixelSampler {
 public:
@@ -16,4 +16,4 @@ public:
     virtual std::optional<QColor> sample(const QPoint& globalPosition) const = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -284,4 +284,4 @@ QVector<QRect> WinScreenRegionDetector::regionsAt(const QPoint& globalPosition, 
 #endif
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -5,7 +5,7 @@
 #include <QImage>
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 struct StoredImage final {
     QString filePath;
@@ -21,4 +21,4 @@ public:
                                             const QString& format) = 0;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

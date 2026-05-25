@@ -11,7 +11,7 @@
 #include <QScreen>
 #include <QVector>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -137,4 +137,4 @@ void CaptureViewModel::copyCurrentImageToClipboard()
     emit copied();
 }
 
-} // namespace nanosnap
+} // namespace snappaste

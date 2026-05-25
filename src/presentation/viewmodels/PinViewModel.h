@@ -4,7 +4,7 @@
 
 #include <QObject>
 
-namespace nanosnap {
+namespace snappaste {
 
 class PinViewModel final : public QObject {
     Q_OBJECT
@@ -29,4 +29,4 @@ private:
     PinnedImageService& service_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

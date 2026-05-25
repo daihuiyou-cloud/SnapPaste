@@ -5,7 +5,7 @@
 
 #include <QApplication>
 
-namespace nanosnap {
+namespace snappaste {
 
 class DarkModeDetector;
 
@@ -19,4 +19,4 @@ private:
     static QString themePath(const AppSettings& settings, const DarkModeDetector& darkModeDetector);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

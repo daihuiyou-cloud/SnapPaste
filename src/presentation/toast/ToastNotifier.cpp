@@ -12,7 +12,7 @@
 
 #include <algorithm>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -135,4 +135,4 @@ void ToastNotifier::positionToast(const QPoint& referencePosition)
                  bounds.bottom() - size.height() - kToastMargin + 1);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

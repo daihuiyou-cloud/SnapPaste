@@ -2,7 +2,7 @@
 
 #include <QJsonObject>
 
-namespace nanosnap {
+namespace snappaste {
 
 void AnnotationDocument::add(Annotation annotation)
 {
@@ -38,4 +38,4 @@ Result<QJsonArray> AnnotationDocument::toJson() const
     return Result<QJsonArray>::success(array);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

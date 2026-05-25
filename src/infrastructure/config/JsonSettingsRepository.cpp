@@ -6,7 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-namespace nanosnap {
+namespace snappaste {
 
 namespace {
 
@@ -148,4 +148,4 @@ AppSettings JsonSettingsRepository::defaultSettings() const
     return settings;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

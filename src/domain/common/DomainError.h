@@ -2,10 +2,10 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 struct DomainError final {
     QString message;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

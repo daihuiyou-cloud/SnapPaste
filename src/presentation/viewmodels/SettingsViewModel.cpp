@@ -1,6 +1,6 @@
 #include "presentation/viewmodels/SettingsViewModel.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 SettingsViewModel::SettingsViewModel(SettingsService& service, EventHub& eventHub, QObject* parent)
     : QObject(parent)
@@ -55,4 +55,4 @@ ThemeMode SettingsViewModel::themeFromIndex(int index)
     }
 }
 
-} // namespace nanosnap
+} // namespace snappaste

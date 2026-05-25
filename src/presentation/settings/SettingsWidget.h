@@ -7,7 +7,7 @@
 class QComboBox;
 class QLineEdit;
 
-namespace nanosnap {
+namespace snappaste {
 
 class SettingsWidget final : public QWidget {
     Q_OBJECT
@@ -24,4 +24,4 @@ private:
     QComboBox* themeCombo_ = nullptr;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

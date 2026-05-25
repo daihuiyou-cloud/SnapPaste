@@ -8,7 +8,7 @@ class QPropertyAnimation;
 class QTimer;
 class QWidget;
 
-namespace nanosnap {
+namespace snappaste {
 
 class ToastNotifier final : public QObject {
     Q_OBJECT
@@ -30,4 +30,4 @@ private:
     QPropertyAnimation* fadeAnimation_ = nullptr;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

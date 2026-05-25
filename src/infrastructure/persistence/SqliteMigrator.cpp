@@ -4,7 +4,7 @@
 #include <QSqlQuery>
 #include <QVariant>
 
-namespace nanosnap {
+namespace snappaste {
 
 Result<void> SqliteMigrator::migrate(QSqlDatabase database)
 {
@@ -172,4 +172,4 @@ Result<void> SqliteMigrator::applyVersion3(QSqlDatabase database)
     return Result<void>::success();
 }
 
-} // namespace nanosnap
+} // namespace snappaste

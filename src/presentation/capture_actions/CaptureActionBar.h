@@ -4,7 +4,7 @@
 #include <QRect>
 #include <QWidget>
 
-namespace nanosnap {
+namespace snappaste {
 
 class CaptureActionBar final : public QWidget {
     Q_OBJECT
@@ -29,4 +29,4 @@ protected:
 private:
 };
 
-} // namespace nanosnap
+} // namespace snappaste

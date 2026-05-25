@@ -2,7 +2,7 @@
 
 #include "domain/settings/ISettingsRepository.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class SettingsService final {
 public:
@@ -15,4 +15,4 @@ private:
     ISettingsRepository& repository_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -4,7 +4,7 @@
 #include <windows.h>
 #endif
 
-namespace nanosnap {
+namespace snappaste {
 
 void WindowInteractionService::setClickThrough(QWidget* widget, bool enabled) const
 {
@@ -26,4 +26,4 @@ void WindowInteractionService::setClickThrough(QWidget* widget, bool enabled) co
 #endif
 }
 
-} // namespace nanosnap
+} // namespace snappaste

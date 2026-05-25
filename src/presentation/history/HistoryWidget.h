@@ -6,7 +6,7 @@
 
 class QListView;
 
-namespace nanosnap {
+namespace snappaste {
 
 class HistoryWidget final : public QWidget {
     Q_OBJECT
@@ -19,4 +19,4 @@ private:
     QListView* listView_ = nullptr;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

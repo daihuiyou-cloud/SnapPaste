@@ -3,7 +3,7 @@
 #include <QFileInfo>
 #include <QStandardItem>
 
-namespace nanosnap {
+namespace snappaste {
 
 HistoryViewModel::HistoryViewModel(HistoryService& service, QObject* parent)
     : QObject(parent)
@@ -54,4 +54,4 @@ void HistoryViewModel::deleteByRow(int row)
     refresh();
 }
 
-} // namespace nanosnap
+} // namespace snappaste

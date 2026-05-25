@@ -2,7 +2,7 @@
 
 #include "domain/history/IHistoryRepository.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class HistoryService final {
 public:
@@ -15,4 +15,4 @@ private:
     IHistoryRepository& repository_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include <QIcon>
 
-namespace nanosnap {
+namespace snappaste {
 
 enum class IconName {
     App,
@@ -30,4 +30,4 @@ public:
     static QIcon icon(IconName name);
 };
 
-} // namespace nanosnap
+} // namespace snappaste

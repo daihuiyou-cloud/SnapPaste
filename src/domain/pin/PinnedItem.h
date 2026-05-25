@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace nanosnap {
+namespace snappaste {
 
 enum class PinSource {
     Screenshot,
@@ -62,4 +62,4 @@ struct PinnedItem final {
     QDateTime updatedAt;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

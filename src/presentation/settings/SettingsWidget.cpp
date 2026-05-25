@@ -10,7 +10,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-namespace nanosnap {
+namespace snappaste {
 
 SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     : QWidget(parent)
@@ -65,10 +65,10 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         hidePinsHotkeyLabel->setText(settings.hidePinsHotkey.toDisplayString());
     });
     connect(&viewModel_, &SettingsViewModel::saved, this, [this] {
-        QMessageBox::information(this, "NanoSnap", "Settings saved.");
+        QMessageBox::information(this, "SnapPaste", "Settings saved.");
     });
     connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(this, "NanoSnap", message);
+        QMessageBox::warning(this, "SnapPaste", message);
     });
 
     viewModel_.load();
@@ -87,4 +87,4 @@ int SettingsWidget::themeIndex(ThemeMode mode) const
     }
 }
 
-} // namespace nanosnap
+} // namespace snappaste

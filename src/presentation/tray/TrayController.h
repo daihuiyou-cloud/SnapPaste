@@ -6,7 +6,7 @@
 class QAction;
 class QMenu;
 
-namespace nanosnap {
+namespace snappaste {
 
 class TrayController final : public QObject {
     Q_OBJECT
@@ -29,4 +29,4 @@ private:
     QMenu* menu_ = nullptr;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

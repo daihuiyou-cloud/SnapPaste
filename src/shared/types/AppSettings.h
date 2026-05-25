@@ -4,7 +4,7 @@
 
 #include <QString>
 
-namespace nanosnap {
+namespace snappaste {
 
 enum class ThemeMode {
     System,
@@ -21,4 +21,4 @@ struct AppSettings final {
     Hotkey hidePinsHotkey;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

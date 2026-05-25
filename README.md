@@ -1,6 +1,6 @@
-# NanoSnap
+# SnapPaste
 
-NanoSnap 是一个 Windows 平台的轻量级截图工具，使用 Qt5 Widgets 和 C++17 开发。项目目标是提供快速截图、复制、保存、贴图、简单标注和截图历史管理等能力。
+SnapPaste 是一个 Windows 平台的轻量级截图工具，使用 Qt5 Widgets 和 C++17 开发。项目目标是提供快速截图、复制、保存、贴图、简单标注和截图历史管理等能力。
 
 ## 功能概览
 
@@ -45,7 +45,7 @@ cmake --build build
 启用单元测试：
 
 ```powershell
-cmake -B build -DNANOSNAP_BUILD_TESTS=ON
+cmake -B build -DSNAPPASTE_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build -V
 ```
@@ -53,7 +53,7 @@ ctest --test-dir build -V
 运行单个 QtTest 测试函数：
 
 ```powershell
-.\build\tests\NanoSnapUnitTests.exe captureSelectionHistoryKeepsRecentUniqueRegions
+.\build\tests\SnapPasteUnitTests.exe captureSelectionHistoryKeepsRecentUniqueRegions
 ```
 
 ## 项目结构
@@ -93,11 +93,11 @@ presentation -> domain -> infrastructure -> platform/windows
 
 ## 数据与配置
 
-NanoSnap 会在用户本地应用数据目录下保存配置、数据库、截图文件和缩略图。配置由 `JsonSettingsRepository` 管理，历史记录和贴图状态由 SQLite 仓储管理。
+SnapPaste 会在用户本地应用数据目录下保存配置、数据库、截图文件和缩略图。配置由 `JsonSettingsRepository` 管理，历史记录和贴图状态由 SQLite 仓储管理。
 
 ## 测试
 
-测试集中在 `tests/unit/NanoSnapTests.cpp`，使用 QtTest。测试中包含内存测试替身，也包含少量基于临时目录和 SQLite 的轻量集成测试。
+测试集中在 `tests/unit/SnapPasteTests.cpp`，使用 QtTest。测试中包含内存测试替身，也包含少量基于临时目录和 SQLite 的轻量集成测试。
 
 ## 当前状态
 

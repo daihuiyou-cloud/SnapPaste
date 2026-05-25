@@ -26,7 +26,7 @@
 
 #include <memory>
 
-namespace nanosnap {
+namespace snappaste {
 
 class AppContext final {
 public:
@@ -71,4 +71,4 @@ private:
     std::unique_ptr<PinViewModel> pinViewModel_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include <QDateTime>
 
-namespace nanosnap {
+namespace snappaste {
 
 class TimeProvider final {
 public:
@@ -12,4 +12,4 @@ public:
     }
 };
 
-} // namespace nanosnap
+} // namespace snappaste

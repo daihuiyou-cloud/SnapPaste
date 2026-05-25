@@ -5,7 +5,7 @@
 #include <QSqlQuery>
 #include <QVariant>
 
-namespace nanosnap {
+namespace snappaste {
 
 SqlitePinnedItemRepository::SqlitePinnedItemRepository(QString databasePath)
     : connection_(std::move(databasePath))
@@ -203,4 +203,4 @@ PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
     return item;
 }
 
-} // namespace nanosnap
+} // namespace snappaste

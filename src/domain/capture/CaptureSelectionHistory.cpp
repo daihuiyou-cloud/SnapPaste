@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace nanosnap {
+namespace snappaste {
 
 CaptureSelectionHistory::CaptureSelectionHistory(int capacity)
     : capacity_(std::max(1, capacity))
@@ -65,4 +65,4 @@ QRect CaptureSelectionHistory::next()
     return entries_.at(cursor_);
 }
 
-} // namespace nanosnap
+} // namespace snappaste

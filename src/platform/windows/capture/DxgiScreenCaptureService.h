@@ -7,7 +7,7 @@
 
 #include <mutex>
 
-namespace nanosnap {
+namespace snappaste {
 
 class DxgiScreenCaptureService final : public IScreenCaptureService {
 public:
@@ -20,4 +20,4 @@ private:
     GdiScreenCaptureService fallback_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

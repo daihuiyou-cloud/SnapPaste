@@ -8,7 +8,7 @@
 #include <QVector>
 #include <QWidget>
 
-namespace nanosnap {
+namespace snappaste {
 
 class PinWindow final : public QWidget {
     Q_OBJECT
@@ -86,4 +86,4 @@ private:
     mutable QImage renderedCache_;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

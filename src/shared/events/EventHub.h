@@ -2,7 +2,7 @@
 
 #include <QObject>
 
-namespace nanosnap {
+namespace snappaste {
 
 class EventHub final : public QObject {
     Q_OBJECT
@@ -18,4 +18,4 @@ signals:
     void settingsChanged();
 };
 
-} // namespace nanosnap
+} // namespace snappaste

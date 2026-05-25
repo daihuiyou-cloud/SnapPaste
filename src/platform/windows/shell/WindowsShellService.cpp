@@ -4,7 +4,7 @@
 #include <QFileInfo>
 #include <QUrl>
 
-namespace nanosnap {
+namespace snappaste {
 
 void WindowsShellService::revealInExplorer(const QString& filePath) const
 {
@@ -14,4 +14,4 @@ void WindowsShellService::revealInExplorer(const QString& filePath) const
     }
 }
 
-} // namespace nanosnap
+} // namespace snappaste

@@ -2,7 +2,7 @@
 
 #include "domain/capture/IScreenCaptureService.h"
 
-namespace nanosnap {
+namespace snappaste {
 
 class GdiScreenCaptureService final : public IScreenCaptureService {
 public:
@@ -10,4 +10,4 @@ public:
     Result<QImage> captureRegion(const QRect& region) override;
 };
 
-} // namespace nanosnap
+} // namespace snappaste

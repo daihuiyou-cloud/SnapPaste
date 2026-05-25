@@ -4,7 +4,7 @@
 #include <QPainter>
 #include <QScreen>
 
-namespace nanosnap {
+namespace snappaste {
 
 void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
 {
@@ -51,4 +51,4 @@ std::optional<QColor> QtScreenPixelSampler::sample(const QPoint& globalPosition)
     return QColor::fromRgba(snapshot_.pixel(local));
 }
 
-} // namespace nanosnap
+} // namespace snappaste

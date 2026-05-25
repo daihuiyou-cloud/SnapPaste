@@ -8,7 +8,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
-namespace nanosnap {
+namespace snappaste {
 
 HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     : QWidget(parent)
@@ -45,10 +45,10 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
     });
     connect(&viewModel_, &HistoryViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(this, "NanoSnap", message);
+        QMessageBox::warning(this, "SnapPaste", message);
     });
 
     viewModel_.refresh();
 }
 
-} // namespace nanosnap
+} // namespace snappaste

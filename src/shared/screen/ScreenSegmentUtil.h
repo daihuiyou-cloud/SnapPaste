@@ -5,7 +5,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 
-namespace nanosnap {
+namespace snappaste {
 
 inline QVector<ScreenCaptureSegment> captureSegmentsFor(const QRect& region)
 {
@@ -30,4 +30,4 @@ inline QVector<ScreenCaptureSegment> captureSegmentsFor(const QRect& region)
     return segments;
 }
 
-} // namespace nanosnap
+} // namespace snappaste
