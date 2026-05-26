@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QToolTip>
 #include <QVBoxLayout>
 
 namespace snappaste {
@@ -173,8 +174,9 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                 pasteHotkeyInput_->setHotkey(settings.pasteHotkey);
                 hidePinsHotkeyInput_->setHotkey(settings.hidePinsHotkey);
             });
-    connect(&viewModel_, &SettingsViewModel::saved, this, [this] {
-        QMessageBox::information(this, "SnapPaste", "Settings saved.");
+    connect(&viewModel_, &SettingsViewModel::saved, this, [this, saveButton] {
+        QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, 0)),
+                           "Settings saved", this);
     });
     connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this](const QString& message) {
         QMessageBox::warning(this, "SnapPaste", message);

@@ -156,7 +156,7 @@ CaptureOverlay::CaptureOverlay(IScreenRegionDetector& regionDetector,
     setAttribute(Qt::WA_TranslucentBackground);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-    setCursor(Qt::ArrowCursor);
+    setCursor(Qt::CrossCursor);
 
     connect(actionBar_, &CaptureActionBar::copyRequested, this, [this] { confirmSelection(&CaptureOverlay::emitCopy); });
     connect(actionBar_, &CaptureActionBar::pinRequested, this, [this] { confirmSelection(&CaptureOverlay::emitPin); });
@@ -210,7 +210,7 @@ void CaptureOverlay::showEvent(QShowEvent* event)
     state_ = State::Idle;
     activeHandle_ = Handle::None;
     actionBar_->hide();
-    setCursor(Qt::ArrowCursor);
+    setCursor(Qt::CrossCursor);
     setFocus();
     fadeAnimation_->stop();
     setWindowOpacity(0.0);
@@ -232,7 +232,7 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
             selection_ = {};
             origin_ = {};
             current_ = {};
-            setCursor(Qt::ArrowCursor);
+            setCursor(Qt::CrossCursor);
             scheduleOverlayUpdate();
         } else {
             cancel();
@@ -387,7 +387,7 @@ void CaptureOverlay::mousePressEvent(QMouseEvent* event)
     origin_ = event->globalPos();
     current_ = origin_;
     selection_ = QRect(origin_, current_).normalized();
-    setCursor(Qt::ArrowCursor);
+    setCursor(Qt::CrossCursor);
     scheduleOverlayUpdate();
 }
 
@@ -858,7 +858,7 @@ void CaptureOverlay::updateCursorFor(const QPoint& globalPosition)
         setCursor(Qt::SizeAllCursor);
         break;
     case Handle::None:
-        setCursor(Qt::ArrowCursor);
+        setCursor(state_ == State::Idle ? Qt::CrossCursor : Qt::ArrowCursor);
         break;
     }
 }

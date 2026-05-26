@@ -20,10 +20,10 @@ CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
 {
     if (!region.isValid()) {
-        return Result<QImage>::failure("Invalid capture region.");
+        return Result<QImage>::failure("Selection is empty. Please select a region to capture.");
     }
     if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
-        return Result<QImage>::failure("Capture region is too small.");
+        return Result<QImage>::failure("Selection too small. Please select a larger area.");
     }
 
     const std::lock_guard<std::mutex> lock(captureMutex_);
@@ -33,10 +33,10 @@ Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
 {
     if (!region.isValid()) {
-        return Result<QImage>::failure("Invalid capture region.");
+        return Result<QImage>::failure("Selection is empty. Please select a region to capture.");
     }
     if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
-        return Result<QImage>::failure("Capture region is too small.");
+        return Result<QImage>::failure("Selection too small. Please select a larger area.");
     }
 
     const std::lock_guard<std::mutex> lock(captureMutex_);
@@ -46,7 +46,7 @@ Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector
 Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, const QString& sourceScreen)
 {
     if (image.isNull()) {
-        return Result<CaptureRecord>::failure("Cannot save an empty image.");
+        return Result<CaptureRecord>::failure("No image data to save. Try capturing again.");
     }
 
     const auto settingsResult = settingsRepository_.load();

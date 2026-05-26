@@ -52,7 +52,12 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
             QMessageBox::information(this, "SnapPaste", "No capture selected.");
             return;
         }
-        viewModel_.deleteByRow(index.row());
+        auto ret = QMessageBox::question(this, "Delete Capture",
+            "Are you sure you want to delete this capture?",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            viewModel_.deleteByRow(index.row());
+        }
     });
     connect(openButton, &QPushButton::clicked, this, [this] {
         const auto index = listView_->currentIndex();

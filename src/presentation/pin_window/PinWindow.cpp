@@ -21,6 +21,7 @@
 #include <QPointer>
 #include <QScreen>
 #include <QShowEvent>
+#include <QToolTip>
 #include <QTransform>
 #include <QWheelEvent>
 
@@ -265,6 +266,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     const auto* action = menu.exec(event->globalPos());
     if (action == copyAction) {
         emit copyRequested(renderedImage());
+        QToolTip::showText(QCursor::pos(), "Copied to clipboard", this);
     } else if (action == saveAction) {
         emit saveRequested(renderedImage());
     } else if (action == saveAsAction) {
@@ -280,6 +282,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
             int iy = qBound(0, event->pos().y() * img.height() / height(), img.height() - 1);
             QColor pixel = QColor::fromRgba(img.pixel(ix, iy));
             QApplication::clipboard()->setText(pixel.name().toUpper());
+            QToolTip::showText(QCursor::pos(), "Copied " + pixel.name().toUpper(), this);
         }
     } else if (action == rotateLeftAction) {
         rotateBy(-90);
@@ -367,6 +370,7 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
     case Qt::Key_C:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             emit copyRequested(renderedImage());
+            QToolTip::showText(QCursor::pos(), "Copied to clipboard", this);
             return;
         }
         break;
@@ -471,6 +475,25 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if (!dragging_ && !resizing_) {
+        bool onToolbar = false;
+        if ((hovered_ || controlsVisible_) && toolbarFits()) {
+            const auto btns = toolbarButtonRects();
+            static const char* kTooltipLabels[] = {
+                "Close", "Rotate Left", "Rotate Right",
+                "Flip Horizontal", "Flip Vertical",
+                "Click Through", "Always on Top"
+            };
+            for (int i = 0; i < btns.size(); ++i) {
+                if (btns[i].contains(event->pos())) {
+                    QToolTip::showText(event->globalPos(), kTooltipLabels[i], this);
+                    onToolbar = true;
+                    break;
+                }
+            }
+        }
+        if (!onToolbar) {
+            QToolTip::hideText();
+        }
         switch (resizeEdgeAt(event->pos())) {
         case EdgeLeft:
         case EdgeRight:     setCursor(Qt::SizeHorCursor); break;
@@ -735,6 +758,7 @@ void PinWindow::rotateBy(int degrees)
     resize(renderedImage().size() * item_.state.transform.scale);
     update();
     emitStateChanged();
+    QToolTip::showText(QCursor::pos(), QString("Rotated %1\xC2\xB0").arg(degrees), this);
 }
 
 void PinWindow::setScale(double scale)
@@ -765,6 +789,7 @@ void PinWindow::flipH()
     invalidateRenderedCache();
     update();
     emitStateChanged();
+    QToolTip::showText(QCursor::pos(), "Flipped horizontally", this);
 }
 
 void PinWindow::flipV()
@@ -773,6 +798,7 @@ void PinWindow::flipV()
     invalidateRenderedCache();
     update();
     emitStateChanged();
+    QToolTip::showText(QCursor::pos(), "Flipped vertically", this);
 }
 
 void PinWindow::toggleAlwaysOnTop()
