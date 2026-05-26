@@ -25,9 +25,20 @@ struct ActionDef {
     QString label;
 };
 
+QString verticalText(const QString& text)
+{
+    if (text.isEmpty()) return text;
+    QStringList chars;
+    chars.reserve(text.size());
+    for (const QChar& ch : text) {
+        chars << QString(ch);
+    }
+    return chars.join('\n');
+}
+
 QPushButton* createActionButton(const ActionDef& def, QWidget* parent)
 {
-    auto* btn = new QPushButton(def.label, parent);
+    auto* btn = new QPushButton(verticalText(def.label), parent);
     btn->setObjectName("CaptureActionButton");
     btn->setIcon(IconProvider::icon(def.icon));
     btn->setIconSize(QSize(kActionIconSize, kActionIconSize));

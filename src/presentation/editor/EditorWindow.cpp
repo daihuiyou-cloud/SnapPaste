@@ -1119,7 +1119,7 @@ protected:
             }
             painter.restore();
         }
-        if (drawing_ && draft_.tool != AnnotationTool::Pen && draft_.tool != AnnotationTool::Numbered) {
+        if (drawing_ && draft_.tool != AnnotationTool::Pen && draft_.tool != AnnotationTool::Numbered && draft_.tool != AnnotationTool::Crop) {
             auto dims = draft_.bounds.size();
             QString label = QString("%1 × %2").arg(dims.width()).arg(dims.height());
             painter.setPen(Qt::NoPen);
