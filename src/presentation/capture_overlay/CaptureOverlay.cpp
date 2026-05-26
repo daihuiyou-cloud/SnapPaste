@@ -1183,7 +1183,7 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     }
 
     painter.setPen(kLabelTextColor);
-    const auto infoRect = rect.adjusted(kPad, rect.top() + kPad + kGrid + kSpacing, -kPad, -kPad);
+    const auto infoRect = rect.adjusted(kPad, kPad + kGrid + kSpacing, -kPad, -kPad);
     if (sampledColor_.has_value()) {
         const auto color = sampledColor_.value();
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
