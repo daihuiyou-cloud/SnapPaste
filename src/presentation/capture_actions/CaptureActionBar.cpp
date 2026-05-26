@@ -15,7 +15,7 @@ namespace snappaste {
 namespace {
 
 constexpr int kActionIconSize = 18;
-constexpr int kActionBarMargin = 8;
+constexpr int kActionBarMargin = 16;
 constexpr int kActionBarPadding = 6;
 constexpr int kActionBarSpacing = 5;
 
