@@ -612,7 +612,6 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
     }
 
     drawSizeLabel(painter, localRegion, globalRegion.size());
-    drawDimensionLines(painter, localRegion, globalRegion.size());
     if (state_ == State::Ready && !lastMouseGlobal_.isNull()) {
         painter.setPen(kLabelTextColor);
         painter.setFont(QFont("Segoe UI", 10));
