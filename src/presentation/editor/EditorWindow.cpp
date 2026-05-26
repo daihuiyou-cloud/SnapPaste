@@ -18,6 +18,7 @@
 #include <QInputDialog>
 #include <QLabel>
 #include <QMimeData>
+#include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
@@ -210,6 +211,7 @@ public:
         setMouseTracking(true);
         setAcceptDrops(true);
         setFocusPolicy(Qt::StrongFocus);
+        setAttribute(Qt::WA_InputMethodEnabled, true);
         setMinimumSize(640, 360);
         QSettings settings;
         fontSize_ = settings.value("editor/fontSize", 14).toInt();
@@ -258,6 +260,8 @@ public:
         redoStack_.clear();
         modified_ = false;
         nextNumber_ = 1;
+        editingTextIndex_ = -1;
+        preeditString_.clear();
         setMinimumSize(image_.size());
         resize(image_.size());
         updateWindowTitle();
@@ -413,6 +417,21 @@ public:
         filled_ = filled;
     }
 
+    void updateTextBounds(int index)
+    {
+        if (index < 0 || index >= annotations_.size()) return;
+        auto& a = annotations_[index];
+        if (a.tool != AnnotationTool::Text) return;
+        QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+        QFontMetrics fm(font);
+        const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, a.text);
+        QRect newBounds(a.bounds.topLeft(), QSize(qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20)));
+        if (newBounds.right() > image_.width()) {
+            newBounds.moveRight(image_.width() - 4);
+        }
+        a.bounds = newBounds;
+    }
+
     int fontSize() const { return fontSize_; }
     void setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
 
@@ -516,6 +535,19 @@ protected:
 
         setFocus();
 
+        // finish text editing on any mouse click, except clicks on the editing annotation
+        if (editingTextIndex_ >= 0 && event->button() == Qt::LeftButton) {
+            const auto pos = toImage(event->pos());
+            bool clickedSelf = (editingTextIndex_ < annotations_.size()
+                && annotations_[editingTextIndex_].tool == AnnotationTool::Text
+                && hitTestAnnotation(annotations_[editingTextIndex_], pos));
+            if (!clickedSelf) {
+                editingTextIndex_ = -1;
+                preeditString_.clear();
+                update();
+            }
+        }
+
         if (event->button() == Qt::MiddleButton) {
             panning_ = true;
             panStart_ = event->pos();
@@ -605,25 +637,25 @@ protected:
         }
 
         if (currentTool_ == AnnotationTool::Text) {
+            // finish any ongoing text editing
+            if (editingTextIndex_ >= 0) {
+                editingTextIndex_ = -1;
+                preeditString_.clear();
+                update();
+            }
+            // check if clicking existing text to edit
             for (int i = annotations_.size() - 1; i >= 0; --i) {
                 if (annotations_.at(i).tool == AnnotationTool::Text && hitTestAnnotation(annotations_.at(i), pos)) {
                     selectedIndex_ = i;
-                    moving_ = true;
-                    moveOffset_ = annotations_[i].bounds.topLeft() - pos;
+                    editingTextIndex_ = i;
                     update();
                     return;
                 }
             }
-            bool ok = false;
-            const auto text = QInputDialog::getMultiLineText(
-                static_cast<QWidget*>(window()), "Text Input", "Enter text:", QString(), &ok);
-            if (!ok || text.isEmpty()) {
-                return;
-            }
-            QFont font("Segoe UI", fontSize_);
+            // create new empty text annotation at click position
+            QFont font("Microsoft YaHei UI", fontSize_);
             QFontMetrics fm(font);
-            const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, text);
-            QRect bounds(pos.x(), pos.y(), qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20));
+            QRect bounds(pos.x(), pos.y(), 28, fm.height() + 8);
             if (bounds.right() > image_.width()) {
                 bounds.moveRight(image_.width() - 4);
             }
@@ -632,13 +664,16 @@ protected:
             Annotation ann;
             ann.tool = AnnotationTool::Text;
             ann.bounds = bounds;
-            ann.text = text;
+            ann.text = QString();
             ann.color = currentColor_;
             ann.strokeWidth = 2;
+            ann.textFontSize = fontSize_;
             ann.textOutline = textOutlineEnabled_;
             annotations_.push_back(std::move(ann));
             selectedIndex_ = annotations_.size() - 1;
+            editingTextIndex_ = selectedIndex_;
             markModified();
+            setFocus();
             return;
         }
 
@@ -850,8 +885,56 @@ protected:
 
     void keyPressEvent(QKeyEvent* event) override
     {
+        if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()
+            && annotations_[editingTextIndex_].tool == AnnotationTool::Text) {
+            auto& textAnn = annotations_[editingTextIndex_];
+            if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+                editingTextIndex_ = -1;
+                preeditString_.clear();
+                update();
+                event->accept();
+                return;
+            }
+            if (event->key() == Qt::Key_Escape) {
+                if (textAnn.text.isEmpty()) {
+                    pushUndo();
+                    redoStack_.clear();
+                    annotations_.removeAt(editingTextIndex_);
+                    selectedIndex_ = -1;
+                }
+                editingTextIndex_ = -1;
+                preeditString_.clear();
+                markModified();
+                event->accept();
+                return;
+            }
+            if (event->key() == Qt::Key_Backspace) {
+                if (!textAnn.text.isEmpty()) {
+                    textAnn.text.chop(1);
+                    updateTextBounds(editingTextIndex_);
+                    markModified();
+                }
+                event->accept();
+                return;
+            }
+            if (event->key() == Qt::Key_Delete) {
+                event->accept();
+                return;
+            }
+            QString text = event->text();
+            if (!text.isEmpty() && text[0].isPrint()) {
+                textAnn.text += text;
+                updateTextBounds(editingTextIndex_);
+                markModified();
+                event->accept();
+                return;
+            }
+            // fall through for non-printable keys like arrow keys, tab, etc.
+        }
+
         if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
-            && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+            && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+            && editingTextIndex_ < 0) {
             pushUndo();
             redoStack_.clear();
             annotations_.removeAt(selectedIndex_);
@@ -1135,6 +1218,33 @@ protected:
             if (drawing_) {
                 drawAnnotation(&painter, image_, draft_, fontSize_);
             }
+            // text editing cursor + preedit
+            if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
+                const auto& a = annotations_[editingTextIndex_];
+                if (a.tool == AnnotationTool::Text) {
+                    QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+                    painter.setFont(font);
+                    int textWidth = painter.fontMetrics().horizontalAdvance(a.text);
+                    int cx = a.bounds.left() + 4 + textWidth;
+                    int cy = a.bounds.top() + 4;
+                    int ch = painter.fontMetrics().height();
+                    // draw preedit string if any
+                    if (!preeditString_.isEmpty()) {
+                        painter.setPen(QPen(a.color, 1));
+                        painter.drawText(cx, cy, painter.fontMetrics().horizontalAdvance(preeditString_) + 4, ch,
+                            Qt::AlignLeft | Qt::AlignTop, preeditString_);
+                        // underline preedit text
+                        int preeditWidth = painter.fontMetrics().horizontalAdvance(preeditString_);
+                        painter.setPen(QPen(a.color, 1, Qt::DashLine));
+                        painter.drawLine(cx, cy + ch + 1, cx + preeditWidth, cy + ch + 1);
+                        textWidth += preeditWidth;
+                        cx += preeditWidth;
+                    }
+                    // cursor
+                    painter.setPen(QPen(a.color, 1.5));
+                    painter.drawLine(cx, cy, cx, cy + ch);
+                }
+            }
             painter.restore();
         }
         if (drawing_ && draft_.tool != AnnotationTool::Pen && draft_.tool != AnnotationTool::Numbered && draft_.tool != AnnotationTool::Crop) {
@@ -1165,6 +1275,60 @@ protected:
         if (delta == 0) return;
         zoomAt(zoomFactor_ * (delta > 0 ? 1.15 : 0.85), event->pos());
         event->accept();
+    }
+
+    void inputMethodEvent(QInputMethodEvent* event) override
+    {
+        if (editingTextIndex_ < 0 || editingTextIndex_ >= annotations_.size()
+            || annotations_[editingTextIndex_].tool != AnnotationTool::Text) {
+            QWidget::inputMethodEvent(event);
+            return;
+        }
+        auto& a = annotations_[editingTextIndex_];
+        if (!event->commitString().isEmpty()) {
+            a.text += event->commitString();
+            preeditString_.clear();
+            updateTextBounds(editingTextIndex_);
+            markModified();
+        }
+        preeditString_ = event->preeditString();
+        update();
+        event->accept();
+    }
+
+    QVariant inputMethodQuery(Qt::InputMethodQuery query) const override
+    {
+        if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()
+            && annotations_[editingTextIndex_].tool == AnnotationTool::Text) {
+            const auto& a = annotations_[editingTextIndex_];
+            const auto& img = image_;
+            switch (query) {
+            case Qt::ImCursorRectangle: {
+                QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+                QFontMetrics fm(font);
+                int textWidth = fm.horizontalAdvance(a.text + preeditString_);
+                int cx = static_cast<int>((a.bounds.left() + 4 + textWidth) * zoomFactor_);
+                int cy = static_cast<int>((a.bounds.top() + 4) * zoomFactor_);
+                int ch = static_cast<int>(fm.height() * zoomFactor_);
+                return QRect(mapToGlobal(QPoint(0, 0)) + QPoint(cx, cy), QSize(4, ch));
+            }
+            case Qt::ImEnabled:
+                return true;
+            case Qt::ImFont:
+                return QFont("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            case Qt::ImCursorPosition:
+                return a.text.length() + preeditString_.length();
+            case Qt::ImSurroundingText:
+                return a.text + preeditString_;
+            case Qt::ImCurrentSelection:
+                return QString();
+            case Qt::ImAnchorPosition:
+                return a.text.length() + preeditString_.length();
+            default:
+                break;
+            }
+        }
+        return QWidget::inputMethodQuery(query);
     }
 
 private:
@@ -1335,6 +1499,8 @@ private:
     QColor currentColor_{"#ff3b30"};
     int currentStrokeWidth_ = 3;
     int selectedIndex_ = -1;
+    int editingTextIndex_ = -1;
+    QString preeditString_;
     bool moving_ = false;
     bool resizing_ = false;
     int resizeCorner_ = 0;
