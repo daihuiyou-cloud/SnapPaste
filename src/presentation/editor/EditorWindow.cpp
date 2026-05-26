@@ -501,35 +501,6 @@ protected:
                 return;
             }
         }
-
-        bool ok = false;
-        const auto text = QInputDialog::getMultiLineText(
-            static_cast<QWidget*>(parent()), "Text Input", "Enter text:", QString(), &ok);
-        if (!ok || text.isEmpty()) {
-            return;
-        }
-
-        const auto clickPos = toImage(event->pos());
-        QFont font("Segoe UI", fontSize_);
-        QFontMetrics fm(font);
-        const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, text);
-        QRect bounds(clickPos.x(), clickPos.y(), qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20));
-        if (bounds.right() > image_.width()) {
-            bounds.moveRight(image_.width() - 4);
-        }
-
-        undoStack_.push_back(annotations_);
-        redoStack_.clear();
-        Annotation ann;
-        ann.tool = AnnotationTool::Text;
-        ann.bounds = bounds;
-        ann.text = text;
-        ann.color = currentColor_;
-        ann.strokeWidth = 2;
-        ann.textOutline = textOutlineEnabled_;
-        annotations_.push_back(std::move(ann));
-        selectedIndex_ = annotations_.size() - 1;
-        markModified();
     }
 
     void mousePressEvent(QMouseEvent* event) override
@@ -628,8 +599,46 @@ protected:
             return;
         }
 
+        if (currentTool_ == AnnotationTool::Text) {
+            for (int i = annotations_.size() - 1; i >= 0; --i) {
+                if (annotations_.at(i).tool == AnnotationTool::Text && hitTestAnnotation(annotations_.at(i), pos)) {
+                    selectedIndex_ = i;
+                    moving_ = true;
+                    moveOffset_ = annotations_[i].bounds.topLeft() - pos;
+                    update();
+                    return;
+                }
+            }
+            bool ok = false;
+            const auto text = QInputDialog::getMultiLineText(
+                static_cast<QWidget*>(window()), "Text Input", "Enter text:", QString(), &ok);
+            if (!ok || text.isEmpty()) {
+                return;
+            }
+            QFont font("Segoe UI", fontSize_);
+            QFontMetrics fm(font);
+            const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, text);
+            QRect bounds(pos.x(), pos.y(), qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20));
+            if (bounds.right() > image_.width()) {
+                bounds.moveRight(image_.width() - 4);
+            }
+            pushUndo();
+            redoStack_.clear();
+            Annotation ann;
+            ann.tool = AnnotationTool::Text;
+            ann.bounds = bounds;
+            ann.text = text;
+            ann.color = currentColor_;
+            ann.strokeWidth = 2;
+            ann.textOutline = textOutlineEnabled_;
+            annotations_.push_back(std::move(ann));
+            selectedIndex_ = annotations_.size() - 1;
+            markModified();
+            return;
+        }
+
         if (currentTool_ != AnnotationTool::Select && currentTool_ != AnnotationTool::Eraser
-            && currentTool_ != AnnotationTool::Numbered && currentTool_ != AnnotationTool::Text) {
+            && currentTool_ != AnnotationTool::Numbered) {
             for (int i = annotations_.size() - 1; i >= 0; --i) {
                 if (hitTestAnnotation(annotations_.at(i), pos)) {
                     if (i != selectedIndex_) {
