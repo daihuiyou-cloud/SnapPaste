@@ -91,6 +91,21 @@ QIcon makeEraserIcon()
     return QIcon(pix);
 }
 
+QIcon makeCropIcon()
+{
+    QPixmap pix(20, 20);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(QColor("#bcbec6"), 2));
+    p.drawLine(3, 10, 3, 3);
+    p.drawLine(3, 3, 10, 3);
+    p.drawLine(17, 10, 17, 17);
+    p.drawLine(10, 17, 17, 17);
+    p.end();
+    return QIcon(pix);
+}
+
 QIcon makeNumberedIcon()
 {
     QPixmap pix(20, 20);
@@ -248,6 +263,42 @@ public:
         update();
     }
 
+    void applyCrop(QRect cropRect)
+    {
+        cropRect = cropRect.intersected(image_.rect());
+        if (cropRect.width() < 5 || cropRect.height() < 5) return;
+
+        image_ = image_.copy(cropRect);
+        annotations_.clear();
+        annotations_.squeeze();
+        selectedIndex_ = -1;
+        undoStack_.clear();
+        redoStack_.clear();
+        nextNumber_ = 1;
+        modified_ = true;
+
+        auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
+        if (scrollArea) {
+            auto vp = scrollArea->viewport()->size();
+            double fit = qMin(static_cast<double>(vp.width()) / image_.width(),
+                               static_cast<double>(vp.height()) / image_.height());
+            if (fit > 1.0) fit = 1.0;
+            zoomFactor_ = fit;
+        }
+
+        setMinimumSize(image_.size());
+        resize(image_.size());
+        updateWindowTitle();
+        update();
+
+        if (auto* ew = qobject_cast<EditorWindow*>(window())) {
+            ew->setWindowModified(true);
+            emit ew->imageEdited(image_);
+        }
+
+        setTool(AnnotationTool::Select);
+    }
+
     void clearModified() { modified_ = false; updateWindowTitle(); }
 
     bool isModified() const { return modified_; }
@@ -318,6 +369,7 @@ public:
         case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
         case AnnotationTool::Eraser:
         case AnnotationTool::Mosaic: setCursor(Qt::PointingHandCursor); break;
+        case AnnotationTool::Crop: setCursor(Qt::CrossCursor); break;
         default: setCursor(Qt::CrossCursor); break;
         }
         update();
@@ -722,7 +774,9 @@ protected:
             const int margin = currentStrokeWidth_ + 4;
             update(QRect(oldCurrent, current_).normalized().adjusted(-margin, -margin, margin, margin));
         } else if (draft_.tool == AnnotationTool::Mosaic) {
-            update(QRect(oldCurrent, current_).normalized().adjusted(-12, -12, 12, 12));
+            draft_.points.push_back(current_);
+            const int margin = currentStrokeWidth_ * 4 + 4;
+            update(QRect(oldCurrent, current_).normalized().adjusted(-margin, -margin, margin, margin));
         } else {
             update();
         }
@@ -751,10 +805,17 @@ protected:
         drawing_ = false;
         current_ = toImage(event->pos());
         draft_.bounds = QRect(start_, current_).normalized();
+        if (draft_.tool == AnnotationTool::Crop) {
+            if (draft_.bounds.width() > 5 && draft_.bounds.height() > 5) {
+                applyCrop(draft_.bounds);
+            }
+            update();
+            return;
+        }
         if (draft_.tool == AnnotationTool::Arrow) {
             draft_.points = {start_, current_};
         }
-        if (draft_.bounds.width() > 2 || draft_.bounds.height() > 2 || draft_.tool == AnnotationTool::Pen) {
+        if (draft_.bounds.width() > 2 || draft_.bounds.height() > 2 || draft_.tool == AnnotationTool::Pen || draft_.tool == AnnotationTool::Mosaic) {
             pushUndo();
             redoStack_.clear();
             annotations_.push_back(draft_);
@@ -865,6 +926,7 @@ protected:
         case Qt::Key_M: setTool(AnnotationTool::Mosaic); event->accept(); return;
         case Qt::Key_V: setTool(AnnotationTool::Select); event->accept(); return;
         case Qt::Key_X: setTool(AnnotationTool::Eraser); event->accept(); return;
+        case Qt::Key_C: setTool(AnnotationTool::Crop); event->accept(); return;
         case Qt::Key_Up:
         case Qt::Key_Down:
         case Qt::Key_Left:
@@ -908,7 +970,7 @@ protected:
                     "<b>Tools</b><br>"
                     "R - Rectangle<br>E - Ellipse<br>A - Arrow<br>P - Pen<br>"
                     "T - Text<br>H - Highlight<br>N - Numbered<br>M - Mosaic<br>"
-                    "V - Select<br>X - Eraser<br><br>"
+                    "V - Select<br>X - Eraser<br>C - Crop<br><br>"
                     "<b>Edit</b><br>"
                         "Ctrl+Z - Undo<br>Ctrl+Y - Redo<br>Ctrl+D - Duplicate annotation<br>"
                         "Ctrl+A - Select last annotation<br>"
@@ -1177,21 +1239,40 @@ private:
             break;
         }
         case AnnotationTool::Mosaic: {
-            const auto clipped = annotation.bounds.intersected(sourceImage.rect());
-            if (clipped.isEmpty()) {
-                break;
-            }
-            if (annotation.blurRadius > 0) {
-                auto region = sourceImage.copy(clipped);
-                painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+            if (!annotation.points.isEmpty()) {
+                const int blockSize = qMax(4, annotation.strokeWidth * 4);
+                for (const auto& pt : annotation.points) {
+                    QRect blockRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
+                    const auto clipped = blockRect.intersected(sourceImage.rect());
+                    if (clipped.isEmpty()) continue;
+                    if (annotation.blurRadius > 0) {
+                        auto region = sourceImage.copy(clipped);
+                        painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+                    } else {
+                        constexpr int kBlock = 8;
+                        const int bw = qMax(1, clipped.width() / kBlock);
+                        const int bh = qMax(1, clipped.height() / kBlock);
+                        auto region = sourceImage.copy(clipped);
+                        auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                                              .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                        painter->drawImage(clipped.topLeft(), pixelated);
+                    }
+                }
             } else {
-                constexpr int kBlockSize = 8;
-                const int bw = qMax(1, clipped.width() / kBlockSize);
-                const int bh = qMax(1, clipped.height() / kBlockSize);
-                auto region = sourceImage.copy(clipped);
-                auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                                      .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
-                painter->drawImage(clipped.topLeft(), pixelated);
+                const auto clipped = annotation.bounds.intersected(sourceImage.rect());
+                if (clipped.isEmpty()) break;
+                if (annotation.blurRadius > 0) {
+                    auto region = sourceImage.copy(clipped);
+                    painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+                } else {
+                    constexpr int kBlockSize = 8;
+                    const int bw = qMax(1, clipped.width() / kBlockSize);
+                    const int bh = qMax(1, clipped.height() / kBlockSize);
+                    auto region = sourceImage.copy(clipped);
+                    auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                                          .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                    painter->drawImage(clipped.topLeft(), pixelated);
+                }
             }
             break;
         }
@@ -1389,6 +1470,9 @@ void EditorWindow::createToolbar()
     auto* select = toolbar->addAction(makeSelectIcon(), "Select");
     select->setCheckable(true);
 
+    auto* crop = toolbar->addAction(makeCropIcon(), "Crop");
+    crop->setCheckable(true);
+
     toolbar->addSeparator();
 
     struct StrokePreset { QString label; int width; };
@@ -1511,20 +1595,21 @@ void EditorWindow::createToolbar()
     mosaic->setToolTip("Mosaic (M)");
     eraser->setToolTip("Eraser (X)");
     select->setToolTip("Select (V)");
+    crop->setToolTip("Crop (C)");
     copy->setToolTip("Copy");
     pinBtn->setToolTip("Pin image (F3)");
     save->setToolTip("Save (Ctrl+S)");
     saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
 
-    updateToolActions_ = [rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser](AnnotationTool tool) {
-        QAction* lookup[] = {rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser};
+    updateToolActions_ = [rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
+        QAction* lookup[] = {rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser, crop};
         const AnnotationTool tools[] = {AnnotationTool::Rectangle, AnnotationTool::Ellipse, AnnotationTool::Arrow,
             AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
-            AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser};
+            AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser, AnnotationTool::Crop};
         for (auto* action : lookup) {
             action->setChecked(false);
         }
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 11; ++i) {
             if (tools[i] == tool) {
                 lookup[i]->setChecked(true);
                 break;
@@ -1557,6 +1642,7 @@ void EditorWindow::createToolbar()
 
     connect(mosaic, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Mosaic); });
     connect(select, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Select); });
+    connect(crop, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Crop); });
     connect(eraser, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Eraser); });
     canvas_->setOnPickingColorChanged([eyedropper](bool picking) {
         eyedropper->setChecked(picking);

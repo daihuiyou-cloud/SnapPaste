@@ -27,7 +27,9 @@ void SettingsViewModel::load()
 }
 
 void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int themeIndex,
-                             Hotkey captureHotkey, Hotkey pasteHotkey, Hotkey hidePinsHotkey)
+                             Hotkey captureHotkey, Hotkey pasteHotkey, Hotkey hidePinsHotkey,
+                             QString ocrLanguage, bool autoSaveOnCapture,
+                             Hotkey repeatCaptureHotkey)
 {
     AppSettings newSettings;
     newSettings.saveDirectory = std::move(saveDirectory);
@@ -36,6 +38,9 @@ void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int the
     newSettings.captureHotkey = std::move(captureHotkey);
     newSettings.pasteHotkey = std::move(pasteHotkey);
     newSettings.hidePinsHotkey = std::move(hidePinsHotkey);
+    newSettings.ocrLanguage = std::move(ocrLanguage);
+    newSettings.autoSaveOnCapture = autoSaveOnCapture;
+    newSettings.repeatCaptureHotkey = std::move(repeatCaptureHotkey);
 
     const auto result = service_.save(newSettings);
     if (result.isError()) {

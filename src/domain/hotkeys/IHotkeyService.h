@@ -9,7 +9,8 @@ namespace snappaste {
 enum class HotkeyAction {
     Capture,
     Paste,
-    HideAllPins
+    HideAllPins,
+    RepeatCapture
 };
 
 class IHotkeyService {

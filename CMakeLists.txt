@@ -60,6 +60,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/viewmodels/HistoryViewModel.cpp
     src/presentation/viewmodels/PinViewModel.cpp
     src/presentation/viewmodels/SettingsViewModel.cpp
+    src/infrastructure/ocr/WindowsOcrService.cpp
+    src/presentation/ocr/OcrResultWindow.cpp
     src/presentation/pin_window/PinWindow.cpp
 )
 

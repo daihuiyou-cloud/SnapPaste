@@ -4,7 +4,9 @@
 
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QPushButton>
+#include <QVBoxLayout>
 
 #include <algorithm>
 
@@ -12,23 +14,42 @@ namespace snappaste {
 
 namespace {
 
-constexpr int kActionButtonSize = 36;
 constexpr int kActionIconSize = 18;
 constexpr int kActionBarMargin = 8;
 constexpr int kActionBarPadding = 6;
 constexpr int kActionBarSpacing = 5;
 
-QPushButton* createIconButton(IconName iconName, const QString& tooltip, QWidget* parent)
+struct ActionDef {
+    IconName icon;
+    QString tooltip;
+    QString label;
+};
+
+QPushButton* createActionButton(const ActionDef& def, QWidget* parent)
 {
-    auto* button = new QPushButton(parent);
-    button->setObjectName("CaptureActionButton");
-    button->setIcon(IconProvider::icon(iconName));
-    button->setIconSize(QSize(kActionIconSize, kActionIconSize));
-    button->setToolTip(tooltip);
-    button->setAccessibleName(tooltip);
-    button->setFocusPolicy(Qt::NoFocus);
-    button->setFixedSize(kActionButtonSize, kActionButtonSize);
-    return button;
+    auto* btn = new QPushButton(def.label, parent);
+    btn->setObjectName("CaptureActionButton");
+    btn->setIcon(IconProvider::icon(def.icon));
+    btn->setIconSize(QSize(kActionIconSize, kActionIconSize));
+    btn->setToolTip(def.tooltip);
+    btn->setAccessibleName(def.tooltip);
+    btn->setFocusPolicy(Qt::NoFocus);
+    btn->setCursor(Qt::PointingHandCursor);
+    btn->setFixedHeight(40);
+    btn->setStyleSheet(
+        "QPushButton#CaptureActionButton {"
+        " color: #f4fbff; font-size: 10px; padding: 2px 8px;"
+        " border: 1px solid rgba(255,255,255,20); border-radius: 4px;"
+        " background: rgba(255,255,255,12);"
+        "}"
+        "QPushButton#CaptureActionButton:hover {"
+        " background: rgba(47,191,159,40);"
+        " border-color: #2fbf9f;"
+        "}"
+        "QPushButton#CaptureActionButton:pressed {"
+        " background: rgba(47,191,159,80);"
+        "}");
+    return btn;
 }
 
 int clamped(int value, int minimum, int maximum)
@@ -48,30 +69,40 @@ CaptureActionBar::CaptureActionBar(QWidget* parent)
     setAttribute(Qt::WA_TranslucentBackground, false);
     setFocusPolicy(Qt::StrongFocus);
 
-    auto* copyButton = createIconButton(IconName::Copy, "Copy (Enter)", this);
-    auto* pinButton = createIconButton(IconName::Pin, "Pin (F3)", this);
-    auto* saveButton = createIconButton(IconName::Save, "Save (Ctrl+S)", this);
-    auto* editButton = createIconButton(IconName::Edit, "Edit (Space)", this);
-    auto* ocrButton = createIconButton(IconName::Text, "OCR (O)", this);
-    auto* closeButton = createIconButton(IconName::Close, "Cancel (Esc)", this);
+    const ActionDef actions[] = {
+        {IconName::Copy, "Copy (Enter)", "Copy"},
+        {IconName::Pin, "Pin (F3)", "Pin"},
+        {IconName::Save, "Save (Ctrl+S)", "Save"},
+        {IconName::Edit, "Edit (Space)", "Edit"},
+        {IconName::Text, "OCR (O)", "OCR"},
+        {IconName::Close, "Cancel (Esc)", "Cancel"}
+    };
 
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(kActionBarPadding, kActionBarPadding, kActionBarPadding, kActionBarPadding);
     layout->setSpacing(kActionBarSpacing);
-    layout->addWidget(copyButton);
-    layout->addWidget(pinButton);
-    layout->addWidget(saveButton);
-    layout->addWidget(editButton);
-    layout->addWidget(ocrButton);
-    layout->addWidget(closeButton);
+
+    auto* copyBtn = createActionButton(actions[0], this);
+    auto* pinBtn = createActionButton(actions[1], this);
+    auto* saveBtn = createActionButton(actions[2], this);
+    auto* editBtn = createActionButton(actions[3], this);
+    auto* ocrBtn = createActionButton(actions[4], this);
+    auto* closeBtn = createActionButton(actions[5], this);
+
+    layout->addWidget(copyBtn);
+    layout->addWidget(pinBtn);
+    layout->addWidget(saveBtn);
+    layout->addWidget(editBtn);
+    layout->addWidget(ocrBtn);
+    layout->addWidget(closeBtn);
     setLayout(layout);
 
-    connect(copyButton, &QPushButton::clicked, this, &CaptureActionBar::copyRequested);
-    connect(pinButton, &QPushButton::clicked, this, &CaptureActionBar::pinRequested);
-    connect(saveButton, &QPushButton::clicked, this, &CaptureActionBar::saveRequested);
-    connect(editButton, &QPushButton::clicked, this, &CaptureActionBar::editRequested);
-    connect(ocrButton, &QPushButton::clicked, this, &CaptureActionBar::ocrRequested);
-    connect(closeButton, &QPushButton::clicked, this, &CaptureActionBar::cancelRequested);
+    connect(copyBtn, &QPushButton::clicked, this, &CaptureActionBar::copyRequested);
+    connect(pinBtn, &QPushButton::clicked, this, &CaptureActionBar::pinRequested);
+    connect(saveBtn, &QPushButton::clicked, this, &CaptureActionBar::saveRequested);
+    connect(editBtn, &QPushButton::clicked, this, &CaptureActionBar::editRequested);
+    connect(ocrBtn, &QPushButton::clicked, this, &CaptureActionBar::ocrRequested);
+    connect(closeBtn, &QPushButton::clicked, this, &CaptureActionBar::cancelRequested);
 }
 
 void CaptureActionBar::showForRegion(const QRect& region, const QRect& availableGeometry)

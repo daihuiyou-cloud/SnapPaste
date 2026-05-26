@@ -69,6 +69,8 @@ Result<AppSettings> JsonSettingsRepository::load()
     settings.saveDirectory = object.value("saveDirectory").toString(settings.saveDirectory);
     settings.imageFormat = object.value("imageFormat").toString(settings.imageFormat).toLower();
     settings.themeMode = themeFromString(object.value("themeMode").toString("system"));
+    settings.ocrLanguage = object.value("ocrLanguage").toString();
+    settings.autoSaveOnCapture = object.value("autoSaveOnCapture").toBool(false);
 
     const auto hotkey = object.value("captureHotkey").toObject();
     settings.captureHotkey.ctrl = hotkey.value("ctrl").toBool(settings.captureHotkey.ctrl);
@@ -90,6 +92,12 @@ Result<AppSettings> JsonSettingsRepository::load()
     settings.hidePinsHotkey.alt = hidePinsHotkey.value("alt").toBool(settings.hidePinsHotkey.alt);
     settings.hidePinsHotkey.shift = hidePinsHotkey.value("shift").toBool(settings.hidePinsHotkey.shift);
     settings.hidePinsHotkey.key = hidePinsHotkey.value("key").toInt(settings.hidePinsHotkey.key);
+
+    const auto repeatCaptureHotkey = object.value("repeatCaptureHotkey").toObject();
+    settings.repeatCaptureHotkey.ctrl = repeatCaptureHotkey.value("ctrl").toBool(settings.repeatCaptureHotkey.ctrl);
+    settings.repeatCaptureHotkey.alt = repeatCaptureHotkey.value("alt").toBool(settings.repeatCaptureHotkey.alt);
+    settings.repeatCaptureHotkey.shift = repeatCaptureHotkey.value("shift").toBool(settings.repeatCaptureHotkey.shift);
+    settings.repeatCaptureHotkey.key = repeatCaptureHotkey.value("key").toInt(settings.repeatCaptureHotkey.key);
 
     if (shouldPersistMigratedSettings) {
         const auto saveResult = save(settings);
@@ -120,9 +128,12 @@ Result<void> JsonSettingsRepository::save(const AppSettings& settings)
     object["saveDirectory"] = settings.saveDirectory;
     object["imageFormat"] = settings.imageFormat;
     object["themeMode"] = themeToString(settings.themeMode);
+    object["ocrLanguage"] = settings.ocrLanguage;
+    object["autoSaveOnCapture"] = settings.autoSaveOnCapture;
     object["captureHotkey"] = hotkeyToJson(settings.captureHotkey);
     object["pasteHotkey"] = hotkeyToJson(settings.pasteHotkey);
     object["hidePinsHotkey"] = hotkeyToJson(settings.hidePinsHotkey);
+    object["repeatCaptureHotkey"] = hotkeyToJson(settings.repeatCaptureHotkey);
 
     {
         QFile file(tmpPath);
@@ -159,6 +170,7 @@ AppSettings JsonSettingsRepository::defaultSettingsInternal() const
     settings.captureHotkey = Hotkey{false, false, false, 0x70};
     settings.pasteHotkey = Hotkey{false, false, false, 0x72};
     settings.hidePinsHotkey = Hotkey{true, true, false, 'H'};
+    settings.repeatCaptureHotkey = Hotkey{false, false, false, 0x73};
     return settings;
 }
 

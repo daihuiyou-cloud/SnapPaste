@@ -65,7 +65,7 @@ Result<QImage> captureRectWithGdi(const QRect& region)
     bitmapInfo.bmiHeader.biBitCount = 32;
     bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-    const auto lines = GetDIBits(screenDc,
+    const auto lines = GetDIBits(memoryDc,
                                  bitmap,
                                  0,
                                  static_cast<UINT>(region.height()),

@@ -2,15 +2,21 @@
 
 #include "app/AppStartup.h"
 #include "infrastructure/logging/Logger.h"
+#include "infrastructure/ocr/WindowsOcrService.h"
+#include "presentation/ocr/OcrResultWindow.h"
+
+#include <climits>
 
 #include <QPointer>
 
 #include <QMessageBox>
 #include <QClipboard>
 #include <QCursor>
+#include <QDesktopServices>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QUrl>
 #include <QMetaObject>
 #include <QScreen>
 #include <QSignalBlocker>
@@ -20,19 +26,6 @@
 #include <algorithm>
 #include <cstring>
 
-#if defined(_WIN32) && __has_include(<winrt/Windows.Media.Ocr.h>)
-#define SNAPPASTE_HAS_WINRT_OCR 1
-#include <unknwn.h>
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Foundation.Collections.h>
-#include <winrt/Windows.Graphics.Imaging.h>
-#include <winrt/Windows.Media.Ocr.h>
-#include <winrt/base.h>
-#if defined(_MSC_VER)
-#pragma comment(lib, "windowsapp")
-#endif
-#endif
-
 namespace snappaste {
 
 namespace {
@@ -41,76 +34,6 @@ constexpr int kCaptureAfterHideDelayMs = 120;
 constexpr int kPinBaseOffset = 16;
 constexpr int kPinCascadeOffset = 24;
 constexpr int kPinCascadeSlots = 8;
-
-struct OcrOutcome {
-    bool ok = false;
-    QString text;
-    QString message;
-};
-
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByteAccess : ::IUnknown {
-    virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
-};
-#endif
-
-OcrOutcome recognizeTextFromImage(const QImage& source)
-{
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-    if (source.isNull()) {
-        return {false, {}, "No image is available for OCR."};
-    }
-
-    try {
-        const auto engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromUserProfileLanguages();
-        if (engine == nullptr) {
-            return {false, {}, "OCR is not available for the current Windows language profile."};
-        }
-
-        const auto image = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-        winrt::Windows::Graphics::Imaging::SoftwareBitmap bitmap(
-            winrt::Windows::Graphics::Imaging::BitmapPixelFormat::Bgra8,
-            image.width(),
-            image.height(),
-            winrt::Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied);
-
-        {
-            const auto buffer = bitmap.LockBuffer(winrt::Windows::Graphics::Imaging::BitmapBufferAccessMode::Write);
-            const auto reference = buffer.CreateReference();
-            auto byteAccess = reference.as<IMemoryBufferByteAccess>();
-            uint8_t* bytes = nullptr;
-            uint32_t capacity = 0;
-            winrt::check_hresult(byteAccess->GetBuffer(&bytes, &capacity));
-
-            const auto plane = buffer.GetPlaneDescription(0);
-            const auto rowBytes = image.width() * 4;
-            for (int y = 0; y < image.height(); ++y) {
-                const auto targetOffset = plane.StartIndex + (y * plane.Stride);
-                if (targetOffset + rowBytes > static_cast<int>(capacity)) {
-                    break;
-                }
-                std::memcpy(bytes + targetOffset, image.constScanLine(y), std::min(rowBytes, image.bytesPerLine()));
-            }
-        }
-
-        const auto result = engine.RecognizeAsync(bitmap).get();
-        QStringList lines;
-        for (const auto& line : result.Lines()) {
-            lines << QString::fromWCharArray(line.Text().c_str());
-        }
-        const auto text = lines.join('\n').trimmed();
-        if (text.isEmpty()) {
-            return {false, {}, "No text was recognized in the selected region."};
-        }
-        return {true, text, {}};
-    } catch (...) {
-        return {false, {}, "OCR failed while processing the selected region."};
-    }
-#else
-    Q_UNUSED(source)
-    return {false, {}, "OCR is not available in this build."};
-#endif
-}
 
 } // namespace
 
@@ -127,25 +50,17 @@ int Application::run()
 {
     Logger::install();
     applyCurrentTheme();
-    connectCoreSignals();
-
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-    try {
-        winrt::init_apartment(winrt::apartment_type::single_threaded);
-    } catch (...) {
-        Logger::warning("Failed to initialize WinRT apartment for OCR.");
+    ocrService_ = std::make_unique<WindowsOcrService>();
+    if (cachedSettings_) {
+        ocrService_->setLanguage(cachedSettings_->ocrLanguage);
     }
-#endif
+    connectCoreSignals();
 
     trayController_.show();
     registerHotkey();
     context_.pinViewModel().restore();
 
     const auto exitCode = qtApplication_.exec();
-
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-    winrt::uninit_apartment();
-#endif
 
     return exitCode;
 }
@@ -172,15 +87,22 @@ void Application::connectCoreSignals()
     context_.hotkeyService().setActionCallback(HotkeyAction::HideAllPins, [guard] {
         if (guard) QMetaObject::invokeMethod(guard, [guard] { if (guard) guard->hideAllPins(); }, Qt::QueuedConnection);
     });
+    context_.hotkeyService().setActionCallback(HotkeyAction::RepeatCapture, [guard] {
+        if (guard) QMetaObject::invokeMethod(guard, [guard] { if (guard) guard->repeatLastCapture(); }, Qt::QueuedConnection);
+    });
 
     connect(&context_.captureViewModel(), &CaptureViewModel::errorOccurred, this, [this](const QString& message) {
         QMessageBox::warning(mainWindow_.get(), "SnapPaste", message);
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::copied, this, [this] {
-        showStatus("Screenshot copied. Press F3 to pin.");
+        showStatus("Screenshot copied. Press F3 to pin.", [this] {
+            showMainWindow();
+        });
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::saved, this, [this](const QString& filePath) {
-        showStatus("Saved " + QFileInfo(filePath).fileName() + ". Press F3 to pin.");
+        showStatus("Saved " + QFileInfo(filePath).fileName() + " \u2192 Click to open", [filePath] {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+        });
     });
     connect(&context_.pinViewModel(), &PinViewModel::pinCreated, this, [this](const PinnedItem& item) {
         if (!item.image.isNull()) {
@@ -204,6 +126,9 @@ void Application::connectCoreSignals()
         invalidateSettingsCache();
         applyCurrentTheme();
         registerHotkey();
+        if (ocrService_ && cachedSettings_) {
+            ocrService_->setLanguage(cachedSettings_->ocrLanguage);
+        }
     });
 }
 
@@ -326,24 +251,43 @@ void Application::editRegion(const QRect& region)
 void Application::ocrRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
-        const auto outcome = recognizeTextFromImage(image);
+        const auto outcome = ocrService_->recognizeText(image);
         if (!outcome.ok) {
             showStatus(outcome.message);
             return;
         }
 
         QApplication::clipboard()->setText(outcome.text);
-        showStatus("Recognized text copied to the clipboard.");
+        auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
+        connect(win, &OcrResultWindow::pasteRequested, this, &Application::pasteFromClipboard);
+        showStatus(QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()), [win] {
+            win->show();
+            win->activateWindow();
+            win->raise();
+        });
     });
 }
 
-void Application::showStatus(const QString& message)
+void Application::showStatus(const QString& message, std::function<void()> onClick)
 {
-    toastNotifier_.showMessage(message);
+    toastNotifier_.showMessage(message, QPoint(), std::move(onClick));
+}
+
+void Application::repeatLastCapture()
+{
+    if (lastCaptureRegion_.has_value()) {
+        captureAfterOverlayHidden(lastCaptureRegion_.value(), [this](const QImage&) {
+            const QSignalBlocker blocker(QApplication::clipboard());
+            context_.captureViewModel().copyCurrentImageToClipboard();
+        });
+    } else {
+        startCapture();
+    }
 }
 
 void Application::captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady)
 {
+    lastCaptureRegion_ = region;
     overlay().hide();
     QPointer<Application> guard(this);
     QTimer::singleShot(kCaptureAfterHideDelayMs, this, [guard, region, onReady = std::move(onReady)]() mutable {
@@ -354,6 +298,9 @@ void Application::captureAfterOverlayHidden(const QRect& region, std::function<v
                 guard->lastPinnableImage_ = image;
                 guard->lastPinnableSource_ = PinSource::Screenshot;
                 guard->preferLastPinnableImage_ = true;
+                if (guard->cachedSettings_ && guard->cachedSettings_->autoSaveOnCapture) {
+                    guard->context_.captureViewModel().saveImage(image, "capture");
+                }
             }
             if (onReady) {
                 onReady(image);
@@ -401,6 +348,11 @@ void Application::registerHotkey()
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
         const auto message = "Failed to register hide-pins hotkey: " + settings.hidePinsHotkey.toDisplayString();
+        Logger::warning(message);
+        trayController_.showMessage("SnapPaste", message);
+    }
+    if (!context_.hotkeyService().registerHotkey(HotkeyAction::RepeatCapture, settings.repeatCaptureHotkey)) {
+        const auto message = "Failed to register repeat-capture hotkey: " + settings.repeatCaptureHotkey.toDisplayString();
         Logger::warning(message);
         trayController_.showMessage("SnapPaste", message);
     }
@@ -471,9 +423,9 @@ void Application::openPinWindow(PinnedItem item)
     }
 }
 
-QPoint Application::cascadedPinPosition(const QPoint& basePosition) const
+QPoint Application::cascadedPinPosition(const QPoint& basePosition)
 {
-    const auto slot = static_cast<int>(pinWindows_.size() % kPinCascadeSlots);
+    const auto slot = (nextPinSlot_++) % kPinCascadeSlots;
     const auto offset = slot * kPinCascadeOffset;
     return basePosition + QPoint(offset, offset);
 }

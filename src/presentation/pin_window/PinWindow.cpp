@@ -15,6 +15,7 @@
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QEasingCurve>
@@ -41,6 +42,7 @@ constexpr int kToolbarBtnPad = 4;
 constexpr int kToolbarButtonCount = 7;
 constexpr int kMinPinSize = 40;
 constexpr int kThumbnailMaxSize = 200;
+constexpr int kOverflowBtnSize = 18;
 
 } // namespace
 
@@ -416,6 +418,26 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
             return;
         }
         break;
+    case Qt::Key_F1:
+    case Qt::Key_Slash:
+        QMessageBox::information(static_cast<QWidget*>(window()), "Keyboard Shortcuts",
+            "<b>Pin Window Controls</b><br><br>"
+            "<b>Transform</b><br>"
+            "R - Rotate 90&deg;<br>Shift+R - Rotate -90&deg;<br>"
+            "H - Flip horizontally<br>V - Flip vertically<br>"
+            "Ctrl+Z - Undo transform<br><br>"
+            "<b>View</b><br>"
+            "Ctrl+0 - Actual size (1:1)<br>Ctrl+9 - Fit to screen<br>"
+            "Ctrl+Scroll - Change opacity<br>Scroll - Zoom<br>"
+            "Shift+Double-click - Toggle thumbnail mode<br><br>"
+            "<b>Actions</b><br>"
+            "Ctrl+C - Copy image<br>Ctrl+S - Save<br>"
+            "Ctrl+Shift+S - Save As...<br>"
+            "Ctrl+Drag - Drag image out<br>"
+            "A - Toggle always on top<br>T - Toggle click through<br>"
+            "Escape - Close pin window");
+        event->accept();
+        return;
     case Qt::Key_9:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             auto imgSize = item_.state.size;
@@ -595,24 +617,29 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    if ((hovered_ || controlsVisible_) && toolbarFits()) {
-        const auto btns = toolbarButtonRects();
-        for (int i = 0; i < btns.size(); ++i) {
-            if (btns[i].contains(pos)) {
-                switch (i) {
-                case 0:
-                    requestClose();
-                    break;
-                case 1: rotateBy(-90); break;
-                case 2: rotateBy(90); break;
-                case 3: flipH(); break;
-                case 4: flipV(); break;
-                case 5: toggleClickThrough(); break;
-                case 6: toggleAlwaysOnTop(); break;
+    if (hovered_ || controlsVisible_) {
+        if (toolbarFits()) {
+            const auto btns = toolbarButtonRects();
+            for (int i = 0; i < btns.size(); ++i) {
+                if (btns[i].contains(pos)) {
+                    switch (i) {
+                    case 0: requestClose(); break;
+                    case 1: rotateBy(-90); break;
+                    case 2: rotateBy(90); break;
+                    case 3: flipH(); break;
+                    case 4: flipV(); break;
+                    case 5: toggleClickThrough(); break;
+                    case 6: toggleAlwaysOnTop(); break;
+                    }
+                    event->accept();
+                    return;
                 }
-                event->accept();
-                return;
             }
+        } else if (QRect(width() - kOverflowBtnSize - 4, height() - kOverflowBtnSize - 4,
+                         kOverflowBtnSize, kOverflowBtnSize).contains(pos)) {
+            showOverflowMenu(event->globalPos());
+            event->accept();
+            return;
         }
     }
 
@@ -685,6 +712,15 @@ void PinWindow::paintEvent(QPaintEvent* event)
                 const auto iconTopLeft = btns[i].center() - QPoint(kToolbarIconSize / 2, kToolbarIconSize / 2);
                 painter.drawPixmap(iconTopLeft, pixmap);
             }
+        } else {
+            const QRect ob(width() - kOverflowBtnSize - 4, height() - kOverflowBtnSize - 4,
+                           kOverflowBtnSize, kOverflowBtnSize);
+            painter.setBrush(QColor(20, 26, 33, 200));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(ob, 3, 3);
+            painter.setPen(QColor("#bcbec6"));
+            painter.setFont(QFont("Segoe UI", 10, QFont::Bold));
+            painter.drawText(ob, Qt::AlignCenter, "\u22EF");
         }
     }
 }
@@ -733,6 +769,48 @@ void PinWindow::wheelEvent(QWheelEvent* event)
         emitStateChanged();
     }
     event->accept();
+}
+
+void PinWindow::showOverflowMenu(const QPoint& pos)
+{
+    QMenu menu(this);
+    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), "Copy\tCtrl+C");
+    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), "Save\tCtrl+S");
+    menu.addSeparator();
+    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), "Rotate Left");
+    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), "Rotate Right");
+    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), "Flip Horizontal");
+    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), "Flip Vertical");
+    menu.addSeparator();
+    auto* alwaysOnTopAction = menu.addAction("Always on Top\tA");
+    alwaysOnTopAction->setCheckable(true);
+    alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
+    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), "Click Through");
+    clickThroughAction->setCheckable(true);
+    clickThroughAction->setChecked(item_.state.options.clickThrough);
+    menu.addSeparator();
+    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), "Close\tEsc");
+
+    const auto* action = menu.exec(pos);
+    if (action == copyAction) {
+        emit copyRequested(renderedImage());
+    } else if (action == saveAction) {
+        emit saveRequested(renderedImage());
+    } else if (action == rotateLeftAction) {
+        rotateBy(-90);
+    } else if (action == rotateRightAction) {
+        rotateBy(90);
+    } else if (action == flipHAction) {
+        flipH();
+    } else if (action == flipVAction) {
+        flipV();
+    } else if (action == alwaysOnTopAction) {
+        toggleAlwaysOnTop();
+    } else if (action == clickThroughAction) {
+        toggleClickThrough();
+    } else if (action == closeAction) {
+        requestClose();
+    }
 }
 
 void PinWindow::applyState()

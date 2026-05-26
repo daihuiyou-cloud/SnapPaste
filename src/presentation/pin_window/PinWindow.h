@@ -54,6 +54,7 @@ private:
     void applyWindowFlags();
     void emitStateChanged();
     void requestClose();
+    void showOverflowMenu(const QPoint& pos);
     void pushUndoState();
     void undoTransform();
     void rotateBy(int degrees);

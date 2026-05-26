@@ -2,8 +2,10 @@
 
 #include "presentation/viewmodels/HistoryViewModel.h"
 
+#include <QSortFilterProxyModel>
 #include <QWidget>
 
+class QLineEdit;
 class QListView;
 
 namespace snappaste {
@@ -20,6 +22,8 @@ signals:
 private:
     HistoryViewModel& viewModel_;
     QListView* listView_ = nullptr;
+    QLineEdit* searchBox_ = nullptr;
+    QSortFilterProxyModel* proxyModel_ = nullptr;
 };
 
 } // namespace snappaste

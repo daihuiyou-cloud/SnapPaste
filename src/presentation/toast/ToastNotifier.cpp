@@ -46,11 +46,13 @@ ToastNotifier::~ToastNotifier()
     delete toast_;
 }
 
-void ToastNotifier::showMessage(const QString& message, const QPoint& referencePosition)
+void ToastNotifier::showMessage(const QString& message, const QPoint& referencePosition,
+                                std::function<void()> onClick)
 {
     ensureToast();
     label_->setText(message);
     positionToast(referencePosition.isNull() ? QCursor::pos() : referencePosition);
+    onClick_ = std::move(onClick);
 
     fadeAnimation_->stop();
     toast_->setWindowOpacity(0.0);
@@ -74,6 +76,19 @@ void ToastNotifier::hide()
     }
 }
 
+bool ToastNotifier::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == toast_ && event->type() == QEvent::MouseButtonRelease) {
+        hide();
+        if (onClick_) {
+            onClick_();
+        }
+        emit clicked();
+        return true;
+    }
+    return QObject::eventFilter(obj, event);
+}
+
 void ToastNotifier::ensureToast()
 {
     if (toast_ != nullptr) {
@@ -87,7 +102,7 @@ void ToastNotifier::ensureToast()
                            | Qt::WindowDoesNotAcceptFocus);
     toast_->setAttribute(Qt::WA_TranslucentBackground);
     toast_->setAttribute(Qt::WA_ShowWithoutActivating);
-    toast_->setAttribute(Qt::WA_TransparentForMouseEvents);
+    toast_->installEventFilter(this);
 
     label_ = new QLabel(toast_);
     label_->setObjectName("ToastLabel");

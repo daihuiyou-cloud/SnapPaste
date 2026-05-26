@@ -1145,6 +1145,10 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
             break;
         }
     }
+    if (rect.left() < kOverlayMargin) rect.moveLeft(kOverlayMargin);
+    if (rect.top() < kOverlayMargin) rect.moveTop(kOverlayMargin);
+    if (rect.right() > width() - kOverlayMargin) rect.moveRight(width() - kOverlayMargin);
+    if (rect.bottom() > height() - kOverlayMargin) rect.moveBottom(height() - kOverlayMargin);
     rect = rect.intersected(QRect(kOverlayMargin, kOverlayMargin,
                                   width() - 2 * kOverlayMargin, height() - 2 * kOverlayMargin));
     if (rect.isEmpty()) {

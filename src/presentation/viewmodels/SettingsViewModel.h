@@ -19,7 +19,9 @@ public:
 public slots:
     void load();
     void save(QString saveDirectory, QString imageFormat, int themeIndex,
-              Hotkey captureHotkey = {}, Hotkey pasteHotkey = {}, Hotkey hidePinsHotkey = {});
+              Hotkey captureHotkey = {}, Hotkey pasteHotkey = {}, Hotkey hidePinsHotkey = {},
+              QString ocrLanguage = {}, bool autoSaveOnCapture = false,
+              Hotkey repeatCaptureHotkey = {});
     void restoreDefaults();
 
 signals:

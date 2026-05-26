@@ -4,6 +4,7 @@
 
 #include <QWidget>
 
+class QCheckBox;
 class QComboBox;
 class QLineEdit;
 
@@ -24,9 +25,12 @@ private:
     QLineEdit* saveDirectoryEdit_ = nullptr;
     QComboBox* imageFormatCombo_ = nullptr;
     QComboBox* themeCombo_ = nullptr;
+    QComboBox* ocrLanguageCombo_ = nullptr;
+    QCheckBox* autoSaveCheckbox_ = nullptr;
     HotkeyInput* captureHotkeyInput_ = nullptr;
     HotkeyInput* pasteHotkeyInput_ = nullptr;
     HotkeyInput* hidePinsHotkeyInput_ = nullptr;
+    HotkeyInput* repeatCaptureHotkeyInput_ = nullptr;
 };
 
 } // namespace snappaste

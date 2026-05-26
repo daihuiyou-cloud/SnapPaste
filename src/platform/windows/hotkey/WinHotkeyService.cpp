@@ -12,6 +12,7 @@ namespace {
 constexpr int kCaptureHotkeyId = 1001;
 constexpr int kPasteHotkeyId = 1002;
 constexpr int kHidePinsHotkeyId = 1003;
+constexpr int kRepeatCaptureHotkeyId = 1004;
 }
 
 WinHotkeyService::WinHotkeyService()
@@ -118,6 +119,8 @@ int WinHotkeyService::idFor(HotkeyAction action)
         return kPasteHotkeyId;
     case HotkeyAction::HideAllPins:
         return kHidePinsHotkeyId;
+    case HotkeyAction::RepeatCapture:
+        return kRepeatCaptureHotkeyId;
     case HotkeyAction::Capture:
     default:
         return kCaptureHotkeyId;
@@ -131,6 +134,8 @@ HotkeyAction WinHotkeyService::actionForId(int id)
         return HotkeyAction::Paste;
     case kHidePinsHotkeyId:
         return HotkeyAction::HideAllPins;
+    case kRepeatCaptureHotkeyId:
+        return HotkeyAction::RepeatCapture;
     case kCaptureHotkeyId:
         return HotkeyAction::Capture;
     default:

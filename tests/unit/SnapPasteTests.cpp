@@ -44,6 +44,11 @@ public:
         return Result<void>::success();
     }
 
+    AppSettings defaultSettings() override
+    {
+        return {};
+    }
+
     AppSettings settings;
     bool saved = false;
 };

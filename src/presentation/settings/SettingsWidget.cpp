@@ -1,5 +1,6 @@
 #include "presentation/settings/SettingsWidget.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFocusEvent>
@@ -10,6 +11,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QTimer>
 #include <QToolTip>
 #include <QVBoxLayout>
 
@@ -24,6 +26,9 @@ public:
         setMinimumWidth(140);
         setCursor(Qt::PointingHandCursor);
         updateStyle();
+        timer_.setSingleShot(true);
+        timer_.setInterval(10000);
+        connect(&timer_, &QTimer::timeout, this, &HotkeyInput::cancelRecording);
     }
 
     Hotkey hotkey() const { return hotkey_; }
@@ -32,6 +37,7 @@ public:
     {
         hotkey_ = hk;
         recording_ = false;
+        timer_.stop();
         setText(hotkey_.toDisplayString());
         updateStyle();
     }
@@ -42,9 +48,11 @@ protected:
         recording_ = !recording_;
         setText(recording_ ? "Press shortcut..." : hotkey_.toDisplayString());
         if (recording_) {
+            timer_.start();
             grabKeyboard();
             setFocus();
         } else {
+            timer_.stop();
             releaseKeyboard();
         }
         updateStyle();
@@ -76,6 +84,7 @@ protected:
         hotkey_.key = nativeVk > 0 ? nativeVk : key;
 
         recording_ = false;
+        timer_.stop();
         releaseKeyboard();
         setText(hotkey_.toDisplayString());
         updateStyle();
@@ -93,6 +102,7 @@ private:
     void cancelRecording()
     {
         recording_ = false;
+        timer_.stop();
         releaseKeyboard();
         setText(hotkey_.toDisplayString());
         updateStyle();
@@ -112,6 +122,7 @@ private:
         }
     }
 
+    QTimer timer_;
     Hotkey hotkey_;
     bool recording_ = false;
 };
@@ -122,9 +133,12 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     , saveDirectoryEdit_(new QLineEdit(this))
     , imageFormatCombo_(new QComboBox(this))
     , themeCombo_(new QComboBox(this))
+    , ocrLanguageCombo_(new QComboBox(this))
+    , autoSaveCheckbox_(new QCheckBox("Auto-save on capture", this))
     , captureHotkeyInput_(new HotkeyInput(this))
     , pasteHotkeyInput_(new HotkeyInput(this))
     , hidePinsHotkeyInput_(new HotkeyInput(this))
+    , repeatCaptureHotkeyInput_(new HotkeyInput(this))
 {
     auto* browseButton = new QPushButton("Browse", this);
 
@@ -134,6 +148,37 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     imageFormatCombo_->addItems({"png", "jpg"});
     themeCombo_->addItems({"System", "Light", "Dark"});
 
+    struct LangEntry { const char* label; const char* tag; };
+    const LangEntry kLanguages[] = {
+        {"Auto (System Default)", ""},
+        {"English", "en"},
+        {"Chinese (Simplified)", "zh-Hans"},
+        {"Chinese (Traditional)", "zh-Hant"},
+        {"Japanese", "ja"},
+        {"Korean", "ko"},
+        {"French", "fr"},
+        {"German", "de"},
+        {"Spanish", "es"},
+        {"Italian", "it"},
+        {"Portuguese (Brazil)", "pt-BR"},
+        {"Russian", "ru"},
+        {"Arabic", "ar"},
+        {"Dutch", "nl"},
+        {"Polish", "pl"},
+        {"Swedish", "sv"},
+        {"Turkish", "tr"},
+        {"Czech", "cs"},
+        {"Danish", "da"},
+        {"Finnish", "fi"},
+        {"Greek", "el"},
+        {"Hungarian", "hu"},
+        {"Norwegian", "nb"},
+        {"Thai", "th"},
+    };
+    for (const auto& lang : kLanguages) {
+        ocrLanguageCombo_->addItem(QLatin1String(lang.label), QLatin1String(lang.tag));
+    }
+
     auto* pathLayout = new QHBoxLayout();
     pathLayout->addWidget(saveDirectoryEdit_);
     pathLayout->addWidget(browseButton);
@@ -142,9 +187,12 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     form->addRow("Save directory", pathLayout);
     form->addRow("Image format", imageFormatCombo_);
     form->addRow("Theme", themeCombo_);
+    form->addRow("OCR language", ocrLanguageCombo_);
+    form->addRow("", autoSaveCheckbox_);
     form->addRow("Capture hotkey", captureHotkeyInput_);
     form->addRow("Paste hotkey", pasteHotkeyInput_);
     form->addRow("Hide pins hotkey", hidePinsHotkeyInput_);
+    form->addRow("Repeat capture hotkey", repeatCaptureHotkeyInput_);
 
     auto* layout = new QVBoxLayout(this);
     layout->addLayout(form);
@@ -168,7 +216,10 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                         themeCombo_->currentIndex(),
                         captureHotkeyInput_->hotkey(),
                         pasteHotkeyInput_->hotkey(),
-                        hidePinsHotkeyInput_->hotkey());
+                        hidePinsHotkeyInput_->hotkey(),
+                        ocrLanguageCombo_->currentData().toString(),
+                        autoSaveCheckbox_->isChecked(),
+                        repeatCaptureHotkeyInput_->hotkey());
     });
     connect(restoreButton, &QPushButton::clicked, this, [this] {
         auto ret = QMessageBox::question(this, "Restore Defaults",
@@ -183,9 +234,13 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                 saveDirectoryEdit_->setText(settings.saveDirectory);
                 imageFormatCombo_->setCurrentText(settings.imageFormat);
                 themeCombo_->setCurrentIndex(themeIndex(settings.themeMode));
+                int langIdx = ocrLanguageCombo_->findData(settings.ocrLanguage);
+                if (langIdx >= 0) ocrLanguageCombo_->setCurrentIndex(langIdx);
+                autoSaveCheckbox_->setChecked(settings.autoSaveOnCapture);
                 captureHotkeyInput_->setHotkey(settings.captureHotkey);
                 pasteHotkeyInput_->setHotkey(settings.pasteHotkey);
                 hidePinsHotkeyInput_->setHotkey(settings.hidePinsHotkey);
+                repeatCaptureHotkeyInput_->setHotkey(settings.repeatCaptureHotkey);
             });
     connect(&viewModel_, &SettingsViewModel::saved, this, [this, saveButton] {
         QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, 0)),

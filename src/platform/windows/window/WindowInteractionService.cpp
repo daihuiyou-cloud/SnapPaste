@@ -21,6 +21,7 @@ void WindowInteractionService::setClickThrough(QWidget* widget, bool enabled) co
         style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED);
     }
     SetWindowLong(hwnd, GWL_EXSTYLE, style);
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 #else
     Q_UNUSED(enabled)
 #endif

@@ -8,6 +8,7 @@
 #include "presentation/toast/ToastNotifier.h"
 #include "presentation/tray/TrayController.h"
 
+#include "domain/ocr/IOcrService.h"
 #include "shared/types/AppSettings.h"
 
 #include <QApplication>
@@ -31,6 +32,7 @@ private:
     void connectCoreSignals();
     void showMainWindow();
     void startCapture();
+    void repeatLastCapture();
     void openFile();
     void pasteFromClipboard();
     void hideAllPins();
@@ -40,14 +42,14 @@ private:
     void saveRegion(const QRect& region);
     void editRegion(const QRect& region);
     void ocrRegion(const QRect& region);
-    void showStatus(const QString& message);
+    void showStatus(const QString& message, std::function<void()> onClick = {});
     void captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady);
     void ensureSettingsCached();
     void invalidateSettingsCache();
     void registerHotkey();
     void applyCurrentTheme();
     void openPinWindow(PinnedItem item);
-    QPoint cascadedPinPosition(const QPoint& basePosition) const;
+    QPoint cascadedPinPosition(const QPoint& basePosition);
     QPoint pinnedPositionFor(const QSize& imageSize,
                              const QPoint& preferredPosition,
                              const std::optional<QRect>& avoidRegion) const;
@@ -68,6 +70,9 @@ private:
     QImage lastPinnableImage_;
     PinSource lastPinnableSource_ = PinSource::Screenshot;
     bool preferLastPinnableImage_ = false;
+    std::optional<QRect> lastCaptureRegion_;
+    int nextPinSlot_ = 0;
+    std::unique_ptr<IOcrService> ocrService_;
 };
 
 } // namespace snappaste

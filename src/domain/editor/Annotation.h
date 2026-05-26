@@ -18,7 +18,8 @@ enum class AnnotationTool {
     Ellipse,
     Highlight,
     Eraser,
-    Numbered
+    Numbered,
+    Crop
 };
 
 constexpr int kDefaultNumberedSize = 28;

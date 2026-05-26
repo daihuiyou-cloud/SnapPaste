@@ -19,6 +19,9 @@ struct AppSettings final {
     Hotkey captureHotkey;
     Hotkey pasteHotkey;
     Hotkey hidePinsHotkey;
+    QString ocrLanguage;
+    bool autoSaveOnCapture = false;
+    Hotkey repeatCaptureHotkey;
 };
 
 } // namespace snappaste
