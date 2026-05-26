@@ -17,8 +17,11 @@ enum class AnnotationTool {
     Mosaic,
     Ellipse,
     Highlight,
-    Eraser
+    Eraser,
+    Numbered
 };
+
+constexpr int kDefaultNumberedSize = 28;
 
 struct Annotation final {
     AnnotationTool tool = AnnotationTool::Rectangle;
@@ -28,6 +31,8 @@ struct Annotation final {
     QColor color = QColor("#ff3b30");
     int strokeWidth = 3;
     int blurRadius = 0; // 0=pixel-block mosaic, >0=gaussian blur radius
+    int number = 0;
+    bool textOutline = false;
 };
 
 } // namespace snappaste

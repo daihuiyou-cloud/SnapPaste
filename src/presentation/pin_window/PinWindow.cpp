@@ -5,6 +5,8 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
+#include <QDrag>
+#include <QMimeData>
 #include <QContextMenuEvent>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -32,6 +34,7 @@ constexpr int kToolbarIconSize = 14;
 constexpr int kToolbarBtnPad = 4;
 constexpr int kToolbarButtonCount = 7;
 constexpr int kMinPinSize = 40;
+constexpr int kThumbnailMaxSize = 200;
 
 } // namespace
 
@@ -351,6 +354,28 @@ void PinWindow::leaveEvent(QEvent* event)
 
 void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 {
+    if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+        thumbnailMode_ = !thumbnailMode_;
+        if (thumbnailMode_) {
+            fullScale_ = item_.state.transform.scale;
+            fullPosition_ = item_.state.position;
+            const auto imgSize = renderedImage().size();
+            const auto maxDim = std::max(imgSize.width(), imgSize.height());
+            if (maxDim > 0) {
+                setScale(static_cast<double>(kThumbnailMaxSize) / maxDim);
+            }
+        } else {
+            item_.state.position = fullPosition_;
+            item_.state.transform.scale = fullScale_;
+            item_.state = normalizedState(item_.state);
+            resize(renderedImage().size() * item_.state.transform.scale);
+            move(item_.state.position);
+            update();
+            emitStateChanged();
+        }
+        event->accept();
+        return;
+    }
     controlsVisible_ = !controlsVisible_;
     update();
     event->accept();
@@ -370,6 +395,22 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
         case EdgeNone:      setCursor(Qt::ArrowCursor); break;
         }
+    }
+
+    if (dragDropping_) {
+        const auto dist = (event->pos() - dragOffset_).manhattanLength();
+        if (dist > 5) {
+            dragDropping_ = false;
+            QDrag drag(this);
+            auto* mimeData = new QMimeData();
+            mimeData->setImageData(QVariant(renderedImage()));
+            drag.setMimeData(mimeData);
+            drag.setPixmap(QPixmap::fromImage(
+                renderedImage().scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+            drag.exec(Qt::CopyAction);
+        }
+        event->accept();
+        return;
     }
 
     if (resizing_) {
@@ -399,6 +440,13 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
     }
 
     const auto pos = event->pos();
+
+    if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        dragDropping_ = true;
+        dragOffset_ = pos;
+        event->accept();
+        return;
+    }
 
     if ((hovered_ || controlsVisible_) && toolbarFits()) {
         const auto btns = toolbarButtonRects();
@@ -438,6 +486,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
 void PinWindow::mouseReleaseEvent(QMouseEvent* event)
 {
+    dragDropping_ = false;
     dragging_ = false;
     resizing_ = false;
     setCursor(Qt::ArrowCursor);
@@ -452,6 +501,12 @@ void PinWindow::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.drawImage(rect(), renderedImage());
+
+    if (thumbnailMode_) {
+        painter.setPen(QColor("#31c7a4"));
+        painter.setFont(QFont("Segoe UI", 9, QFont::Bold));
+        painter.drawText(rect().adjusted(8, 8, -8, -8), Qt::AlignTop | Qt::AlignLeft, "T");
+    }
 
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;
     if (showControls) {

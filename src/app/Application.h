@@ -31,6 +31,7 @@ private:
     void connectCoreSignals();
     void showMainWindow();
     void startCapture();
+    void openFile();
     void pasteFromClipboard();
     void hideAllPins();
     void showAllPins();

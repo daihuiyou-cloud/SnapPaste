@@ -82,6 +82,10 @@ private:
     bool controlsVisible_ = false;
     bool firstShow_ = true;
     bool closeRequested_ = false;
+    bool thumbnailMode_ = false;
+    double fullScale_ = 1.0;
+    QPoint fullPosition_;
+    bool dragDropping_ = false;
     QPropertyAnimation* showAnimation_ = nullptr;
     mutable QImage renderedCache_;
 };

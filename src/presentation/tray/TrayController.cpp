@@ -13,6 +13,7 @@ TrayController::TrayController(QObject* parent)
     , menu_(std::make_unique<QMenu>())
 {
     auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), "Capture");
+    auto* openFileAction = menu_->addAction("Open Image...");
     auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open SnapPaste");
     auto* hidePinsAction = menu_->addAction("Hide Pins");
     auto* showPinsAction = menu_->addAction("Show Pins");
@@ -24,6 +25,7 @@ TrayController::TrayController(QObject* parent)
     trayIcon_.setIcon(IconProvider::icon(IconName::App));
 
     connect(captureAction, &QAction::triggered, this, &TrayController::captureRequested);
+    connect(openFileAction, &QAction::triggered, this, &TrayController::openFileRequested);
     connect(showAction, &QAction::triggered, this, &TrayController::showWindowRequested);
     connect(hidePinsAction, &QAction::triggered, this, &TrayController::hidePinsRequested);
     connect(showPinsAction, &QAction::triggered, this, &TrayController::showPinsRequested);

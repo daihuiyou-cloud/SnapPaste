@@ -74,6 +74,22 @@ QIcon makeEraserIcon()
     return QIcon(pix);
 }
 
+QIcon makeNumberedIcon()
+{
+    QPixmap pix(20, 20);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(QColor("#bcbec6"), 2));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(QRectF(2, 2, 16, 16));
+    p.setPen(QColor("#bcbec6"));
+    p.setFont(QFont("Segoe UI", 8, QFont::Bold));
+    p.drawText(QRectF(2, 2, 16, 16), Qt::AlignCenter, "1");
+    p.end();
+    return QIcon(pix);
+}
+
 QIcon makeEyedropperIcon()
 {
     QPixmap pix(20, 20);
@@ -217,6 +233,11 @@ public:
         mosaicBlurred_ = blurred;
     }
 
+    void setTextOutlineEnabled(bool enabled)
+    {
+        textOutlineEnabled_ = enabled;
+    }
+
     void undo()
     {
         if (undoStack_.isEmpty()) {
@@ -288,6 +309,7 @@ protected:
         ann.text = text;
         ann.color = currentColor_;
         ann.strokeWidth = 2;
+        ann.textOutline = textOutlineEnabled_;
         annotations_.push_back(std::move(ann));
         update();
     }
@@ -365,6 +387,20 @@ protected:
             return;
         }
 
+        if (currentTool_ == AnnotationTool::Numbered) {
+            undoStack_.push_back(annotations_);
+            redoStack_.clear();
+            Annotation ann;
+            ann.tool = AnnotationTool::Numbered;
+            ann.bounds = QRect(pos.x() - kDefaultNumberedSize / 2, pos.y() - kDefaultNumberedSize / 2,
+                               kDefaultNumberedSize, kDefaultNumberedSize);
+            ann.color = currentColor_;
+            ann.number = nextNumber_++;
+            annotations_.push_back(std::move(ann));
+            update();
+            return;
+        }
+
         drawing_ = true;
         start_ = event->pos();
         current_ = start_;
@@ -427,6 +463,10 @@ protected:
             return;
         }
 
+        if (draft_.tool == AnnotationTool::Numbered) {
+            return;
+        }
+
         current_ = event->pos();
         draft_.bounds = QRect(start_, current_).normalized();
         if (draft_.tool == AnnotationTool::Pen) {
@@ -445,7 +485,7 @@ protected:
             }
         }
 
-        if (!drawing_) {
+        if (!drawing_ || draft_.tool == AnnotationTool::Numbered) {
             return;
         }
 
@@ -564,10 +604,20 @@ private:
             }
             break;
         case AnnotationTool::Text: {
-            painter->setPen(QPen(annotation.color, 1));
             QFont font("Segoe UI", 14);
             painter->setFont(font);
-            painter->drawText(annotation.bounds, Qt::AlignLeft | Qt::AlignTop, annotation.text);
+            const auto flags = Qt::AlignLeft | Qt::AlignTop;
+            if (annotation.textOutline) {
+                painter->setPen(QColor(255, 255, 255, 220));
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dx = -1; dx <= 1; dx++) {
+                        if (dx == 0 && dy == 0) continue;
+                        painter->drawText(annotation.bounds.adjusted(dx, dy, dx, dy), flags, annotation.text);
+                    }
+                }
+            }
+            painter->setPen(QPen(annotation.color, 1));
+            painter->drawText(annotation.bounds, flags, annotation.text);
             break;
         }
         case AnnotationTool::Mosaic: {
@@ -592,6 +642,19 @@ private:
         case AnnotationTool::Highlight:
             painter->fillRect(annotation.bounds, QColor(annotation.color.red(), annotation.color.green(), annotation.color.blue(), 100));
             break;
+        case AnnotationTool::Numbered: {
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            const auto center = annotation.bounds.center();
+            const auto r = kDefaultNumberedSize / 2;
+            painter->setPen(QPen(annotation.color, 2));
+            painter->setBrush(annotation.color);
+            painter->drawEllipse(center, r, r);
+            painter->setPen(Qt::white);
+            painter->setFont(QFont("Segoe UI", r, QFont::Bold));
+            painter->drawText(QRect(center.x() - r, center.y() - r, kDefaultNumberedSize, kDefaultNumberedSize),
+                              Qt::AlignCenter, QString::number(annotation.number));
+            break;
+        }
         case AnnotationTool::Select:
         case AnnotationTool::Eraser:
             break;
@@ -618,6 +681,8 @@ private:
     bool drawing_ = false;
     bool pickingColor_ = false;
     bool mosaicBlurred_ = false;
+    int nextNumber_ = 1;
+    bool textOutlineEnabled_ = true;
 };
 
 EditorWindow::EditorWindow(QWidget* parent)
@@ -665,6 +730,20 @@ void EditorWindow::createToolbar()
     auto* pen = toolbar->addAction(IconProvider::icon(IconName::Pen), "Pen");
     auto* textB = toolbar->addAction(IconProvider::icon(IconName::Text), "Text");
     auto* highlight = toolbar->addAction(makeHighlightIcon(), "Highlight");
+    auto* numbered = toolbar->addAction(makeNumberedIcon(), "Numbered");
+    auto* outlineBtn = new QToolButton(toolbar);
+    outlineBtn->setText("O");
+    outlineBtn->setToolTip("Toggle text outline");
+    outlineBtn->setFixedSize(24, 24);
+    outlineBtn->setCheckable(true);
+    outlineBtn->setChecked(true);
+    outlineBtn->setStyleSheet(
+        "QToolButton { font: bold 10px; color: #bcbec6; }"
+        "QToolButton:checked { color: #2fbf9f; }");
+    connect(outlineBtn, &QToolButton::clicked, this, [this](bool checked) {
+        canvas_->setTextOutlineEnabled(checked);
+    });
+    toolbar->addWidget(outlineBtn);
     auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
     toolbar->addSeparator();
 
@@ -733,6 +812,7 @@ void EditorWindow::createToolbar()
     pen->setToolTip("Pen");
     textB->setToolTip("Text (double-click canvas to enter text)");
     highlight->setToolTip("Highlight");
+    numbered->setToolTip("Numbered (click canvas to place sequential numbers)");
     mosaic->setToolTip("Mosaic");
     eraser->setToolTip("Eraser");
     select->setToolTip("Select (click to select, drag corners to resize, drag body to move, Delete to remove)");
@@ -745,6 +825,7 @@ void EditorWindow::createToolbar()
     connect(pen, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Pen); });
     connect(textB, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
     connect(highlight, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Highlight); });
+    connect(numbered, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Numbered); });
     auto* mosaicBlurBtn = new QToolButton(toolbar);
     mosaicBlurBtn->setText("Blur");
     mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");

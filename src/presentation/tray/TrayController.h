@@ -21,6 +21,7 @@ public:
 
 signals:
     void captureRequested();
+    void openFileRequested();
     void showWindowRequested();
     void hidePinsRequested();
     void showPinsRequested();

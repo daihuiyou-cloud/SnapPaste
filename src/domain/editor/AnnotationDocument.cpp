@@ -58,6 +58,8 @@ Result<QJsonArray> AnnotationDocument::toJson() const
         object["color"] = annotation.color.name();
         object["strokeWidth"] = annotation.strokeWidth;
         object["points"] = pointsToJson(annotation.points);
+        object["number"] = annotation.number;
+        object["textOutline"] = annotation.textOutline;
         array.append(object);
     }
     return Result<QJsonArray>::success(array);
@@ -86,6 +88,8 @@ Result<void> AnnotationDocument::fromJson(const QJsonArray& array)
         }
         ann.strokeWidth = object["strokeWidth"].toInt(3);
         ann.points = pointsFromJson(object["points"].toArray());
+        ann.number = object["number"].toInt(0);
+        ann.textOutline = object["textOutline"].toBool(false);
         annotations_.push_back(std::move(ann));
     }
     return Result<void>::success();

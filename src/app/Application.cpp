@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QClipboard>
 #include <QCursor>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
@@ -152,6 +153,7 @@ int Application::run()
 void Application::connectCoreSignals()
 {
     connect(&trayController_, &TrayController::captureRequested, this, &Application::startCapture);
+    connect(&trayController_, &TrayController::openFileRequested, this, &Application::openFile);
     connect(&trayController_, &TrayController::showWindowRequested, this, &Application::showMainWindow);
     connect(&trayController_, &TrayController::hidePinsRequested, this, &Application::hideAllPins);
     connect(&trayController_, &TrayController::showPinsRequested, this, &Application::showAllPins);
@@ -223,6 +225,24 @@ void Application::startCapture()
     auto& captureOverlay = overlay();
     captureOverlay.prepareForCapture();
     captureOverlay.showForCapture();
+}
+
+void Application::openFile()
+{
+    const auto path = QFileDialog::getOpenFileName(
+        mainWindow_.get(), "Open Image", QString(),
+        "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)");
+    if (path.isEmpty()) {
+        return;
+    }
+
+    QImage image(path);
+    if (image.isNull()) {
+        showStatus("Failed to open image: " + QFileInfo(path).fileName());
+        return;
+    }
+
+    context_.pinViewModel().createFromImage(image, PinSource::File);
 }
 
 void Application::pasteFromClipboard()
