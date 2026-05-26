@@ -40,16 +40,22 @@ QLineEdit, QComboBox, QListView {
 
 QToolBar {
     background: #ffffff;
-    border-bottom: 1px solid #d9dee7;
-    spacing: 6px;
-    padding: 5px;
+    border-bottom: 1px solid #e1e5eb;
+    spacing: 4px;
+    padding: 4px 6px;
+}
+
+QToolBar::separator {
+    height: 1px;
+    background: #e1e5eb;
+    margin: 4px 8px;
 }
 
 QToolButton {
     background: transparent;
     border: 1px solid transparent;
     border-radius: 6px;
-    padding: 5px;
+    padding: 4px;
 }
 
 QToolButton:hover {
@@ -59,6 +65,27 @@ QToolButton:hover {
 
 QToolButton:pressed {
     background: #dfeaff;
+}
+
+QToolButton:checked {
+    background: #e8f4f0;
+    border-color: #2fbf9f;
+}
+
+QToolButton:hover:checked {
+    background: #d6f0ea;
+    border-color: #2fbf9f;
+}
+
+QToolButton#colorWell {
+    border: 1px solid #d9dee7;
+    border-radius: 4px;
+    padding: 2px;
+    min-width: 24px;
+}
+
+QToolButton#colorWell:hover {
+    border-color: #b8cffc;
 }
 
 QWidget#CaptureActionBar {

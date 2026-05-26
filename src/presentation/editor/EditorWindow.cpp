@@ -1622,14 +1622,26 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
 
 void EditorWindow::createToolbar()
 {
-    auto* toolbar = addToolBar("Editor");
+    auto* toolbar = new QToolBar("Editor", this);
+    addToolBar(Qt::RightToolBarArea, toolbar);
     toolbar->setMovable(false);
-    toolbar->setIconSize(QSize(18, 18));
-    toolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    toolbar->setIconSize(QSize(16, 16));
+    toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     toolbar->setStyleSheet(
-        "QToolBar { padding-bottom: 12px; }"
-        "QToolButton { font: 11px 'Microsoft YaHei UI','Segoe UI',sans-serif; }");
+        "QToolBar { spacing: 1px; padding: 6px 4px; }"
+        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
+        "  padding: 3px 4px; text-align: left; }");
 
+    const QString toggleBtnStyle =
+        "QToolButton { font: bold 10px; color: #999; background: transparent;"
+        "  border: none; border-radius: 4px; padding: 3px 5px; }"
+        "QToolButton:hover { background: rgba(47,191,159,0.1); color: #2fbf9f; }"
+        "QToolButton:checked { color: #fff; background: #2fbf9f; }"
+        "QToolButton:hover:checked { background: #269d84; }";
+
+    // ─────────────────────────────────────────────
+    // Group 1: Drawing Tools
+    // ─────────────────────────────────────────────
     auto* rectangle = toolbar->addAction(IconProvider::icon(IconName::Rectangle), "Rectangle");
     rectangle->setCheckable(true);
     auto* ellipse = toolbar->addAction(makeEllipseIcon(), "Ellipse");
@@ -1646,15 +1658,29 @@ void EditorWindow::createToolbar()
     highlight->setCheckable(true);
     auto* numbered = toolbar->addAction(makeNumberedIcon(), "Numbered");
     numbered->setCheckable(true);
+    auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
+    mosaic->setCheckable(true);
+    auto* eraser = toolbar->addAction(makeEraserIcon(), "Eraser");
+    eraser->setCheckable(true);
+    auto* select = toolbar->addAction(makeSelectIcon(), "Select");
+    select->setCheckable(true);
+    auto* crop = toolbar->addAction(makeCropIcon(), "Crop");
+    crop->setCheckable(true);
+
+    toolbar->addSeparator();
+
+    // ─────────────────────────────────────────────
+    // Group 2: Properties — Outline, Fill, Blur,
+    //           Stroke(S/M/L), Font, Color
+    // ─────────────────────────────────────────────
     auto* outlineBtn = new QToolButton(toolbar);
-    outlineBtn->setText("O");
+    outlineBtn->setText("Outline");
     outlineBtn->setToolTip("Toggle text outline");
-    outlineBtn->setFixedSize(24, 24);
+    outlineBtn->setFixedHeight(24);
+    outlineBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     outlineBtn->setCheckable(true);
     outlineBtn->setChecked(true);
-    outlineBtn->setStyleSheet(
-        "QToolButton { font: bold 10px; color: #bcbec6; }"
-        "QToolButton:checked { color: #2fbf9f; }");
+    outlineBtn->setStyleSheet(toggleBtnStyle);
     connect(outlineBtn, &QToolButton::clicked, this, [this](bool checked) {
         canvas_->setTextOutlineEnabled(checked);
     });
@@ -1663,64 +1689,41 @@ void EditorWindow::createToolbar()
     auto* fillBtn = new QToolButton(toolbar);
     fillBtn->setText("Fill");
     fillBtn->setToolTip("Toggle fill for shapes");
-    fillBtn->setFixedSize(32, 24);
+    fillBtn->setFixedHeight(24);
+    fillBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     fillBtn->setCheckable(true);
-    fillBtn->setStyleSheet(
-        "QToolButton { font: bold 9px; color: #bcbec6; }"
-        "QToolButton:checked { color: #2fbf9f; }");
+    fillBtn->setStyleSheet(toggleBtnStyle);
     connect(fillBtn, &QToolButton::clicked, this, [this](bool checked) {
         canvas_->setFilled(checked);
     });
     toolbar->addWidget(fillBtn);
 
-    auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
-    mosaic->setCheckable(true);
-
     auto* mosaicBlurBtn = new QToolButton(toolbar);
     mosaicBlurBtn->setText("Blur");
     mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");
-    mosaicBlurBtn->setFixedSize(32, 24);
+    mosaicBlurBtn->setFixedHeight(24);
+    mosaicBlurBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mosaicBlurBtn->setCheckable(true);
-    mosaicBlurBtn->setStyleSheet(
-        "QToolButton { font: bold 9px; color: #bcbec6; }"
-        "QToolButton:checked { color: #2fbf9f; }");
+    mosaicBlurBtn->setStyleSheet(toggleBtnStyle);
     connect(mosaicBlurBtn, &QToolButton::clicked, this, [this](bool checked) {
         canvas_->setMosaicBlurred(checked);
     });
     toolbar->addWidget(mosaicBlurBtn);
 
-    toolbar->addSeparator();
-
-    auto* eraser = toolbar->addAction(makeEraserIcon(), "Eraser");
-    eraser->setCheckable(true);
-
-    toolbar->addSeparator();
-    auto* select = toolbar->addAction(makeSelectIcon(), "Select");
-    select->setCheckable(true);
-
-    auto* crop = toolbar->addAction(makeCropIcon(), "Crop");
-    crop->setCheckable(true);
-
-    toolbar->addSeparator();
-
+    // Stroke presets
     struct StrokePreset { QString label; int width; };
-    const StrokePreset strokes[] = {
-        {"S", 2}, {"M", 4}, {"L", 8}
-    };
+    const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
     auto* strokeGroup = new QButtonGroup(toolbar);
     strokeGroup->setExclusive(true);
     for (const auto& s : strokes) {
         auto* btn = new QToolButton(toolbar);
         btn->setText(s.label);
-        btn->setToolTip(QString("Stroke width: %1px").arg(s.width));
-        btn->setFixedSize(24, 24);
+        btn->setToolTip(QString("Stroke: %1px").arg(s.width));
+        btn->setFixedHeight(24);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
-        btn->setStyleSheet(
-            "QToolButton { font: bold 10px; color: #bcbec6; }"
-            "QToolButton:checked { color: #2fbf9f; }");
-        if (s.width == 4) {
-            btn->setChecked(true);
-        }
+        btn->setStyleSheet(toggleBtnStyle);
+        if (s.width == 4) btn->setChecked(true);
         strokeGroup->addButton(btn);
         connect(btn, &QToolButton::clicked, this, [this, s] {
             canvas_->setStrokeWidth(s.width);
@@ -1728,89 +1731,113 @@ void EditorWindow::createToolbar()
         toolbar->addWidget(btn);
     }
 
-    auto* fontSizeLabel = new QLabel("14px", toolbar);
+    // Font size label
+    auto* fontSizeLabel = new QLabel(toolbar);
+    fontSizeLabel->setText("14px");
     fontSizeLabel->setToolTip("Font size");
-    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0 4px;");
+    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0 4px; background: transparent;");
     toolbar->addWidget(fontSizeLabel);
     canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
         fontSizeLabel->setText(QString("%1px").arg(size));
     });
 
-    auto* strokeSpin = new QSpinBox(toolbar);
-    strokeSpin->setRange(1, 12);
-    strokeSpin->setValue(4);
-    strokeSpin->setFixedWidth(40);
-    strokeSpin->setToolTip("Stroke width (px)");
-    strokeSpin->setStyleSheet(
-        "QSpinBox { color: #bcbec6; background: transparent; border: 1px solid #3a3a3c;"
-        " border-radius: 2px; padding: 1px 2px; font: 10px; }");
-    connect(strokeSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int val) {
-        canvas_->setStrokeWidth(val);
-    });
-    toolbar->addWidget(strokeSpin);
+    // Color picker
+    auto* colorBtn = new QToolButton(toolbar);
+    colorBtn->setObjectName("colorWell");
+    colorBtn->setFixedHeight(26);
+    colorBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    colorBtn->setPopupMode(QToolButton::InstantPopup);
+    colorBtn->setToolTip("Color");
 
-    toolbar->addSeparator();
+    auto updateColorIcon = [colorBtn](const QColor& c) {
+        QPixmap px(18, 18);
+        px.fill(c);
+        QPainter p(&px);
+        p.setPen(QPen(QColor(255, 255, 255, 48), 1));
+        p.drawRect(QRectF(0.5, 0.5, 17, 17));
+        p.end();
+        colorBtn->setIcon(QIcon(px));
+    };
+    updateColorIcon(QColor("#ff3b30"));
 
     const QColor fixedColors[] = {
         QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
         QColor("#34c759"), QColor("#007aff"), QColor("#af52de"),
         QColor("#ffffff"), QColor("#000000")
     };
-    for (const auto& color : fixedColors) {
-        auto* btn = new QToolButton(toolbar);
-        btn->setIcon(makeColorIcon(color));
-        btn->setToolTip(color.name(QColor::HexRgb).toUpper());
-        btn->setFixedSize(24, 24);
-        connect(btn, &QToolButton::clicked, this, [this, color] {
-            canvas_->setColor(color);
-        });
-        toolbar->addWidget(btn);
-    }
 
-    auto* customBtn = new QToolButton(toolbar);
-    customBtn->setText("+");
-    customBtn->setToolTip("Custom color...");
-    customBtn->setFixedSize(24, 24);
-    customBtn->setStyleSheet("QToolButton { font: bold 14px; color: #bcbec6; }");
-    connect(customBtn, &QToolButton::clicked, this, [this, customBtn] {
-        QMenu menu(customBtn);
+    auto* colorMenu = new QMenu(colorBtn);
+    auto* eyeAction = new QAction(makeEyedropperIcon(), "Eyedropper", nullptr);
+    eyeAction->setCheckable(true);
+    connect(eyeAction, &QAction::triggered, this, [this, eyeAction] {
+        canvas_->setPickingColor(eyeAction->isChecked());
+    });
+    canvas_->setOnPickingColorChanged([eyeAction](bool picking) {
+        eyeAction->setChecked(picking);
+    });
+    colorMenu->addAction(eyeAction);
+
+    connect(colorMenu, &QMenu::aboutToShow, this, [this, colorMenu, fixedColors, updateColorIcon, eyeAction]() {
+        auto actions = colorMenu->actions();
+        for (auto* action : actions) {
+            if (action != eyeAction) {
+                colorMenu->removeAction(action);
+                delete action;
+            }
+        }
         auto recent = canvas_->recentColors();
         if (!recent.isEmpty()) {
             for (const auto& c : recent) {
-                QPixmap px(16, 16);
-                px.fill(c);
-                auto* action = menu.addAction(QIcon(px), c.name().toUpper());
-                connect(action, &QAction::triggered, this, [this, c] { canvas_->setColor(c); });
+                auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorMenu);
+                colorMenu->insertAction(eyeAction, a);
+                connect(a, &QAction::triggered, this, [this, c, updateColorIcon] {
+                    canvas_->setColor(c); updateColorIcon(c);
+                });
             }
-            menu.addSeparator();
+            colorMenu->insertSeparator(eyeAction);
         }
-        auto* picker = menu.addAction("Custom Color...");
-        connect(picker, &QAction::triggered, this, [this] {
-            const auto color = QColorDialog::getColor(Qt::white, static_cast<QWidget*>(parent()), "Choose Color");
+        for (const auto& c : fixedColors) {
+            auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorMenu);
+            colorMenu->insertAction(eyeAction, a);
+            connect(a, &QAction::triggered, this, [this, c, updateColorIcon] {
+                canvas_->setColor(c); updateColorIcon(c);
+            });
+        }
+        colorMenu->insertSeparator(eyeAction);
+        auto* customAction = new QAction("Custom Color...", colorMenu);
+        colorMenu->insertAction(eyeAction, customAction);
+        connect(customAction, &QAction::triggered, this, [this, updateColorIcon] {
+            auto color = QColorDialog::getColor(Qt::white, this, "Choose Color");
             if (color.isValid()) {
                 canvas_->setColor(color);
                 canvas_->addRecentColor(color);
+                updateColorIcon(color);
             }
         });
-        menu.exec(customBtn->mapToGlobal(QPoint(0, customBtn->height())));
+        colorMenu->insertSeparator(eyeAction);
     });
-    toolbar->addWidget(customBtn);
 
-    auto* eyedropper = toolbar->addAction(makeEyedropperIcon(), "Eyedropper");
-    eyedropper->setCheckable(true);
-    eyedropper->setToolTip("Pick color from image");
+    colorBtn->setMenu(colorMenu);
+    toolbar->addWidget(colorBtn);
 
+    // ── Spacer: push actions to bottom ──
+    auto* spacer = new QWidget(toolbar);
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    spacer->setStyleSheet("background: transparent;");
+    toolbar->addWidget(spacer);
+
+    // ─────────────────────────────────────────────
+    // Group 3: Actions (bottom)
+    // ─────────────────────────────────────────────
     toolbar->addSeparator();
     auto* undo = toolbar->addAction(QIcon::fromTheme("edit-undo"), "Undo");
     auto* redo = toolbar->addAction(QIcon::fromTheme("edit-redo"), "Redo");
-    toolbar->addSeparator();
     auto* copy = toolbar->addAction(IconProvider::icon(IconName::Copy), "Copy");
     auto* pinBtn = toolbar->addAction(IconProvider::icon(IconName::Pin), "Pin");
     auto* save = toolbar->addAction(IconProvider::icon(IconName::Save), "Save");
     auto* saveAs = toolbar->addAction("Save As...");
 
-    undo->setToolTip("Undo (Ctrl+Z)");
-    redo->setToolTip("Redo (Ctrl+Y)");
+    // ── ToolTips ──
     rectangle->setToolTip("Rectangle (R)");
     ellipse->setToolTip("Ellipse (E)");
     arrow->setToolTip("Arrow (A)");
@@ -1823,28 +1850,27 @@ void EditorWindow::createToolbar()
     eraser->setToolTip("Eraser (X)");
     select->setToolTip("Select (V)");
     crop->setToolTip("Crop (C)");
+    undo->setToolTip("Undo (Ctrl+Z)");
+    redo->setToolTip("Redo (Ctrl+Y)");
     copy->setToolTip("Copy");
-    pinBtn->setToolTip("Pin image (F3)");
+    pinBtn->setToolTip("Pin (F3)");
     save->setToolTip("Save (Ctrl+S)");
     saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
 
+    // ── updateToolActions callback ──
     updateToolActions_ = [rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
         QAction* lookup[] = {rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop};
         const AnnotationTool tools[] = {AnnotationTool::Rectangle, AnnotationTool::Ellipse, AnnotationTool::Arrow,
             AnnotationTool::Line, AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
             AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser, AnnotationTool::Crop};
-        for (auto* action : lookup) {
-            action->setChecked(false);
-        }
+        for (auto* action : lookup) action->setChecked(false);
         for (int i = 0; i < 12; ++i) {
-            if (tools[i] == tool) {
-                lookup[i]->setChecked(true);
-                break;
-            }
+            if (tools[i] == tool) { lookup[i]->setChecked(true); break; }
         }
     };
     updateToolActions_(AnnotationTool::Rectangle);
 
+    // ── Connections ──
     connect(undo, &QAction::triggered, this, [this] { canvas_->undo(); });
     connect(redo, &QAction::triggered, this, [this] { canvas_->redo(); });
     connect(rectangle, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Rectangle); });
@@ -1859,12 +1885,6 @@ void EditorWindow::createToolbar()
     connect(select, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Select); });
     connect(crop, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Crop); });
     connect(eraser, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Eraser); });
-    canvas_->setOnPickingColorChanged([eyedropper](bool picking) {
-        eyedropper->setChecked(picking);
-    });
-    connect(eyedropper, &QAction::triggered, this, [this, eyedropper] {
-        canvas_->setPickingColor(eyedropper->isChecked());
-    });
     connect(copy, &QAction::triggered, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();
