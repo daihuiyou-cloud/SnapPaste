@@ -1432,7 +1432,9 @@ void EditorWindow::createToolbar()
     toolbar->setMovable(false);
     toolbar->setIconSize(QSize(18, 18));
     toolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    toolbar->setStyleSheet("QToolBar { padding-bottom: 12px; }");
+    toolbar->setStyleSheet(
+        "QToolBar { padding-bottom: 12px; }"
+        "QToolButton { font: 11px 'Microsoft YaHei UI','Segoe UI',sans-serif; }");
 
     auto* rectangle = toolbar->addAction(IconProvider::icon(IconName::Rectangle), "Rectangle");
     rectangle->setCheckable(true);
