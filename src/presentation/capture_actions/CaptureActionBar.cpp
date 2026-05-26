@@ -5,7 +5,7 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QPushButton>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -25,39 +25,30 @@ struct ActionDef {
     QString label;
 };
 
-QString verticalText(const QString& text)
+QToolButton* createActionButton(const ActionDef& def, QWidget* parent)
 {
-    if (text.isEmpty()) return text;
-    QStringList chars;
-    chars.reserve(text.size());
-    for (const QChar& ch : text) {
-        chars << QString(ch);
-    }
-    return chars.join('\n');
-}
-
-QPushButton* createActionButton(const ActionDef& def, QWidget* parent)
-{
-    auto* btn = new QPushButton(verticalText(def.label), parent);
+    auto* btn = new QToolButton(parent);
     btn->setObjectName("CaptureActionButton");
     btn->setIcon(IconProvider::icon(def.icon));
     btn->setIconSize(QSize(kActionIconSize, kActionIconSize));
+    btn->setText(def.label);
+    btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     btn->setToolTip(def.tooltip);
     btn->setAccessibleName(def.tooltip);
     btn->setFocusPolicy(Qt::NoFocus);
     btn->setCursor(Qt::PointingHandCursor);
-    btn->setFixedHeight(40);
+    btn->setFixedSize(48, 48);
     btn->setStyleSheet(
-        "QPushButton#CaptureActionButton {"
-        " color: #f4fbff; font-size: 10px; padding: 2px 8px;"
+        "QToolButton#CaptureActionButton {"
+        " color: #f4fbff; font-size: 10px; padding: 2px 4px;"
         " border: 1px solid rgba(255,255,255,20); border-radius: 4px;"
         " background: rgba(255,255,255,12);"
         "}"
-        "QPushButton#CaptureActionButton:hover {"
+        "QToolButton#CaptureActionButton:hover {"
         " background: rgba(47,191,159,40);"
         " border-color: #2fbf9f;"
         "}"
-        "QPushButton#CaptureActionButton:pressed {"
+        "QToolButton#CaptureActionButton:pressed {"
         " background: rgba(47,191,159,80);"
         "}");
     return btn;
@@ -108,12 +99,12 @@ CaptureActionBar::CaptureActionBar(QWidget* parent)
     layout->addWidget(closeBtn);
     setLayout(layout);
 
-    connect(copyBtn, &QPushButton::clicked, this, &CaptureActionBar::copyRequested);
-    connect(pinBtn, &QPushButton::clicked, this, &CaptureActionBar::pinRequested);
-    connect(saveBtn, &QPushButton::clicked, this, &CaptureActionBar::saveRequested);
-    connect(editBtn, &QPushButton::clicked, this, &CaptureActionBar::editRequested);
-    connect(ocrBtn, &QPushButton::clicked, this, &CaptureActionBar::ocrRequested);
-    connect(closeBtn, &QPushButton::clicked, this, &CaptureActionBar::cancelRequested);
+    connect(copyBtn, &QToolButton::clicked, this, &CaptureActionBar::copyRequested);
+    connect(pinBtn, &QToolButton::clicked, this, &CaptureActionBar::pinRequested);
+    connect(saveBtn, &QToolButton::clicked, this, &CaptureActionBar::saveRequested);
+    connect(editBtn, &QToolButton::clicked, this, &CaptureActionBar::editRequested);
+    connect(ocrBtn, &QToolButton::clicked, this, &CaptureActionBar::ocrRequested);
+    connect(closeBtn, &QToolButton::clicked, this, &CaptureActionBar::cancelRequested);
 }
 
 void CaptureActionBar::showForRegion(const QRect& region, const QRect& availableGeometry)
