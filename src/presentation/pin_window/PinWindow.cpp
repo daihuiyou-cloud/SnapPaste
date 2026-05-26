@@ -679,8 +679,17 @@ void PinWindow::paintEvent(QPaintEvent* event)
 
     if (thumbnailMode_) {
         painter.setPen(QColor("#31c7a4"));
-        painter.setFont(QFont("Segoe UI", 9, QFont::Bold));
+        painter.setFont(QFont("Microsoft YaHei UI", 9, QFont::Bold));
         painter.drawText(rect().adjusted(8, 8, -8, -8), Qt::AlignTop | Qt::AlignLeft, "T");
+    }
+
+    const int zoomPct = static_cast<int>(std::round(item_.state.transform.scale * 100));
+    if (zoomPct != 100 || thumbnailMode_) {
+        painter.setPen(QColor(255, 255, 255, 160));
+        painter.setFont(QFont("Microsoft YaHei UI", 10));
+        painter.drawText(rect().adjusted(8, 8, -8, -8),
+            Qt::AlignTop | Qt::AlignRight,
+            QString("%1%").arg(zoomPct));
     }
 
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;

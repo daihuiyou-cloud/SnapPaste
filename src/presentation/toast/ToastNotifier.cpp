@@ -132,12 +132,9 @@ void ToastNotifier::ensureToast()
     });
 }
 
-void ToastNotifier::positionToast(const QPoint& referencePosition)
+void ToastNotifier::positionToast(const QPoint& /*referencePosition*/)
 {
-    auto* screen = QGuiApplication::screenAt(referencePosition);
-    if (screen == nullptr) {
-        screen = QGuiApplication::primaryScreen();
-    }
+    auto* screen = QGuiApplication::primaryScreen();
     if (screen == nullptr || toast_ == nullptr) {
         return;
     }

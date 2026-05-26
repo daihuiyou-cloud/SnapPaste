@@ -630,7 +630,7 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
     drawSizeLabel(painter, localRegion, globalRegion.size());
     if (state_ == State::Ready && !lastMouseGlobal_.isNull()) {
         painter.setPen(kLabelTextColor);
-        painter.setFont(QFont("Segoe UI", 10));
+        painter.setFont(QFont("Microsoft YaHei UI", 11));
         painter.drawText(localRegion.bottomLeft() + QPoint(0, 20),
             QString("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     }
