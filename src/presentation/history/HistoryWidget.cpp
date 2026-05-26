@@ -2,6 +2,7 @@
 
 #include <QDesktopServices>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QListView>
 #include <QMessageBox>
 #include <QPushButton>
@@ -16,6 +17,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     , listView_(new QListView(this))
 {
     auto* refreshButton = new QPushButton("Refresh", this);
+    auto* pinButton = new QPushButton("Pin", this);
     auto* openButton = new QPushButton("Open", this);
     auto* deleteButton = new QPushButton("Delete", this);
 
@@ -23,6 +25,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
 
     auto* buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(refreshButton);
+    buttonLayout->addWidget(pinButton);
     buttonLayout->addWidget(openButton);
     buttonLayout->addWidget(deleteButton);
     buttonLayout->addStretch();
@@ -33,6 +36,16 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     setLayout(layout);
 
     connect(refreshButton, &QPushButton::clicked, &viewModel_, &HistoryViewModel::refresh);
+    auto emitRepin = [this] {
+        const auto index = listView_->currentIndex();
+        if (!index.isValid()) {
+            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+            return;
+        }
+        emit repinRequested(index.data(Qt::UserRole + 2).toString());
+    };
+    connect(pinButton, &QPushButton::clicked, this, emitRepin);
+    connect(listView_, &QListView::doubleClicked, this, emitRepin);
     connect(deleteButton, &QPushButton::clicked, this, [this] {
         const auto index = listView_->currentIndex();
         if (!index.isValid()) {

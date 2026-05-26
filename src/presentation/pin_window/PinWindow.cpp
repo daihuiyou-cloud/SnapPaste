@@ -5,6 +5,10 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
+#include <QFileDialog>
+#include <QCoreApplication>
+#include <QDir>
+#include <QStandardPaths>
 #include <QDrag>
 #include <QMimeData>
 #include <QContextMenuEvent>
@@ -15,6 +19,7 @@
 #include <QPainter>
 #include <QEasingCurve>
 #include <QPointer>
+#include <QScreen>
 #include <QShowEvent>
 #include <QTransform>
 #include <QWheelEvent>
@@ -238,6 +243,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     QMenu menu(this);
     auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), "Copy\tCtrl+C");
     auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), "Save\tCtrl+S");
+    auto* saveAsAction = menu.addAction("Save As...\tCtrl+Shift+S");
     menu.addSeparator();
     auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), "Rotate Left");
     auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), "Rotate Right");
@@ -250,6 +256,9 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     clickThroughAction->setCheckable(true);
     clickThroughAction->setChecked(item_.state.options.clickThrough);
     menu.addSeparator();
+    auto* actualSizeAction = menu.addAction("Actual Size (1:1)\tCtrl+0");
+    auto* fitScreenAction = menu.addAction("Fit to Screen\tCtrl+9");
+    menu.addSeparator();
     auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), "Close");
 
     const auto* action = menu.exec(event->globalPos());
@@ -257,6 +266,12 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
         emit copyRequested(renderedImage());
     } else if (action == saveAction) {
         emit saveRequested(renderedImage());
+    } else if (action == saveAsAction) {
+        auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+            "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+        if (!path.isEmpty()) {
+            renderedImage().save(path);
+        }
     } else if (action == rotateLeftAction) {
         rotateBy(-90);
     } else if (action == rotateRightAction) {
@@ -269,6 +284,34 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
         toggleAlwaysOnTop();
     } else if (action == clickThroughAction) {
         toggleClickThrough();
+    } else if (action == actualSizeAction) {
+        setScale(1.0);
+        QRect screenGeo;
+        auto* screen = QGuiApplication::screenAt(QCursor::pos());
+        if (screen) screenGeo = screen->geometry();
+        if (!screenGeo.isNull()) {
+            auto pos = screenGeo.center() - rect().center();
+            item_.state.position = pos;
+            move(pos);
+        }
+        emitStateChanged();
+    } else if (action == fitScreenAction) {
+        auto imgSize = item_.state.size;
+        if (!imgSize.isValid() || imgSize.isNull()) {
+            imgSize = renderedImage().size();
+        }
+        QRect screenGeo;
+        auto* screen = QGuiApplication::screenAt(QCursor::pos());
+        if (screen) screenGeo = screen->geometry();
+        if (screenGeo.isNull()) return;
+        auto availGeo = screen->availableGeometry();
+        double sx = static_cast<double>(availGeo.width() - 40) / imgSize.width();
+        double sy = static_cast<double>(availGeo.height() - 40) / imgSize.height();
+        setScale(std::min(sx, sy));
+        auto pos = screenGeo.center() - rect().center();
+        item_.state.position = pos;
+        move(pos);
+        emitStateChanged();
     } else if (action == closeAction) {
         requestClose();
     }
@@ -320,7 +363,15 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_S:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            emit saveRequested(renderedImage());
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+                    "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+                if (!path.isEmpty()) {
+                    renderedImage().save(path);
+                }
+            } else {
+                emit saveRequested(renderedImage());
+            }
             return;
         }
         break;
@@ -339,6 +390,33 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
     case Qt::Key_A:
         toggleAlwaysOnTop();
         return;
+    case Qt::Key_0:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            setScale(1.0);
+            return;
+        }
+        break;
+    case Qt::Key_9:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            auto imgSize = item_.state.size;
+            if (!imgSize.isValid() || imgSize.isNull()) {
+                imgSize = renderedImage().size();
+            }
+            QRect screenGeo;
+            auto* screen = QGuiApplication::screenAt(QCursor::pos());
+            if (screen) screenGeo = screen->geometry();
+            if (screenGeo.isNull()) break;
+            auto availGeo = screen->availableGeometry();
+            double sx = static_cast<double>(availGeo.width() - 40) / imgSize.width();
+            double sy = static_cast<double>(availGeo.height() - 40) / imgSize.height();
+            setScale(std::min(sx, sy));
+            auto pos = screenGeo.center() - rect().center();
+            item_.state.position = pos;
+            move(pos);
+            emitStateChanged();
+            return;
+        }
+        break;
     default:
         break;
     }
@@ -401,12 +479,18 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         const auto dist = (event->pos() - dragOffset_).manhattanLength();
         if (dist > 5) {
             dragDropping_ = false;
+            auto img = renderedImage();
+            QString tempPath = QDir::toNativeSeparators(
+                QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+                + "/snappaste_drag_" + QString::number(QCoreApplication::applicationPid()) + ".png");
+            img.save(tempPath, "PNG");
             QDrag drag(this);
             auto* mimeData = new QMimeData();
-            mimeData->setImageData(QVariant(renderedImage()));
+            mimeData->setImageData(QVariant(img));
+            mimeData->setUrls({QUrl::fromLocalFile(tempPath)});
             drag.setMimeData(mimeData);
             drag.setPixmap(QPixmap::fromImage(
-                renderedImage().scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+                img.scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
             drag.exec(Qt::CopyAction);
         }
         event->accept();

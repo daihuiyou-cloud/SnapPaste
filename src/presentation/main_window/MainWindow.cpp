@@ -27,7 +27,11 @@ MainWindow::MainWindow(HistoryViewModel& historyViewModel,
     home->setLayout(homeLayout);
 
     tabs->addTab(home, "Capture");
-    tabs->addTab(new HistoryWidget(historyViewModel, tabs), "History");
+    {
+        auto* historyWidget = new HistoryWidget(historyViewModel, tabs);
+        connect(historyWidget, &HistoryWidget::repinRequested, this, &MainWindow::repinRequested);
+        tabs->addTab(historyWidget, "History");
+    }
     tabs->addTab(new SettingsWidget(settingsViewModel, tabs), "Settings");
 
     setCentralWidget(tabs);

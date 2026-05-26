@@ -17,6 +17,7 @@ public:
 
 signals:
     void captureRequested();
+    void repinRequested(const QString& filePath);
 };
 
 } // namespace snappaste

@@ -212,6 +212,12 @@ void Application::showMainWindow()
     if (!mainWindow_) {
         mainWindow_ = std::make_unique<MainWindow>(context_.historyViewModel(), context_.settingsViewModel());
         connect(mainWindow_.get(), &MainWindow::captureRequested, this, &Application::startCapture);
+        connect(mainWindow_.get(), &MainWindow::repinRequested, this, [this](const QString& filePath) {
+            QImage img(filePath);
+            if (!img.isNull()) {
+                context_.pinViewModel().createFromImage(img, PinSource::Screenshot);
+            }
+        });
     }
 
     mainWindow_->show();
@@ -540,6 +546,9 @@ EditorWindow& Application::editorWindow()
                 &context_.captureViewModel(), &CaptureViewModel::saveCurrentImage);
         connect(editorWindow_.get(), &EditorWindow::copyRequested,
                 &context_.captureViewModel(), &CaptureViewModel::copyCurrentImageToClipboard);
+        connect(editorWindow_.get(), &EditorWindow::pinRequested, this, [this](const QImage& image) {
+            context_.pinViewModel().createFromImage(image, PinSource::Screenshot);
+        });
     }
     return *editorWindow_;
 }

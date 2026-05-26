@@ -2,6 +2,8 @@
 
 #include "domain/editor/Annotation.h"
 
+#include <functional>
+
 #include <QImage>
 #include <QMainWindow>
 
@@ -17,16 +19,19 @@ public:
 
 public slots:
     void setImage(const QImage& image);
+    void onToolChanged(AnnotationTool tool);
 
 signals:
     void imageEdited(const QImage& image);
     void saveRequested();
     void copyRequested();
+    void pinRequested(const QImage& image);
 
 private:
     void createToolbar();
 
     AnnotationCanvas* canvas_ = nullptr;
+    std::function<void(AnnotationTool)> updateToolActions_;
 };
 
 } // namespace snappaste

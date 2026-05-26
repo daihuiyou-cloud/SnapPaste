@@ -14,6 +14,9 @@ class HistoryWidget final : public QWidget {
 public:
     explicit HistoryWidget(HistoryViewModel& viewModel, QWidget* parent = nullptr);
 
+signals:
+    void repinRequested(const QString& filePath);
+
 private:
     HistoryViewModel& viewModel_;
     QListView* listView_ = nullptr;
