@@ -12,6 +12,7 @@ enum class AnnotationTool {
     Select,
     Rectangle,
     Arrow,
+    Line,
     Pen,
     Text,
     Mosaic,
@@ -33,6 +34,8 @@ struct Annotation final {
     int strokeWidth = 3;
     int blurRadius = 0; // 0=pixel-block mosaic, >0=gaussian blur radius
     int number = 0;
+    int textFontSize = 14;
+    bool filled = false;
     bool textOutline = false;
 };
 

@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <thread>
 
 namespace snappaste {
 
@@ -251,20 +252,24 @@ void Application::editRegion(const QRect& region)
 void Application::ocrRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
-        const auto outcome = ocrService_->recognizeText(image);
-        if (!outcome.ok) {
-            showStatus(outcome.message);
-            return;
-        }
+        QPointer<Application> guard(this);
+        std::thread worker([guard, image]() {
+            if (guard.isNull()) return;
+            const auto outcome = guard->ocrService_->recognizeText(image);
+            QMetaObject::invokeMethod(qApp, [guard, outcome]() {
+                if (guard.isNull()) return;
+                if (!outcome.ok) {
+                    guard->showStatus(outcome.message);
+                    return;
+                }
 
-        QApplication::clipboard()->setText(outcome.text);
-        auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
-        connect(win, &OcrResultWindow::pasteRequested, this, &Application::pasteFromClipboard);
-        showStatus(QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()), [win] {
-            win->show();
-            win->activateWindow();
-            win->raise();
+                auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
+                QObject::connect(win, &OcrResultWindow::pasteRequested, guard, &Application::pasteFromClipboard);
+                guard->showStatus(
+                    QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()));
+            }, Qt::QueuedConnection);
         });
+        worker.detach();
     });
 }
 

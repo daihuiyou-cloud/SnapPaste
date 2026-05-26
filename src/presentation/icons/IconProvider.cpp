@@ -37,6 +37,8 @@ QString pathFor(IconName name)
         return ":/icons/rectangle.svg";
     case IconName::Arrow:
         return ":/icons/arrow.svg";
+    case IconName::Line:
+        return ":/icons/line.svg";
     case IconName::Pen:
         return ":/icons/pen.svg";
     case IconName::Text:

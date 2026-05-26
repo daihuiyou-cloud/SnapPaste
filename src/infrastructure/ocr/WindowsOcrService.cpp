@@ -100,13 +100,15 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             winrt::check_hresult(byteAccess->GetBuffer(&bytes, &capacity));
 
             const auto plane = buffer.GetPlaneDescription(0);
-            const auto rowBytes = image.width() * 4;
+            const auto srcBytesPerLine = image.bytesPerLine();
+            const auto dstBytesPerLine = static_cast<int>(plane.Stride);
+            const auto copyBytes = std::min(srcBytesPerLine, dstBytesPerLine);
             for (int y = 0; y < image.height(); ++y) {
                 const auto targetOffset = plane.StartIndex + (y * plane.Stride);
-                if (targetOffset + rowBytes > static_cast<int>(capacity)) {
+                if (targetOffset + copyBytes > static_cast<int>(capacity)) {
                     break;
                 }
-                std::memcpy(bytes + targetOffset, image.constScanLine(y), std::min(rowBytes, image.bytesPerLine()));
+                std::memcpy(bytes + targetOffset, image.constScanLine(y), copyBytes);
             }
         }
 

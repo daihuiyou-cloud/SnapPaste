@@ -20,6 +20,7 @@ enum class IconName {
     ClickThrough,
     Rectangle,
     Arrow,
+    Line,
     Pen,
     Text,
     Mosaic

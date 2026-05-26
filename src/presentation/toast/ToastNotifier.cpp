@@ -115,7 +115,7 @@ void ToastNotifier::ensureToast()
         " border: 1px solid rgba(255, 255, 255, 36);"
         " border-radius: 6px;"
         " padding: 9px 14px;"
-        " font: 10pt 'Segoe UI';"
+        " font: 11px 'Microsoft YaHei UI','Segoe UI';"
         "}");
 
     auto* layout = new QVBoxLayout(toast_);

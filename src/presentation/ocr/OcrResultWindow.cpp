@@ -21,7 +21,8 @@ constexpr int kFadeMargin = 12;
 
 QPoint clampToScreen(const QPoint& pos, const QSize& size)
 {
-    const auto screen = QGuiApplication::primaryScreen();
+    auto screen = QGuiApplication::screenAt(pos);
+    if (!screen) { screen = QGuiApplication::primaryScreen(); }
     if (!screen) return pos;
     const auto geo = screen->availableGeometry();
     int x = std::max(geo.left() + kFadeMargin,
@@ -233,7 +234,6 @@ void OcrResultWindow::mousePressEvent(QMouseEvent* event)
             }
         }
         update();
-        QApplication::clipboard()->setText(selectedText());
         return;
     }
     QWidget::mousePressEvent(event);

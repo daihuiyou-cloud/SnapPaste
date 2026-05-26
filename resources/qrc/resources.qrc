@@ -17,6 +17,7 @@
         <file alias="icons/click-through.svg">../icons/click-through.svg</file>
         <file alias="icons/rectangle.svg">../icons/rectangle.svg</file>
         <file alias="icons/arrow.svg">../icons/arrow.svg</file>
+        <file alias="icons/line.svg">../icons/line.svg</file>
         <file alias="icons/pen.svg">../icons/pen.svg</file>
         <file alias="icons/text.svg">../icons/text.svg</file>
         <file alias="icons/mosaic.svg">../icons/mosaic.svg</file>

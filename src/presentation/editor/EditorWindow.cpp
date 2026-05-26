@@ -408,6 +408,11 @@ public:
         textOutlineEnabled_ = enabled;
     }
 
+    void setFilled(bool filled)
+    {
+        filled_ = filled;
+    }
+
     int fontSize() const { return fontSize_; }
     void setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
 
@@ -657,7 +662,9 @@ protected:
         draft_.tool = currentTool_;
         draft_.color = currentColor_;
         draft_.strokeWidth = currentStrokeWidth_;
-        draft_.blurRadius = (currentTool_ == AnnotationTool::Mosaic && mosaicBlurred_) ? 6 : 0;
+        draft_.blurRadius = (currentTool_ == AnnotationTool::Mosaic && mosaicBlurred_) ? currentStrokeWidth_ : 0;
+        draft_.filled = filled_;
+        draft_.textFontSize = fontSize_;
         draft_.bounds = QRect(start_, current_);
         draft_.points = {start_};
         update();
@@ -759,7 +766,7 @@ protected:
                 int side = std::max(std::abs(dx), std::abs(dy));
                 rawPos.setX(start_.x() + (dx >= 0 ? side : -side));
                 rawPos.setY(start_.y() + (dy >= 0 ? side : -side));
-            } else if (draft_.tool == AnnotationTool::Arrow) {
+            } else if (draft_.tool == AnnotationTool::Arrow || draft_.tool == AnnotationTool::Line) {
                 double angle = std::atan2(rawPos.y() - start_.y(), rawPos.x() - start_.x());
                 double snapped = std::round(angle / (M_PI / 4)) * (M_PI / 4);
                 double dist = std::sqrt(std::pow(rawPos.x() - start_.x(), 2) +
@@ -929,6 +936,7 @@ protected:
         case Qt::Key_R: setTool(AnnotationTool::Rectangle); event->accept(); return;
         case Qt::Key_E: setTool(AnnotationTool::Ellipse); event->accept(); return;
         case Qt::Key_A: setTool(AnnotationTool::Arrow); event->accept(); return;
+        case Qt::Key_L: setTool(AnnotationTool::Line); event->accept(); return;
         case Qt::Key_P: setTool(AnnotationTool::Pen); event->accept(); return;
         case Qt::Key_T: setTool(AnnotationTool::Text); event->accept(); return;
         case Qt::Key_H: setTool(AnnotationTool::Highlight); event->accept(); return;
@@ -978,7 +986,7 @@ protected:
             if (event->modifiers().testFlag(Qt::ShiftModifier) || event->key() == Qt::Key_F1) {
                 QMessageBox::information(static_cast<QWidget*>(window()), "Keyboard Shortcuts",
                     "<b>Tools</b><br>"
-                    "R - Rectangle<br>E - Ellipse<br>A - Arrow<br>P - Pen<br>"
+                    "R - Rectangle<br>E - Ellipse<br>A - Arrow<br>L - Line<br>P - Pen<br>"
                     "T - Text<br>H - Highlight<br>N - Numbered<br>M - Mosaic<br>"
                     "V - Select<br>X - Eraser<br>C - Crop<br><br>"
                     "<b>Edit</b><br>"
@@ -1201,10 +1209,12 @@ private:
         switch (annotation.tool) {
         case AnnotationTool::Rectangle:
             painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
             painter->drawRect(annotation.bounds);
             break;
         case AnnotationTool::Ellipse:
             painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
             painter->drawEllipse(annotation.bounds);
             break;
         case AnnotationTool::Arrow: {
@@ -1225,6 +1235,13 @@ private:
             painter->drawPolygon(arrowHead);
             break;
         }
+        case AnnotationTool::Line: {
+            const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
+            const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
+            painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter->drawLine(from, to);
+            break;
+        }
         case AnnotationTool::Pen:
             painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
             for (int i = 1; i < annotation.points.size(); ++i) {
@@ -1232,7 +1249,7 @@ private:
             }
             break;
         case AnnotationTool::Text: {
-            QFont font("Segoe UI", fontSize);
+            QFont font("Microsoft YaHei UI", annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
             painter->setFont(font);
             const auto flags = Qt::AlignLeft | Qt::AlignTop;
             if (annotation.textOutline) {
@@ -1336,6 +1353,7 @@ private:
     bool modified_ = false;
     int nextNumber_ = 1;
     int fontSize_ = 14;
+    bool filled_ = false;
     bool textOutlineEnabled_ = true;
     QVector<QColor> customColors_;
     std::function<void(int)> onFontSizeChanged_;
@@ -1452,6 +1470,8 @@ void EditorWindow::createToolbar()
     ellipse->setCheckable(true);
     auto* arrow = toolbar->addAction(IconProvider::icon(IconName::Arrow), "Arrow");
     arrow->setCheckable(true);
+    auto* lineTool = toolbar->addAction(IconProvider::icon(IconName::Line), "Line");
+    lineTool->setCheckable(true);
     auto* pen = toolbar->addAction(IconProvider::icon(IconName::Pen), "Pen");
     pen->setCheckable(true);
     auto* textAction = toolbar->addAction(IconProvider::icon(IconName::Text), "Text");
@@ -1473,6 +1493,20 @@ void EditorWindow::createToolbar()
         canvas_->setTextOutlineEnabled(checked);
     });
     toolbar->addWidget(outlineBtn);
+
+    auto* fillBtn = new QToolButton(toolbar);
+    fillBtn->setText("Fill");
+    fillBtn->setToolTip("Toggle fill for shapes");
+    fillBtn->setFixedSize(32, 24);
+    fillBtn->setCheckable(true);
+    fillBtn->setStyleSheet(
+        "QToolButton { font: bold 9px; color: #bcbec6; }"
+        "QToolButton:checked { color: #2fbf9f; }");
+    connect(fillBtn, &QToolButton::clicked, this, [this](bool checked) {
+        canvas_->setFilled(checked);
+    });
+    toolbar->addWidget(fillBtn);
+
     auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
     mosaic->setCheckable(true);
 
@@ -1614,6 +1648,7 @@ void EditorWindow::createToolbar()
     rectangle->setToolTip("Rectangle (R)");
     ellipse->setToolTip("Ellipse (E)");
     arrow->setToolTip("Arrow (A)");
+    lineTool->setToolTip("Line (L)");
     pen->setToolTip("Pen (P)");
     textAction->setToolTip("Text (T)");
     highlight->setToolTip("Highlight (H)");
@@ -1627,15 +1662,15 @@ void EditorWindow::createToolbar()
     save->setToolTip("Save (Ctrl+S)");
     saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
 
-    updateToolActions_ = [rectangle, ellipse, arrow, pen, textAction, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
-        QAction* lookup[] = {rectangle, ellipse, arrow, pen, textAction, highlight, numbered, mosaic, select, eraser, crop};
+    updateToolActions_ = [rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
+        QAction* lookup[] = {rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop};
         const AnnotationTool tools[] = {AnnotationTool::Rectangle, AnnotationTool::Ellipse, AnnotationTool::Arrow,
-            AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
+            AnnotationTool::Line, AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
             AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser, AnnotationTool::Crop};
         for (auto* action : lookup) {
             action->setChecked(false);
         }
-        for (int i = 0; i < 11; ++i) {
+        for (int i = 0; i < 12; ++i) {
             if (tools[i] == tool) {
                 lookup[i]->setChecked(true);
                 break;
@@ -1649,6 +1684,7 @@ void EditorWindow::createToolbar()
     connect(rectangle, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Rectangle); });
     connect(ellipse, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Ellipse); });
     connect(arrow, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Arrow); });
+    connect(lineTool, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Line); });
     connect(pen, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Pen); });
     connect(textAction, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
     connect(highlight, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Highlight); });

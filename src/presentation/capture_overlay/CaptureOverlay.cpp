@@ -259,6 +259,17 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    if (event->key() == Qt::Key_F1) {
+        if (state_ == State::Idle && candidateRegion().isValid()) {
+            selection_ = candidateRegion();
+            finishReady();
+            confirmSelection(&CaptureOverlay::emitCopy);
+        } else if (state_ == State::Ready && selectedRegion().isValid()) {
+            confirmSelection(&CaptureOverlay::emitCopy);
+        }
+        return;
+    }
+
     if (event->key() == Qt::Key_Tab && state_ == State::Idle && !smartCandidates_.isEmpty()) {
         cycleCandidate(event->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1);
         return;
@@ -414,6 +425,11 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
 
 void CaptureOverlay::mousePressEvent(QMouseEvent* event)
 {
+    if (event->button() == Qt::RightButton) {
+        cancel();
+        return;
+    }
+
     if (event->button() != Qt::LeftButton) {
         return;
     }
@@ -577,16 +593,16 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
             drawCandidate(painter, candidate);
             drawMagnifier(painter);
             painter.setPen(QColor(255, 255, 255, 80));
-            painter.setFont(QFont("Segoe UI", 11));
+            painter.setFont(QFont("Microsoft YaHei UI", 11));
             painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
                 "Tab / Arrow keys to cycle  ·  Enter to capture");
         } else {
             if (state_ == State::Idle) {
                 drawMagnifier(painter);
                 painter.setPen(QColor(255, 255, 255, 80));
-                painter.setFont(QFont("Segoe UI", 12));
+                painter.setFont(QFont("Microsoft YaHei UI", 11));
                 painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
-                    "Drag to select selection area  ·  Double-click to capture full screen");
+                    "Drag to select area  ·  Double-click to capture full screen");
             }
         }
         return;
