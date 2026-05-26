@@ -24,6 +24,21 @@ namespace {
 struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByteAccess : ::IUnknown {
     virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
 };
+
+// Workaround: C++/WinRT Windows.Globalization Language constructor
+// is declared but not inline in SDK 10.0.19041 cppwinrt headers.
+winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring& tag)
+{
+    using namespace winrt::Windows::Globalization;
+    auto factory = winrt::get_activation_factory<Language, ILanguageFactory>();
+    auto abiPtr = reinterpret_cast<winrt::impl::abi<ILanguageFactory>::type*>(
+        winrt::get_abi(factory));
+    Language lang{ nullptr };
+    winrt::hstring hstr(tag);
+    winrt::check_hresult(abiPtr->CreateLanguage(
+        winrt::get_abi(hstr), winrt::put_abi(lang)));
+    return lang;
+}
 #endif
 
 } // namespace
@@ -62,7 +77,7 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
         if (language_.isEmpty()) {
             engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromUserProfileLanguages();
         } else {
-            winrt::Windows::Globalization::Language lang(language_.toStdWString());
+            auto lang = createLanguageFromTag(language_.toStdWString());
             engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromLanguage(lang);
         }
         if (engine == nullptr) {

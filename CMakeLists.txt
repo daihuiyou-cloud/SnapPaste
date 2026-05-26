@@ -80,7 +80,7 @@ target_link_libraries(SnapPaste PRIVATE SnapPasteCore)
 
 if (WIN32)
     target_compile_definitions(SnapPasteCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
-    target_link_libraries(SnapPasteCore PUBLIC user32 gdi32 shell32 shcore dwmapi ole32 oleaut32 uiautomationcore d3d11 dxgi)
+    target_link_libraries(SnapPasteCore PUBLIC user32 gdi32 shell32 shcore dwmapi ole32 oleaut32 uiautomationcore d3d11 dxgi windowsapp)
 endif()
 
 option(SNAPPASTE_BUILD_TESTS "Build SnapPaste tests" OFF)
