@@ -6,12 +6,18 @@
 
 #include "presentation/icons/IconProvider.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QColorDialog>
 #include <QActionGroup>
 #include <QCloseEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QInputDialog>
 #include <QLabel>
+#include <QMimeData>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
@@ -20,6 +26,7 @@
 #include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
@@ -185,10 +192,41 @@ public:
         : QWidget(parent)
     {
         setMouseTracking(true);
+        setAcceptDrops(true);
         setFocusPolicy(Qt::StrongFocus);
         setMinimumSize(640, 360);
+        QSettings settings;
+        fontSize_ = settings.value("editor/fontSize", 14).toInt();
+        const auto saved = settings.value("editor/recentColors").toList();
+        for (const auto& v : saved) {
+            QColor c(v.toString());
+            if (c.isValid())
+                customColors_.append(c);
+        }
     }
 
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override
+    {
+        if (event->mimeData()->hasUrls()) {
+            event->acceptProposedAction();
+        }
+    }
+
+    void dropEvent(QDropEvent* event) override
+    {
+        const auto urls = event->mimeData()->urls();
+        if (!urls.isEmpty()) {
+            const auto path = urls.first().toLocalFile();
+            QImage img(path);
+            if (!img.isNull()) {
+                setImage(img);
+                event->acceptProposedAction();
+            }
+        }
+    }
+
+public:
     QPoint toImage(QPoint widgetPt) const
     {
         return QPoint(static_cast<int>(widgetPt.x() / zoomFactor_),
@@ -275,9 +313,6 @@ public:
     {
         if (currentTool_ == tool) return;
         currentTool_ = tool;
-        if (tool != AnnotationTool::Select) {
-            selectedIndex_ = -1;
-        }
         switch (tool) {
         case AnnotationTool::Pen: setCursor(Qt::CrossCursor); break;
         case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
@@ -332,6 +367,10 @@ public:
         if (customColors_.size() > 6) {
             customColors_.resize(6);
         }
+        QVariantList saved;
+        for (const auto& c : customColors_)
+            saved.append(c.name());
+        QSettings().setValue("editor/recentColors", saved);
     }
 
     void undo()
@@ -369,10 +408,23 @@ protected:
             return;
         }
         if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0) {
-            annotations_.removeAt(selectedIndex_);
-            selectedIndex_ = -1;
-            markModified();
-            update();
+            if (annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+                bool ok = false;
+                const auto newText = QInputDialog::getMultiLineText(
+                    static_cast<QWidget*>(parent()), "Edit Text", "Edit text:",
+                    annotations_[selectedIndex_].text, &ok);
+                if (ok && !newText.isEmpty() && newText != annotations_[selectedIndex_].text) {
+                    pushUndo();
+                    redoStack_.clear();
+                    annotations_[selectedIndex_].text = newText;
+                    update();
+                }
+            } else {
+                annotations_.removeAt(selectedIndex_);
+                selectedIndex_ = -1;
+                markModified();
+                update();
+            }
             event->accept();
             return;
         }
@@ -423,6 +475,7 @@ protected:
         ann.strokeWidth = 2;
         ann.textOutline = textOutlineEnabled_;
         annotations_.push_back(std::move(ann));
+        selectedIndex_ = annotations_.size() - 1;
         markModified();
     }
 
@@ -517,8 +570,22 @@ protected:
             ann.color = currentColor_;
             ann.number = nextNumber_++;
             annotations_.push_back(std::move(ann));
+            selectedIndex_ = annotations_.size() - 1;
             markModified();
             return;
+        }
+
+        if (currentTool_ != AnnotationTool::Select && currentTool_ != AnnotationTool::Eraser
+            && currentTool_ != AnnotationTool::Numbered && currentTool_ != AnnotationTool::Text) {
+            for (int i = annotations_.size() - 1; i >= 0; --i) {
+                if (hitTestAnnotation(annotations_.at(i), pos)) {
+                    if (i != selectedIndex_) {
+                        selectedIndex_ = i;
+                        update();
+                    }
+                    return;
+                }
+            }
         }
 
         drawing_ = true;
@@ -654,6 +721,8 @@ protected:
             draft_.points.push_back(current_);
             const int margin = currentStrokeWidth_ + 4;
             update(QRect(oldCurrent, current_).normalized().adjusted(-margin, -margin, margin, margin));
+        } else if (draft_.tool == AnnotationTool::Mosaic) {
+            update(QRect(oldCurrent, current_).normalized().adjusted(-12, -12, 12, 12));
         } else {
             update();
         }
@@ -689,7 +758,13 @@ protected:
             pushUndo();
             redoStack_.clear();
             annotations_.push_back(draft_);
+            selectedIndex_ = annotations_.size() - 1;
             markModified();
+            if (currentTool_ != AnnotationTool::Select && currentTool_ != AnnotationTool::Text
+                && currentTool_ != AnnotationTool::Numbered && currentTool_ != AnnotationTool::Mosaic
+                && currentTool_ != AnnotationTool::Eraser) {
+                setTool(AnnotationTool::Select);
+            }
         } else {
             update();
         }
@@ -743,6 +818,39 @@ protected:
                 event->accept();
                 return;
             }
+            if (event->key() == Qt::Key_D && selectedIndex_ >= 0) {
+                auto dup = annotations_.at(selectedIndex_);
+                dup.bounds.translate(10, 10);
+                pushUndo();
+                redoStack_.clear();
+                annotations_.push_back(std::move(dup));
+                selectedIndex_ = annotations_.size() - 1;
+                markModified();
+                event->accept();
+                return;
+            }
+            if (event->key() == Qt::Key_A && !annotations_.isEmpty()) {
+                selectedIndex_ = annotations_.size() - 1;
+                markModified();
+                event->accept();
+                return;
+            }
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                if ((event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
+                    && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+                    int dir = (event->key() == Qt::Key_Up) ? 1 : -1;
+                    int swap = selectedIndex_ + dir;
+                    if (swap >= 0 && swap < annotations_.size()) {
+                        pushUndo();
+                        redoStack_.clear();
+                        qSwap(annotations_[selectedIndex_], annotations_[swap]);
+                        selectedIndex_ = swap;
+                        markModified();
+                    }
+                    event->accept();
+                    return;
+                }
+            }
             QWidget::keyPressEvent(event);
             return;
         }
@@ -761,7 +869,7 @@ protected:
         case Qt::Key_Down:
         case Qt::Key_Left:
         case Qt::Key_Right:
-            if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0) {
+            if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
                 int step = event->modifiers().testFlag(Qt::ShiftModifier) ? 10 : 1;
                 QPoint delta(0, 0);
                 if (event->key() == Qt::Key_Up) delta.setY(-step);
@@ -781,6 +889,7 @@ protected:
             if (currentTool_ == AnnotationTool::Text && fontSize_ > 8) {
                 fontSize_ -= 2; markModified(); update();
                 if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+                QSettings().setValue("editor/fontSize", fontSize_);
                 event->accept(); return;
             }
             break;
@@ -788,6 +897,7 @@ protected:
             if (currentTool_ == AnnotationTool::Text && fontSize_ < 72) {
                 fontSize_ += 2; markModified(); update();
                 if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+                QSettings().setValue("editor/fontSize", fontSize_);
                 event->accept(); return;
             }
             break;
@@ -800,9 +910,13 @@ protected:
                     "T - Text<br>H - Highlight<br>N - Numbered<br>M - Mosaic<br>"
                     "V - Select<br>X - Eraser<br><br>"
                     "<b>Edit</b><br>"
-                    "Ctrl+Z - Undo<br>Ctrl+Y - Redo<br>Delete/Backspace - Remove annotation<br>"
-                    "Arrow keys - Nudge annotation (Shift+Arrow = 10px)<br>"
-                    "[ / ] - Decrease/Increase text font size<br><br>"
+                        "Ctrl+Z - Undo<br>Ctrl+Y - Redo<br>Ctrl+D - Duplicate annotation<br>"
+                        "Ctrl+A - Select last annotation<br>"
+                        "Delete/Backspace - Remove annotation<br>"
+                        "Arrow keys - Nudge annotation (Shift+Arrow = 10px)<br>"
+                        "Ctrl+Shift+Arrow Up/Down - Bring forward / Send backward<br>"
+                        "Double-click - Delete annotation (Text tool: edit text)<br>"
+                        "[ / ] - Decrease/Increase text font size<br><br>"
                     "<b>Zoom</b><br>"
                     "Ctrl+Scroll / Ctrl++ / Ctrl+- - Zoom<br>"
                     "Ctrl+0 - 100%<br>Ctrl+9 - Fit to window<br><br>"
@@ -822,7 +936,21 @@ protected:
     void contextMenuEvent(QContextMenuEvent* event) override
     {
         QMenu menu;
+        auto* copyImage = menu.addAction("Copy Image\tCtrl+Shift+C");
         auto* saveAs = menu.addAction("Save As...");
+        QAction* deleteAnn = nullptr;
+        QAction* duplicateAnn = nullptr;
+        QAction* bringForward = nullptr;
+        QAction* sendBackward = nullptr;
+        if (selectedIndex_ >= 0) {
+            menu.addSeparator();
+            deleteAnn = menu.addAction("Delete Annotation\tDel");
+            duplicateAnn = menu.addAction("Duplicate Annotation");
+            if (selectedIndex_ < annotations_.size() - 1)
+                bringForward = menu.addAction("Bring Forward\tCtrl+Shift+Up");
+            if (selectedIndex_ > 0)
+                sendBackward = menu.addAction("Send Backward\tCtrl+Shift+Down");
+        }
         menu.addSeparator();
         auto* zoomIn = menu.addAction("Zoom In\tCtrl++");
         auto* zoomOut = menu.addAction("Zoom Out\tCtrl+-");
@@ -831,7 +959,35 @@ protected:
         menu.addSeparator();
         auto* clearAll = menu.addAction("Clear All Annotations");
         auto* action = menu.exec(event->globalPos());
-        if (action == saveAs) {
+        if (action == deleteAnn && selectedIndex_ >= 0) {
+            pushUndo();
+            redoStack_.clear();
+            annotations_.removeAt(selectedIndex_);
+            selectedIndex_ = -1;
+            markModified();
+        } else if (action == duplicateAnn && selectedIndex_ >= 0) {
+            pushUndo();
+            redoStack_.clear();
+            auto dup = annotations_.at(selectedIndex_);
+            dup.bounds.translate(10, 10);
+            annotations_.push_back(std::move(dup));
+            selectedIndex_ = annotations_.size() - 1;
+            markModified();
+        } else if (action == bringForward && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size() - 1) {
+            pushUndo();
+            redoStack_.clear();
+            qSwap(annotations_[selectedIndex_], annotations_[selectedIndex_ + 1]);
+            selectedIndex_++;
+            markModified();
+        } else if (action == sendBackward && selectedIndex_ > 0 && selectedIndex_ < annotations_.size()) {
+            pushUndo();
+            redoStack_.clear();
+            qSwap(annotations_[selectedIndex_], annotations_[selectedIndex_ - 1]);
+            selectedIndex_--;
+            markModified();
+        } else if (action == copyImage) {
+            QApplication::clipboard()->setImage(renderedImage());
+        } else if (action == saveAs) {
             auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
                 "PNG (*.png);;JPEG (*.jpg *.jpeg)");
             if (!path.isEmpty()) {
@@ -1119,13 +1275,35 @@ EditorWindow::EditorWindow(QWidget* parent)
     connect(redoAction, &QAction::triggered, this, [this] { canvas_->redo(); });
     addAction(redoAction);
 
+    auto* copyImageAction = new QAction("Copy Image", this);
+    copyImageAction->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C));
+    connect(copyImageAction, &QAction::triggered, this, [this] {
+        QApplication::clipboard()->setImage(canvas_->renderedImage());
+        statusBar()->showMessage("Image copied to clipboard", 3000);
+    });
+    addAction(copyImageAction);
+
+    auto* pasteAction = new QAction("Paste Image", this);
+    pasteAction->setShortcut(QKeySequence::Paste);
+    connect(pasteAction, &QAction::triggered, this, [this] {
+        auto pix = QApplication::clipboard()->pixmap();
+        if (!pix.isNull()) {
+            canvas_->setImage(pix.toImage());
+            statusBar()->showMessage("Image pasted from clipboard", 3000);
+        }
+    });
+    addAction(pasteAction);
+
     auto* saveAsAction = new QAction("Save As", this);
     saveAsAction->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S));
     connect(saveAsAction, &QAction::triggered, this, [this] {
-        auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+        QSettings settings;
+        auto dir = settings.value("editor/lastSaveDir").toString();
+        auto path = QFileDialog::getSaveFileName(this, "Save As", dir,
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
             canvas_->renderedImage().save(path);
+            QSettings().setValue("editor/lastSaveDir", QFileInfo(path).absolutePath());
         }
     });
     addAction(saveAsAction);

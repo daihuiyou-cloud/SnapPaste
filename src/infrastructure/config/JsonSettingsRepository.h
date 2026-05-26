@@ -8,9 +8,10 @@ class JsonSettingsRepository final : public ISettingsRepository {
 public:
     Result<AppSettings> load() override;
     Result<void> save(const AppSettings& settings) override;
+    AppSettings defaultSettings() override;
 
 private:
-    AppSettings defaultSettings() const;
+    AppSettings defaultSettingsInternal() const;
 };
 
 } // namespace snappaste

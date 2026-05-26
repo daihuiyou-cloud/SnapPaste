@@ -48,6 +48,18 @@ void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int the
     emit eventHub_.settingsChanged();
 }
 
+void SettingsViewModel::restoreDefaults()
+{
+    settings_ = service_.defaultSettings();
+    const auto result = service_.save(settings_);
+    if (result.isError()) {
+        emit errorOccurred(result.error());
+        return;
+    }
+    emit loaded(settings_);
+    emit eventHub_.settingsChanged();
+}
+
 ThemeMode SettingsViewModel::themeFromIndex(int index)
 {
     switch (index) {

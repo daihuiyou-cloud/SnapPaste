@@ -45,7 +45,7 @@ Result<AppSettings> JsonSettingsRepository::load()
 {
     QFile file(AppPaths::configFilePath());
     if (!file.exists()) {
-        auto settings = defaultSettings();
+        auto settings = defaultSettingsInternal();
         const auto saveResult = save(settings);
         if (saveResult.isError()) {
             return Result<AppSettings>::failure(saveResult.error());
@@ -63,7 +63,7 @@ Result<AppSettings> JsonSettingsRepository::load()
     }
 
     const auto object = document.object();
-    AppSettings settings = defaultSettings();
+    AppSettings settings = defaultSettingsInternal();
     bool shouldPersistMigratedSettings = !object.contains("settingsVersion");
 
     settings.saveDirectory = object.value("saveDirectory").toString(settings.saveDirectory);
@@ -76,7 +76,7 @@ Result<AppSettings> JsonSettingsRepository::load()
     settings.captureHotkey.shift = hotkey.value("shift").toBool(settings.captureHotkey.shift);
     settings.captureHotkey.key = hotkey.value("key").toInt(settings.captureHotkey.key);
     if (!object.contains("settingsVersion") && isLegacyCaptureDefault(settings.captureHotkey)) {
-        settings.captureHotkey = defaultSettings().captureHotkey;
+        settings.captureHotkey = defaultSettingsInternal().captureHotkey;
     }
 
     const auto pasteHotkey = object.value("pasteHotkey").toObject();
@@ -145,7 +145,12 @@ Result<void> JsonSettingsRepository::save(const AppSettings& settings)
     return Result<void>::success();
 }
 
-AppSettings JsonSettingsRepository::defaultSettings() const
+AppSettings JsonSettingsRepository::defaultSettings()
+{
+    return defaultSettingsInternal();
+}
+
+AppSettings JsonSettingsRepository::defaultSettingsInternal() const
 {
     AppSettings settings;
     settings.saveDirectory = AppPaths::defaultCaptureDirectory();

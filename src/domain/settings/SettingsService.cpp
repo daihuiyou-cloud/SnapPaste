@@ -24,4 +24,9 @@ Result<void> SettingsService::save(const AppSettings& settings)
     return repository_.save(settings);
 }
 
+AppSettings SettingsService::defaultSettings()
+{
+    return repository_.defaultSettings();
+}
+
 } // namespace snappaste

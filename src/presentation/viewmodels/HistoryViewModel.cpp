@@ -1,6 +1,7 @@
 #include "presentation/viewmodels/HistoryViewModel.h"
 
 #include <QFileInfo>
+#include <QPixmap>
 #include <QStandardItem>
 
 namespace snappaste {
@@ -34,7 +35,15 @@ void HistoryViewModel::refresh()
         auto* item = new QStandardItem(file.fileName());
         item->setData(record.id, Qt::UserRole + 1);
         item->setData(record.filePath, Qt::UserRole + 2);
-        item->setToolTip(record.filePath);
+        item->setData(record.thumbnailPath, Qt::UserRole + 3);
+        if (!record.thumbnailPath.isEmpty()) {
+            QPixmap thumb(record.thumbnailPath);
+            if (!thumb.isNull()) {
+                item->setData(thumb.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation),
+                              Qt::DecorationRole);
+            }
+        }
+        item->setToolTip(QString("%1\n%2x%3").arg(record.filePath).arg(record.width).arg(record.height));
         model_.appendRow(item);
     }
 }

@@ -129,6 +129,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     auto* browseButton = new QPushButton("Browse", this);
 
     auto* saveButton = new QPushButton("Save Settings", this);
+    auto* restoreButton = new QPushButton("Restore Defaults", this);
 
     imageFormatCombo_->addItems({"png", "jpg"});
     themeCombo_->addItems({"System", "Light", "Dark"});
@@ -147,7 +148,11 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
 
     auto* layout = new QVBoxLayout(this);
     layout->addLayout(form);
-    layout->addWidget(saveButton, 0, Qt::AlignLeft);
+    auto* btnRow = new QHBoxLayout();
+    btnRow->addWidget(saveButton);
+    btnRow->addWidget(restoreButton);
+    btnRow->addStretch();
+    layout->addLayout(btnRow);
     layout->addStretch();
     setLayout(layout);
 
@@ -164,6 +169,14 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                         captureHotkeyInput_->hotkey(),
                         pasteHotkeyInput_->hotkey(),
                         hidePinsHotkeyInput_->hotkey());
+    });
+    connect(restoreButton, &QPushButton::clicked, this, [this] {
+        auto ret = QMessageBox::question(this, "Restore Defaults",
+            "Reset all settings to their default values?",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            viewModel_.restoreDefaults();
+        }
     });
     connect(&viewModel_, &SettingsViewModel::loaded, this,
             [this](const AppSettings& settings) {

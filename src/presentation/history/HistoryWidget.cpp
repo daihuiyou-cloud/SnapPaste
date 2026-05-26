@@ -1,10 +1,15 @@
 #include "presentation/history/HistoryWidget.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QListView>
 #include <QMessageBox>
+#include <QProcess>
 #include <QPushButton>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -18,15 +23,21 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
 {
     auto* refreshButton = new QPushButton("Refresh", this);
     auto* pinButton = new QPushButton("Pin", this);
+    auto* copyButton = new QPushButton("Copy", this);
     auto* openButton = new QPushButton("Open", this);
+    auto* showInExplorerButton = new QPushButton("Explore", this);
     auto* deleteButton = new QPushButton("Delete", this);
 
     listView_->setModel(viewModel_.model());
+    listView_->setIconSize(QSize(48, 48));
+    listView_->setSpacing(2);
 
     auto* buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(refreshButton);
     buttonLayout->addWidget(pinButton);
+    buttonLayout->addWidget(copyButton);
     buttonLayout->addWidget(openButton);
+    buttonLayout->addWidget(showInExplorerButton);
     buttonLayout->addWidget(deleteButton);
     buttonLayout->addStretch();
 
@@ -59,6 +70,20 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
             viewModel_.deleteByRow(index.row());
         }
     });
+    connect(copyButton, &QPushButton::clicked, this, [this] {
+        const auto index = listView_->currentIndex();
+        if (!index.isValid()) {
+            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+            return;
+        }
+        const auto filePath = index.data(Qt::UserRole + 2).toString();
+        QImage img(filePath);
+        if (img.isNull()) {
+            QMessageBox::warning(this, "SnapPaste", "Failed to load image.");
+            return;
+        }
+        QApplication::clipboard()->setImage(img);
+    });
     connect(openButton, &QPushButton::clicked, this, [this] {
         const auto index = listView_->currentIndex();
         if (!index.isValid()) {
@@ -66,6 +91,19 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         }
         const auto filePath = index.data(Qt::UserRole + 2).toString();
         QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+    });
+    connect(showInExplorerButton, &QPushButton::clicked, this, [this] {
+        const auto index = listView_->currentIndex();
+        if (!index.isValid()) {
+            return;
+        }
+        const auto filePath = index.data(Qt::UserRole + 2).toString();
+        const QFileInfo fi(filePath);
+#ifdef Q_OS_WIN
+        QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(filePath)});
+#else
+        QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absolutePath()));
+#endif
     });
     connect(&viewModel_, &HistoryViewModel::errorOccurred, this, [this](const QString& message) {
         QMessageBox::warning(this, "SnapPaste", message);

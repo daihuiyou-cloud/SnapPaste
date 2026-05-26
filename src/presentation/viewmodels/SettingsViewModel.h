@@ -20,6 +20,7 @@ public slots:
     void load();
     void save(QString saveDirectory, QString imageFormat, int themeIndex,
               Hotkey captureHotkey = {}, Hotkey pasteHotkey = {}, Hotkey hidePinsHotkey = {});
+    void restoreDefaults();
 
 signals:
     void loaded(const AppSettings& settings);

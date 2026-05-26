@@ -11,6 +11,7 @@ public:
 
     virtual Result<AppSettings> load() = 0;
     virtual Result<void> save(const AppSettings& settings) = 0;
+    virtual AppSettings defaultSettings() = 0;
 };
 
 } // namespace snappaste

@@ -82,6 +82,8 @@ private:
     Handle hitTest(const QPoint& globalPosition) const;
     void refreshSmartCandidates(const QPoint& globalPosition);
     void clearSmartCandidates();
+    void pushSelectionUndo();
+    void undoSelection();
     void selectCandidate(int index);
     void cycleCandidate(int step);
     void confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&));
@@ -100,10 +102,12 @@ private:
     void moveSelectionBy(int dx, int dy);
     void resizeSelectionBy(int dx, int dy);
     void showActionBar();
+    void keyReleaseEvent(QKeyEvent* event) override;
     void updateCursorFor(const QPoint& globalPosition);
     void scheduleOverlayUpdate();
     void drawCandidate(QPainter& painter, const QRect& globalRegion);
     void drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize);
+    void drawDimensionLines(QPainter& painter, const QRect& localRegion, const QSize& regionSize);
     void drawMagnifier(QPainter& painter);
 
     IScreenRegionDetector& regionDetector_;
@@ -116,10 +120,16 @@ private:
     int smartCandidateIndex_ = -1;
     QRect dragStartSelection_;
     QPoint dragStart_;
+    QVector<QRect> selectionUndoStack_;
+    static constexpr int kMaxSelectionUndo = 20;
     QPoint pressGlobal_;
     QRect pressedCandidate_;
     QPoint lastMouseGlobal_;
     std::optional<QColor> sampledColor_;
+    bool spaceRepositioning_ = false;
+    QPoint spaceRepositionAnchor_;
+    QPoint spaceRepositionStartOrigin_;
+    QPoint spaceRepositionStartCurrent_;
     State state_ = State::Idle;
     Handle activeHandle_ = Handle::None;
     CaptureActionBar* actionBar_ = nullptr;

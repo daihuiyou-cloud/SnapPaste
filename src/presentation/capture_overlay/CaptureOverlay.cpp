@@ -39,6 +39,7 @@ constexpr int kFullScreenSelectionInset = 1;
 constexpr int kOverlayMaskAlpha = 96;
 constexpr int kSizeLabelHeight = 20;
 constexpr int kSizeLabelPaddingX = 10;
+constexpr int kSizeLabelRadius = 3;
 constexpr int kOverlayMargin = 8;
 
 const QColor kSelectionColor("#2fbf9f");
@@ -240,6 +241,19 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    if (event->key() == Qt::Key_Space && state_ == State::Selecting) {
+        spaceRepositioning_ = true;
+        spaceRepositionAnchor_ = lastMouseGlobal_;
+        spaceRepositionStartOrigin_ = origin_;
+        spaceRepositionStartCurrent_ = current_;
+        return;
+    }
+
+    if (event->key() == Qt::Key_Z && event->modifiers().testFlag(Qt::ControlModifier)) {
+        undoSelection();
+        return;
+    }
+
     if (event->key() == Qt::Key_C && sampledColor_.has_value()) {
         copySampledColor();
         return;
@@ -321,6 +335,56 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
     case Qt::Key_O:
         confirmSelection(&CaptureOverlay::emitOcr);
         return;
+    case Qt::Key_Tab: {
+        refreshSmartCandidates(selection_.center());
+        if (!smartCandidates_.isEmpty()) {
+            int dir = event->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1;
+            int best = -1;
+            for (int i = 0; i < smartCandidates_.size(); ++i) {
+                if (smartCandidates_[i] == selection_) {
+                    best = i;
+                    break;
+                }
+            }
+            if (best < 0) best = 0;
+            best = ((best + dir) % smartCandidates_.size() + smartCandidates_.size()) % smartCandidates_.size();
+            selection_ = smartCandidates_[best];
+            origin_ = selection_.topLeft();
+            current_ = selection_.bottomRight();
+            clearSmartCandidates();
+            scheduleOverlayUpdate();
+        }
+        return;
+    }
+    case Qt::Key_W: {
+        const auto cursorPos = QCursor::pos();
+        refreshSmartCandidates(cursorPos);
+        if (!smartCandidates_.isEmpty()) {
+            int best = 0;
+            for (int i = 0; i < smartCandidates_.size(); ++i) {
+                if (smartCandidates_[i].contains(cursorPos)) {
+                    best = i;
+                    break;
+                }
+            }
+            selection_ = smartCandidates_[best];
+            origin_ = selection_.topLeft();
+            current_ = selection_.bottomRight();
+            clearSmartCandidates();
+            scheduleOverlayUpdate();
+        }
+        return;
+    }
+    case Qt::Key_F: {
+        auto* screen = QGuiApplication::screenAt(QCursor::pos());
+        if (screen) {
+            selection_ = screen->geometry();
+            origin_ = selection_.topLeft();
+            current_ = selection_.bottomRight();
+            scheduleOverlayUpdate();
+        }
+        return;
+    }
     case Qt::Key_S:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             confirmSelection(&CaptureOverlay::emitSave);
@@ -411,6 +475,15 @@ void CaptureOverlay::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
+    if (spaceRepositioning_) {
+        auto delta = event->globalPos() - spaceRepositionAnchor_;
+        origin_ = spaceRepositionStartOrigin_ + delta;
+        current_ = spaceRepositionStartCurrent_ + delta;
+        selection_ = QRect(origin_, current_).normalized();
+        scheduleOverlayUpdate();
+        return;
+    }
+
     if (state_ == State::Selecting) {
         current_ = event->globalPos();
         selection_ = QRect(origin_, current_).normalized();
@@ -463,6 +536,16 @@ void CaptureOverlay::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
+void CaptureOverlay::keyReleaseEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Space && spaceRepositioning_) {
+        spaceRepositioning_ = false;
+        scheduleOverlayUpdate();
+        return;
+    }
+    QWidget::keyReleaseEvent(event);
+}
+
 void CaptureOverlay::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (event->button() != Qt::LeftButton || state_ != State::Idle) {
@@ -492,8 +575,20 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
         const auto candidate = candidateRegion();
         if (candidate.isValid()) {
             drawCandidate(painter, candidate);
+            drawMagnifier(painter);
+            painter.setPen(QColor(255, 255, 255, 80));
+            painter.setFont(QFont("Segoe UI", 11));
+            painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
+                "Tab / Arrow keys to cycle  ·  Enter to capture");
+        } else {
+            if (state_ == State::Idle) {
+                drawMagnifier(painter);
+                painter.setPen(QColor(255, 255, 255, 80));
+                painter.setFont(QFont("Segoe UI", 12));
+                painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
+                    "Drag to select selection area  ·  Double-click to capture full screen");
+            }
         }
-        drawMagnifier(painter);
         return;
     }
 
@@ -517,6 +612,13 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
     }
 
     drawSizeLabel(painter, localRegion, globalRegion.size());
+    drawDimensionLines(painter, localRegion, globalRegion.size());
+    if (state_ == State::Ready && !lastMouseGlobal_.isNull()) {
+        painter.setPen(kLabelTextColor);
+        painter.setFont(QFont("Segoe UI", 10));
+        painter.drawText(localRegion.bottomLeft() + QPoint(0, 20),
+            QString("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+    }
     if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
         drawMagnifier(painter);
     }
@@ -643,6 +745,25 @@ void CaptureOverlay::refreshSmartCandidates(const QPoint& globalPosition)
     smartCandidateLimiter_.restart();
     smartCandidates_ = regionDetector_.regionsAt(globalPosition, availableGeometry());
     smartCandidateIndex_ = smartCandidates_.isEmpty() ? -1 : 0;
+}
+
+void CaptureOverlay::pushSelectionUndo()
+{
+    if (selection_.isValid()) {
+        selectionUndoStack_.push_back(selection_);
+        if (selectionUndoStack_.size() > kMaxSelectionUndo) {
+            selectionUndoStack_.removeFirst();
+        }
+    }
+}
+
+void CaptureOverlay::undoSelection()
+{
+    if (selectionUndoStack_.isEmpty()) return;
+    selection_ = selectionUndoStack_.takeLast();
+    origin_ = selection_.topLeft();
+    current_ = selection_.bottomRight();
+    scheduleOverlayUpdate();
 }
 
 void CaptureOverlay::clearSmartCandidates()
@@ -807,6 +928,7 @@ void CaptureOverlay::finishReady()
 
 void CaptureOverlay::moveSelectionBy(int dx, int dy)
 {
+    pushSelectionUndo();
     selection_ = selectableRegion(selection_.translated(dx, dy), availableGeometry());
     showActionBar();
     scheduleOverlayUpdate();
@@ -814,6 +936,7 @@ void CaptureOverlay::moveSelectionBy(int dx, int dy)
 
 void CaptureOverlay::resizeSelectionBy(int dx, int dy)
 {
+    pushSelectionUndo();
     auto rect = selection_;
     if (dx < 0) {
         rect.setLeft(rect.left() + dx);
@@ -937,10 +1060,62 @@ void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, 
     }
 
     painter.setPen(QPen(QColor(255, 255, 255, 36), 1));
-    painter.setBrush(kLabelBackgroundColor);
-    painter.drawRoundedRect(label, 10, 10);
+    painter.setBrush(QColor(14, 20, 26, 200));
+    painter.drawRoundedRect(label, kSizeLabelRadius, kSizeLabelRadius);
     painter.setPen(kLabelTextColor);
     painter.drawText(label, Qt::AlignCenter, text);
+}
+
+void CaptureOverlay::drawDimensionLines(QPainter& painter, const QRect& local, const QSize& size)
+{
+    if (local.width() < 60 || local.height() < 30)
+        return;
+
+    const int kOff = 18;
+
+    painter.setFont(QFont("Segoe UI", 9));
+    const auto fm = painter.fontMetrics();
+
+    int l = local.left(), r = local.right(), t = local.top(), b = local.bottom();
+    int cx = local.center().x(), cy = local.center().y();
+
+    // Width line below
+    int wY = b + kOff;
+    bool wFlip = (wY + 10 > height() - 6);
+    if (wFlip) wY = t - 10;
+
+    if (wY >= 6 && wY <= height() - 6) {
+        painter.setPen(QPen(kSelectionColor, 1));
+        painter.drawLine(l, wY, r, wY);
+        painter.drawLine(l, wY - 3, l, wY + 3);
+        painter.drawLine(r, wY - 3, r, wY + 3);
+
+        QString w = QString::number(size.width());
+        int tw = fm.horizontalAdvance(w) + 8;
+        int tx = qBound(l + 4, cx - tw / 2, r - tw - 4);
+        painter.fillRect(tx, wY - 8, tw, 16, QColor(14, 20, 26, 200));
+        painter.setPen(kLabelTextColor);
+        painter.drawText(tx + 4, wY - 7, tw - 8, 14, Qt::AlignCenter, w);
+    }
+
+    // Height line on right
+    int hX = r + kOff;
+    bool hFlip = (hX + 10 > width() - 6);
+    if (hFlip) hX = l - 10;
+
+    if (hX >= 6 && hX <= width() - 6) {
+        painter.setPen(QPen(kSelectionColor, 1));
+        painter.drawLine(hX, t, hX, b);
+        painter.drawLine(hX - 3, t, hX + 3, t);
+        painter.drawLine(hX - 3, b, hX + 3, b);
+
+        QString h = QString::number(size.height());
+        int th = fm.height() + 8;
+        int ty = qBound(t + 4, cy - th / 2, b - th - 4);
+        painter.fillRect(hX - 8, ty, 16, th, QColor(14, 20, 26, 200));
+        painter.setPen(kLabelTextColor);
+        painter.drawText(hX - 7, ty + 4, 14, th - 8, Qt::AlignCenter, h);
+    }
 }
 
 void CaptureOverlay::drawMagnifier(QPainter& painter)

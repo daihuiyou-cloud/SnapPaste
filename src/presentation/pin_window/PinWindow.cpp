@@ -397,6 +397,13 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
     case Qt::Key_V:
         flipV();
         return;
+    case Qt::Key_Z:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            undoTransform();
+            QToolTip::showText(QCursor::pos(), "Undo transform", this);
+            return;
+        }
+        break;
     case Qt::Key_T:
         toggleClickThrough();
         return;
@@ -466,8 +473,32 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
         }
         event->accept();
         return;
+    } else {
+        if (std::abs(item_.state.transform.scale - 1.0) < 0.01) {
+            auto* screen = QGuiApplication::screenAt(QCursor::pos());
+            if (screen) {
+                auto screenGeo = screen->geometry();
+                double fit = qMin(static_cast<double>(screenGeo.width()) / renderedImage().width(),
+                                  static_cast<double>(screenGeo.height()) / renderedImage().height());
+                if (fit > 0) {
+                    pushUndoState();
+                    setScale(fit);
+                }
+            }
+        } else {
+            pushUndoState();
+            setScale(1.0);
+            QRect screenGeo;
+            auto* screen = QGuiApplication::screenAt(QCursor::pos());
+            if (screen) screenGeo = screen->geometry();
+            if (!screenGeo.isNull()) {
+                auto pos = screenGeo.center() - rect().center();
+                item_.state.position = pos;
+                move(pos);
+            }
+            emitStateChanged();
+        }
     }
-    controlsVisible_ = !controlsVisible_;
     update();
     event->accept();
 }
@@ -587,6 +618,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
     const auto edge = resizeEdgeAt(pos);
     if (edge != EdgeNone) {
+        pushUndoState();
         resizing_ = true;
         resizeEdge_ = edge;
         resizeStartGeometry_ = frameGeometry();
@@ -690,11 +722,12 @@ void PinWindow::wheelEvent(QWheelEvent* event)
         const auto oldScale = item_.state.transform.scale;
         item_.state.transform.scale *= delta > 0 ? 1.08 : 0.92;
         item_.state = normalizedState(item_.state);
-        resize(item_.state.size * item_.state.transform.scale);
+        const auto newSize = item_.state.size * item_.state.transform.scale;
         const auto factor = item_.state.transform.scale / oldScale;
         const auto cursorOffset = event->globalPos() - frameGeometry().topLeft();
-        move(event->globalPos() - QPoint(static_cast<int>(cursorOffset.x() * factor),
-                                         static_cast<int>(cursorOffset.y() * factor)));
+        const auto newPos = event->globalPos() - QPoint(static_cast<int>(cursorOffset.x() * factor),
+                                                         static_cast<int>(cursorOffset.y() * factor));
+        setGeometry(QRect(newPos, newSize));
         item_.state.position = frameGeometry().topLeft();
         update();
         emitStateChanged();
@@ -750,8 +783,29 @@ void PinWindow::requestClose()
     }
 }
 
+void PinWindow::pushUndoState()
+{
+    undoStack_.push_back(item_.state);
+    if (undoStack_.size() > kMaxPinUndo) {
+        undoStack_.removeFirst();
+    }
+}
+
+void PinWindow::undoTransform()
+{
+    if (undoStack_.isEmpty()) return;
+    item_.state = undoStack_.takeLast();
+    item_.state = normalizedState(item_.state);
+    invalidateRenderedCache();
+    resize(renderedImage().size() * item_.state.transform.scale);
+    applyWindowFlags();
+    update();
+    emitStateChanged();
+}
+
 void PinWindow::rotateBy(int degrees)
 {
+    pushUndoState();
     item_.state.transform.rotationDegrees += degrees;
     item_.state = normalizedState(item_.state);
     invalidateRenderedCache();
@@ -763,6 +817,7 @@ void PinWindow::rotateBy(int degrees)
 
 void PinWindow::setScale(double scale)
 {
+    pushUndoState();
     item_.state.transform.scale = scale;
     item_.state = normalizedState(item_.state);
     resize(item_.state.size * item_.state.transform.scale);
@@ -785,6 +840,7 @@ void PinWindow::invalidateRenderedCache()
 
 void PinWindow::flipH()
 {
+    pushUndoState();
     item_.state.transform.flippedHorizontally = !item_.state.transform.flippedHorizontally;
     invalidateRenderedCache();
     update();
@@ -794,6 +850,7 @@ void PinWindow::flipH()
 
 void PinWindow::flipV()
 {
+    pushUndoState();
     item_.state.transform.flippedVertically = !item_.state.transform.flippedVertically;
     invalidateRenderedCache();
     update();

@@ -54,6 +54,8 @@ private:
     void applyWindowFlags();
     void emitStateChanged();
     void requestClose();
+    void pushUndoState();
+    void undoTransform();
     void rotateBy(int degrees);
     void setScale(double scale);
     void setOpacityValue(double opacity);
@@ -88,6 +90,8 @@ private:
     bool dragDropping_ = false;
     QPropertyAnimation* showAnimation_ = nullptr;
     mutable QImage renderedCache_;
+    static constexpr int kMaxPinUndo = 20;
+    QVector<PinnedImageState> undoStack_;
 };
 
 } // namespace snappaste

@@ -10,6 +10,7 @@ public:
 
     Result<AppSettings> load();
     Result<void> save(const AppSettings& settings);
+    AppSettings defaultSettings();
 
 private:
     ISettingsRepository& repository_;

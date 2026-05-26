@@ -4,6 +4,7 @@
 
 #include <QAction>
 #include <QMenu>
+#include <QMessageBox>
 
 namespace snappaste {
 
@@ -29,7 +30,14 @@ TrayController::TrayController(QObject* parent)
     connect(showAction, &QAction::triggered, this, &TrayController::showWindowRequested);
     connect(hidePinsAction, &QAction::triggered, this, &TrayController::hidePinsRequested);
     connect(showPinsAction, &QAction::triggered, this, &TrayController::showPinsRequested);
-    connect(quitAction, &QAction::triggered, this, &TrayController::quitRequested);
+    connect(quitAction, &QAction::triggered, this, [this] {
+        auto ret = QMessageBox::question(nullptr, "Quit SnapPaste",
+            "Are you sure you want to quit?\nPinned images will be lost.",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            emit quitRequested();
+        }
+    });
     connect(&trayIcon_, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::DoubleClick) {
             emit showWindowRequested();
