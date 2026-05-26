@@ -1431,6 +1431,7 @@ void EditorWindow::createToolbar()
     auto* toolbar = addToolBar("Editor");
     toolbar->setMovable(false);
     toolbar->setIconSize(QSize(20, 20));
+    toolbar->setStyleSheet("QToolBar { padding-bottom: 12px; }");
 
     auto* rectangle = toolbar->addAction(IconProvider::icon(IconName::Rectangle), "Rectangle");
     rectangle->setCheckable(true);
