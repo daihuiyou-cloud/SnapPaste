@@ -244,6 +244,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), "Copy\tCtrl+C");
     auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), "Save\tCtrl+S");
     auto* saveAsAction = menu.addAction("Save As...\tCtrl+Shift+S");
+    auto* copyColorAction = menu.addAction("Copy Color");
     menu.addSeparator();
     auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), "Rotate Left");
     auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), "Rotate Right");
@@ -271,6 +272,14 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
             renderedImage().save(path);
+        }
+    } else if (action == copyColorAction) {
+        auto img = renderedImage();
+        if (!img.isNull() && !img.size().isEmpty()) {
+            int ix = qBound(0, event->pos().x() * img.width() / width(), img.width() - 1);
+            int iy = qBound(0, event->pos().y() * img.height() / height(), img.height() - 1);
+            QColor pixel = QColor::fromRgba(img.pixel(ix, iy));
+            QApplication::clipboard()->setText(pixel.name().toUpper());
         }
     } else if (action == rotateLeftAction) {
         rotateBy(-90);

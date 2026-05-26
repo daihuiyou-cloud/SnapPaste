@@ -8,10 +8,13 @@
 
 #include <QColorDialog>
 #include <QActionGroup>
+#include <QCloseEvent>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QLabel>
 #include <QKeyEvent>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
@@ -197,11 +200,18 @@ public:
         annotations_.clear();
         undoStack_.clear();
         redoStack_.clear();
+        modified_ = false;
         setMinimumSize(image_.size());
         resize(image_.size());
-        updateZoomTitle();
+        updateWindowTitle();
         update();
     }
+
+    void clearModified() { modified_ = false; updateWindowTitle(); }
+
+    bool isModified() const { return modified_; }
+
+    void markModified() { modified_ = true; updateWindowTitle(); update(); }
 
     void zoomAt(double factor, QPoint center)
     {
@@ -223,19 +233,25 @@ public:
             scrollArea->verticalScrollBar()->setValue(
                 scrollArea->verticalScrollBar()->value() + scrollDelta.y());
         }
-        updateZoomTitle();
+        updateWindowTitle();
         update();
     }
 
-    void updateZoomTitle()
+    void updateWindowTitle()
     {
         auto* w = window();
         if (w) {
-            QString title = "SnapPaste Editor";
+            QString title;
+            if (modified_) title += "* ";
+            title += "SnapPaste Editor";
             if (!image_.isNull()) {
                 title += QString(" - %1x%2").arg(image_.width()).arg(image_.height());
             }
             title += QString(" - %1%").arg(static_cast<int>(zoomFactor_ * 100));
+            int annCount = annotations_.size();
+            if (annCount > 0) {
+                title += QString(" - %1 ann").arg(annCount);
+            }
             w->setWindowTitle(title);
         }
     }
@@ -258,6 +274,13 @@ public:
         currentTool_ = tool;
         if (tool != AnnotationTool::Select) {
             selectedIndex_ = -1;
+        }
+        switch (tool) {
+        case AnnotationTool::Pen: setCursor(Qt::CrossCursor); break;
+        case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
+        case AnnotationTool::Eraser:
+        case AnnotationTool::Mosaic: setCursor(Qt::PointingHandCursor); break;
+        default: setCursor(Qt::CrossCursor); break;
         }
         update();
         auto* ew = qobject_cast<EditorWindow*>(window());
@@ -291,6 +314,17 @@ public:
         textOutlineEnabled_ = enabled;
     }
 
+    const QVector<QColor>& recentColors() const { return customColors_; }
+
+    void addRecentColor(const QColor& color)
+    {
+        customColors_.removeAll(color);
+        customColors_.prepend(color);
+        if (customColors_.size() > 6) {
+            customColors_.resize(6);
+        }
+    }
+
     void undo()
     {
         if (undoStack_.isEmpty()) {
@@ -298,7 +332,7 @@ public:
         }
         redoStack_.push_back(annotations_);
         annotations_ = undoStack_.takeLast();
-        update();
+        markModified();
     }
 
     void redo()
@@ -308,13 +342,21 @@ public:
         }
         undoStack_.push_back(annotations_);
         annotations_ = redoStack_.takeLast();
-        update();
+        markModified();
     }
 
 protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override
     {
         if (image_.isNull()) {
+            return;
+        }
+        if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0) {
+            annotations_.removeAt(selectedIndex_);
+            selectedIndex_ = -1;
+            markModified();
+            update();
+            event->accept();
             return;
         }
         if (currentTool_ != AnnotationTool::Text) {
@@ -364,7 +406,7 @@ protected:
         ann.strokeWidth = 2;
         ann.textOutline = textOutlineEnabled_;
         annotations_.push_back(std::move(ann));
-        update();
+        markModified();
     }
 
     void mousePressEvent(QMouseEvent* event) override
@@ -374,6 +416,14 @@ protected:
         }
 
         setFocus();
+
+        if (event->button() == Qt::MiddleButton) {
+            panning_ = true;
+            panStart_ = event->pos();
+            setCursor(Qt::ClosedHandCursor);
+            event->accept();
+            return;
+        }
 
         if (event->button() != Qt::LeftButton) {
             return;
@@ -433,7 +483,7 @@ protected:
                     undoStack_.push_back(annotations_);
                     redoStack_.clear();
                     annotations_.removeAt(i);
-                    update();
+                    markModified();
                     return;
                 }
             }
@@ -450,7 +500,7 @@ protected:
             ann.color = currentColor_;
             ann.number = nextNumber_++;
             annotations_.push_back(std::move(ann));
-            update();
+            markModified();
             return;
         }
 
@@ -469,6 +519,29 @@ protected:
 
     void mouseMoveEvent(QMouseEvent* event) override
     {
+        if (!drawing_) {
+            if (currentTool_ == AnnotationTool::Pen)
+                setCursor(Qt::CrossCursor);
+            else if (currentTool_ == AnnotationTool::Text)
+                setCursor(Qt::IBeamCursor);
+            else if (currentTool_ == AnnotationTool::Eraser || currentTool_ == AnnotationTool::Mosaic)
+                setCursor(Qt::PointingHandCursor);
+            else
+                setCursor(Qt::CrossCursor);
+        }
+        if (panning_) {
+            auto delta = event->pos() - panStart_;
+            auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
+            if (scrollArea) {
+                scrollArea->horizontalScrollBar()->setValue(
+                    scrollArea->horizontalScrollBar()->value() - delta.x());
+                scrollArea->verticalScrollBar()->setValue(
+                    scrollArea->verticalScrollBar()->value() - delta.y());
+            }
+            panStart_ = event->pos();
+            event->accept();
+            return;
+        }
         if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
             if (resizing_) {
                 auto& a = annotations_[selectedIndex_];
@@ -481,6 +554,17 @@ protected:
                 case 3: b.setBottomRight(p); break;// BR
                 }
                 a.bounds = b.normalized();
+                if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                    double aspect = static_cast<double>(resizeStartBounds_.width()) / resizeStartBounds_.height();
+                    auto newSize = a.bounds.size();
+                    newSize.setWidth(static_cast<int>(newSize.height() * aspect));
+                    switch (resizeCorner_) {
+                    case 0: a.bounds.setTopLeft(QPoint(a.bounds.right() - newSize.width() + 1, a.bounds.bottom() - newSize.height() + 1)); break;
+                    case 1: a.bounds.setTopRight(QPoint(a.bounds.left() + newSize.width() - 1, a.bounds.bottom() - newSize.height() + 1)); break;
+                    case 2: a.bounds.setBottomLeft(QPoint(a.bounds.right() - newSize.width() + 1, a.bounds.top() + newSize.height() - 1)); break;
+                    case 3: a.bounds.setSize(newSize); break;
+                    }
+                }
                 if (a.tool == AnnotationTool::Pen) {
                     if (resizeStartBounds_.width() > 0 && resizeStartBounds_.height() > 0) {
                         const auto sx = a.bounds.width() / static_cast<double>(resizeStartBounds_.width());
@@ -521,7 +605,32 @@ protected:
             return;
         }
 
-        current_ = event->pos();
+        auto rawPos = event->pos();
+        if (!(rawPos == start_) && event->modifiers().testFlag(Qt::ShiftModifier)) {
+            if (draft_.tool == AnnotationTool::Rectangle || draft_.tool == AnnotationTool::Ellipse) {
+                auto dx = rawPos.x() - start_.x();
+                auto dy = rawPos.y() - start_.y();
+                int side = std::max(std::abs(dx), std::abs(dy));
+                rawPos.setX(start_.x() + (dx >= 0 ? side : -side));
+                rawPos.setY(start_.y() + (dy >= 0 ? side : -side));
+            } else if (draft_.tool == AnnotationTool::Arrow) {
+                double angle = std::atan2(rawPos.y() - start_.y(), rawPos.x() - start_.x());
+                double snapped = std::round(angle / (M_PI / 4)) * (M_PI / 4);
+                double dist = std::sqrt(std::pow(rawPos.x() - start_.x(), 2) +
+                                        std::pow(rawPos.y() - start_.y(), 2));
+                rawPos.setX(start_.x() + static_cast<int>(dist * std::cos(snapped)));
+                rawPos.setY(start_.y() + static_cast<int>(dist * std::sin(snapped)));
+            } else if (draft_.tool == AnnotationTool::Pen) {
+                auto dx = std::abs(rawPos.x() - start_.x());
+                auto dy = std::abs(rawPos.y() - start_.y());
+                if (dx >= dy) {
+                    rawPos.setY(start_.y());
+                } else {
+                    rawPos.setX(start_.x());
+                }
+            }
+        }
+        current_ = rawPos;
         draft_.bounds = QRect(start_, current_).normalized();
         if (draft_.tool == AnnotationTool::Pen) {
             draft_.points.push_back(current_);
@@ -531,6 +640,12 @@ protected:
 
     void mouseReleaseEvent(QMouseEvent* event) override
     {
+        if (panning_) {
+            panning_ = false;
+            setCursor(Qt::ArrowCursor);
+            event->accept();
+            return;
+        }
         if (currentTool_ == AnnotationTool::Select) {
             if (resizing_ || moving_) {
                 resizing_ = false;
@@ -553,8 +668,10 @@ protected:
             undoStack_.push_back(annotations_);
             redoStack_.clear();
             annotations_.push_back(draft_);
+            markModified();
+        } else {
+            update();
         }
-        update();
     }
 
     void keyPressEvent(QKeyEvent* event) override
@@ -565,7 +682,7 @@ protected:
             redoStack_.clear();
             annotations_.removeAt(selectedIndex_);
             selectedIndex_ = -1;
-            update();
+            markModified();
             event->accept();
             return;
         }
@@ -598,7 +715,7 @@ protected:
                         setMinimumSize(newSize);
                         resize(newSize);
                         zoomFactor_ = fit;
-                        updateZoomTitle();
+                        updateWindowTitle();
                         update();
                     }
                 }
@@ -619,6 +736,61 @@ protected:
         case Qt::Key_M: setTool(AnnotationTool::Mosaic); event->accept(); return;
         case Qt::Key_V: setTool(AnnotationTool::Select); event->accept(); return;
         case Qt::Key_X: setTool(AnnotationTool::Eraser); event->accept(); return;
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+            if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0) {
+                int step = event->modifiers().testFlag(Qt::ShiftModifier) ? 10 : 1;
+                QPoint delta(0, 0);
+                if (event->key() == Qt::Key_Up) delta.setY(-step);
+                else if (event->key() == Qt::Key_Down) delta.setY(step);
+                else if (event->key() == Qt::Key_Left) delta.setX(-step);
+                else if (event->key() == Qt::Key_Right) delta.setX(step);
+                annotations_[selectedIndex_].bounds.translate(delta);
+                if (annotations_[selectedIndex_].tool == AnnotationTool::Pen) {
+                    for (auto& pt : annotations_[selectedIndex_].points) pt += delta;
+                }
+                markModified();
+                event->accept();
+                return;
+            }
+            break;
+        case Qt::Key_BracketLeft:
+            if (currentTool_ == AnnotationTool::Text && fontSize_ > 8) {
+                fontSize_ -= 2; markModified(); update();
+                event->accept(); return;
+            }
+            break;
+        case Qt::Key_BracketRight:
+            if (currentTool_ == AnnotationTool::Text && fontSize_ < 72) {
+                fontSize_ += 2; markModified(); update();
+                event->accept(); return;
+            }
+            break;
+        case Qt::Key_F1:
+        case Qt::Key_Slash:
+            if (event->modifiers().testFlag(Qt::ShiftModifier) || event->key() == Qt::Key_F1) {
+                QMessageBox::information(static_cast<QWidget*>(window()), "Keyboard Shortcuts",
+                    "<b>Tools</b><br>"
+                    "R - Rectangle<br>E - Ellipse<br>A - Arrow<br>P - Pen<br>"
+                    "T - Text<br>H - Highlight<br>N - Numbered<br>M - Mosaic<br>"
+                    "V - Select<br>X - Eraser<br><br>"
+                    "<b>Edit</b><br>"
+                    "Ctrl+Z - Undo<br>Ctrl+Y - Redo<br>Delete/Backspace - Remove annotation<br>"
+                    "Arrow keys - Nudge annotation (Shift+Arrow = 10px)<br>"
+                    "[ / ] - Decrease/Increase text font size<br><br>"
+                    "<b>Zoom</b><br>"
+                    "Ctrl+Scroll / Ctrl++ / Ctrl+- - Zoom<br>"
+                    "Ctrl+0 - 100%<br>Ctrl+9 - Fit to window<br><br>"
+                    "<b>File</b><br>"
+                    "Ctrl+S - Save<br>Ctrl+Shift+S - Save As...<br>"
+                    "F3 - Pin image<br>"
+                    "Escape - Close editor");
+                event->accept();
+                return;
+            }
+            break;
         default: break;
         }
         QWidget::keyPressEvent(event);
@@ -661,7 +833,7 @@ protected:
                     setMinimumSize(newSize);
                     resize(newSize);
                     zoomFactor_ = fit;
-                    updateZoomTitle();
+                    updateWindowTitle();
                     update();
                 }
             }
@@ -671,7 +843,7 @@ protected:
                 redoStack_.clear();
                 annotations_.clear();
                 selectedIndex_ = -1;
-                update();
+                markModified();
             }
         }
     }
@@ -685,10 +857,19 @@ protected:
         if (!image_.isNull()) {
             painter.save();
             painter.scale(zoomFactor_, zoomFactor_);
+            if (image_.hasAlphaChannel()) {
+                int tile = 8;
+                for (int y = 0; y < image_.height(); y += tile) {
+                    for (int x = 0; x < image_.width(); x += tile) {
+                        bool light = ((x / tile) + (y / tile)) % 2 == 0;
+                        painter.fillRect(x, y, tile, tile, light ? QColor("#cccccc") : QColor("#888888"));
+                    }
+                }
+            }
             painter.drawImage(QPoint(0, 0), image_);
             drawAnnotations(&painter, image_, true);
             if (drawing_) {
-                drawAnnotation(&painter, image_, draft_);
+                drawAnnotation(&painter, image_, draft_, fontSize_);
             }
             painter.restore();
         }
@@ -726,7 +907,7 @@ private:
     void drawAnnotations(QPainter* painter, const QImage& sourceImage, bool includeSelectionChrome) const
     {
         for (int i = 0; i < annotations_.size(); ++i) {
-            drawAnnotation(painter, sourceImage, annotations_.at(i));
+            drawAnnotation(painter, sourceImage, annotations_.at(i), fontSize_);
             if (includeSelectionChrome && i == selectedIndex_) {
                 painter->setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
                 painter->setBrush(Qt::NoBrush);
@@ -757,7 +938,7 @@ private:
         return annotation.bounds.adjusted(-kMargin, -kMargin, kMargin, kMargin).contains(pos);
     }
 
-    static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation)
+    static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize = 14)
     {
         painter->setRenderHint(QPainter::Antialiasing, true);
 
@@ -795,7 +976,7 @@ private:
             }
             break;
         case AnnotationTool::Text: {
-            QFont font("Segoe UI", 14);
+            QFont font("Segoe UI", fontSize);
             painter->setFont(font);
             const auto flags = Qt::AlignLeft | Qt::AlignTop;
             if (annotation.textOutline) {
@@ -872,8 +1053,12 @@ private:
     bool drawing_ = false;
     bool pickingColor_ = false;
     bool mosaicBlurred_ = false;
+    bool panning_ = false;
+    QPoint panStart_;
     double zoomFactor_ = 1.0;
+    bool modified_ = false;
     int nextNumber_ = 1;
+    int fontSize_ = 14;
     bool textOutlineEnabled_ = true;
     QVector<QColor> customColors_;
 };
@@ -912,6 +1097,27 @@ EditorWindow::EditorWindow(QWidget* parent)
         }
     });
     addAction(saveAsAction);
+}
+
+void EditorWindow::closeEvent(QCloseEvent* event)
+{
+    if (canvas_ && canvas_->isModified()) {
+        auto ret = QMessageBox::question(this, "Unsaved Changes",
+            "You have unsaved annotations. Save before closing?",
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+        if (ret == QMessageBox::Save) {
+            auto img = canvas_->renderedImage();
+            emit imageEdited(img);
+            emit saveRequested();
+            event->accept();
+        } else if (ret == QMessageBox::Discard) {
+            event->accept();
+        } else {
+            event->ignore();
+        }
+    } else {
+        event->accept();
+    }
 }
 
 void EditorWindow::setImage(const QImage& image)
@@ -1025,11 +1231,27 @@ void EditorWindow::createToolbar()
     customBtn->setToolTip("Custom color...");
     customBtn->setFixedSize(24, 24);
     customBtn->setStyleSheet("QToolButton { font: bold 14px; color: #bcbec6; }");
-    connect(customBtn, &QToolButton::clicked, this, [this] {
-        const auto color = QColorDialog::getColor(Qt::white, static_cast<QWidget*>(parent()), "Choose Color");
-        if (color.isValid()) {
-            canvas_->setColor(color);
+    connect(customBtn, &QToolButton::clicked, this, [this, customBtn] {
+        QMenu menu(customBtn);
+        auto recent = canvas_->recentColors();
+        if (!recent.isEmpty()) {
+            for (const auto& c : recent) {
+                QPixmap px(16, 16);
+                px.fill(c);
+                auto* action = menu.addAction(QIcon(px), c.name().toUpper());
+                connect(action, &QAction::triggered, this, [this, c] { canvas_->setColor(c); });
+            }
+            menu.addSeparator();
         }
+        auto* picker = menu.addAction("Custom Color...");
+        connect(picker, &QAction::triggered, this, [this] {
+            const auto color = QColorDialog::getColor(Qt::white, static_cast<QWidget*>(parent()), "Choose Color");
+            if (color.isValid()) {
+                canvas_->setColor(color);
+                canvas_->addRecentColor(color);
+            }
+        });
+        menu.exec(customBtn->mapToGlobal(QPoint(0, customBtn->height())));
     });
     toolbar->addWidget(customBtn);
 
@@ -1047,16 +1269,16 @@ void EditorWindow::createToolbar()
 
     undo->setToolTip("Undo (Ctrl+Z)");
     redo->setToolTip("Redo (Ctrl+Y)");
-    rectangle->setToolTip("Rectangle");
-    ellipse->setToolTip("Ellipse");
-    arrow->setToolTip("Arrow");
-    pen->setToolTip("Pen");
-    textB->setToolTip("Text (double-click canvas to enter text)");
-    highlight->setToolTip("Highlight");
-    numbered->setToolTip("Numbered (click canvas to place sequential numbers)");
-    mosaic->setToolTip("Mosaic");
-    eraser->setToolTip("Eraser");
-    select->setToolTip("Select (click to select, drag corners to resize, drag body to move, Delete to remove)");
+    rectangle->setToolTip("Rectangle (R)");
+    ellipse->setToolTip("Ellipse (E)");
+    arrow->setToolTip("Arrow (A)");
+    pen->setToolTip("Pen (P)");
+    textB->setToolTip("Text (T)");
+    highlight->setToolTip("Highlight (H)");
+    numbered->setToolTip("Numbered (N)");
+    mosaic->setToolTip("Mosaic (M)");
+    eraser->setToolTip("Eraser (X)");
+    select->setToolTip("Select (V)");
     copy->setToolTip("Copy");
     pinBtn->setToolTip("Pin image (F3)");
     save->setToolTip("Save (Ctrl+S)");
@@ -1115,6 +1337,7 @@ void EditorWindow::createToolbar()
         emit pinRequested(img);
     });
     connect(save, &QAction::triggered, this, [this] {
+        canvas_->clearModified();
         emit imageEdited(canvas_->renderedImage());
         emit saveRequested();
     });

@@ -4,6 +4,7 @@
 
 #include <functional>
 
+#include <QCloseEvent>
 #include <QImage>
 #include <QMainWindow>
 
@@ -16,6 +17,9 @@ class EditorWindow final : public QMainWindow {
 
 public:
     explicit EditorWindow(QWidget* parent = nullptr);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 public slots:
     void setImage(const QImage& image);
