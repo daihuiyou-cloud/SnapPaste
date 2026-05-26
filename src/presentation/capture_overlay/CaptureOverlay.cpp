@@ -1017,7 +1017,7 @@ void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)
     painter.setPen(QPen(kCandidateColor, 1, Qt::DashLine));
     painter.setBrush(kCandidateFillColor);
     painter.drawRect(localRegion.adjusted(0, 0, -1, -1));
-    drawSizeLabel(painter, localRegion, globalRegion.size());
+    // drawSizeLabel removed per user request
 }
 
 void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize)
