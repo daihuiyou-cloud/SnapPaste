@@ -9,7 +9,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QColorDialog>
-#include <QActionGroup>
+#include <QButtonGroup>
 #include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -31,6 +31,7 @@
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
+#include <QWheelEvent>
 
 namespace snappaste {
 
@@ -174,15 +175,15 @@ static void blurVertical(const QImage& src, QImage& dst, int radius)
     for (int x = 0; x < w; ++x) {
         int a = 0, r = 0, g = 0, b = 0, cnt = 0;
         for (int y = 0; y <= radius && y < h; ++y) {
-            auto px = src.pixel(x, y);
+            auto px = reinterpret_cast<const QRgb*>(src.constScanLine(y))[x];
             a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt;
         }
         for (int y = 0; y < h; ++y) {
-            if (cnt > 0) dst.setPixel(x, y, qRgba(r / cnt, g / cnt, b / cnt, a / cnt));
+            if (cnt > 0) reinterpret_cast<QRgb*>(dst.scanLine(y))[x] = qRgba(r / cnt, g / cnt, b / cnt, a / cnt);
             int top = y - radius;
-            if (top >= 0) { auto px = src.pixel(x, top); a -= qAlpha(px); r -= qRed(px); g -= qGreen(px); b -= qBlue(px); --cnt; }
+            if (top >= 0) { auto px = reinterpret_cast<const QRgb*>(src.constScanLine(top))[x]; a -= qAlpha(px); r -= qRed(px); g -= qGreen(px); b -= qBlue(px); --cnt; }
             int bottom = y + radius + 1;
-            if (bottom < h) { auto px = src.pixel(x, bottom); a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt; }
+            if (bottom < h) { auto px = reinterpret_cast<const QRgb*>(src.constScanLine(bottom))[x]; a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt; }
         }
     }
 }
@@ -1444,8 +1445,8 @@ void EditorWindow::createToolbar()
     arrow->setCheckable(true);
     auto* pen = toolbar->addAction(IconProvider::icon(IconName::Pen), "Pen");
     pen->setCheckable(true);
-    auto* textB = toolbar->addAction(IconProvider::icon(IconName::Text), "Text");
-    textB->setCheckable(true);
+    auto* textAction = toolbar->addAction(IconProvider::icon(IconName::Text), "Text");
+    textAction->setCheckable(true);
     auto* highlight = toolbar->addAction(makeHighlightIcon(), "Highlight");
     highlight->setCheckable(true);
     auto* numbered = toolbar->addAction(makeNumberedIcon(), "Numbered");
@@ -1465,6 +1466,20 @@ void EditorWindow::createToolbar()
     toolbar->addWidget(outlineBtn);
     auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
     mosaic->setCheckable(true);
+
+    auto* mosaicBlurBtn = new QToolButton(toolbar);
+    mosaicBlurBtn->setText("Blur");
+    mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");
+    mosaicBlurBtn->setFixedSize(32, 24);
+    mosaicBlurBtn->setCheckable(true);
+    mosaicBlurBtn->setStyleSheet(
+        "QToolButton { font: bold 9px; color: #bcbec6; }"
+        "QToolButton:checked { color: #2fbf9f; }");
+    connect(mosaicBlurBtn, &QToolButton::clicked, this, [this](bool checked) {
+        canvas_->setMosaicBlurred(checked);
+    });
+    toolbar->addWidget(mosaicBlurBtn);
+
     toolbar->addSeparator();
 
     auto* eraser = toolbar->addAction(makeEraserIcon(), "Eraser");
@@ -1483,6 +1498,8 @@ void EditorWindow::createToolbar()
     const StrokePreset strokes[] = {
         {"S", 2}, {"M", 4}, {"L", 8}
     };
+    auto* strokeGroup = new QButtonGroup(toolbar);
+    strokeGroup->setExclusive(true);
     for (const auto& s : strokes) {
         auto* btn = new QToolButton(toolbar);
         btn->setText(s.label);
@@ -1495,13 +1512,9 @@ void EditorWindow::createToolbar()
         if (s.width == 4) {
             btn->setChecked(true);
         }
-        connect(btn, &QToolButton::clicked, this, [this, s, toolbar, btn] {
+        strokeGroup->addButton(btn);
+        connect(btn, &QToolButton::clicked, this, [this, s] {
             canvas_->setStrokeWidth(s.width);
-            for (auto* child : toolbar->children()) {
-                if (auto* tb = qobject_cast<QToolButton*>(child)) {
-                    tb->setChecked(tb == btn);
-                }
-            }
         });
         toolbar->addWidget(btn);
     }
@@ -1593,7 +1606,7 @@ void EditorWindow::createToolbar()
     ellipse->setToolTip("Ellipse (E)");
     arrow->setToolTip("Arrow (A)");
     pen->setToolTip("Pen (P)");
-    textB->setToolTip("Text (T)");
+    textAction->setToolTip("Text (T)");
     highlight->setToolTip("Highlight (H)");
     numbered->setToolTip("Numbered (N)");
     mosaic->setToolTip("Mosaic (M)");
@@ -1605,8 +1618,8 @@ void EditorWindow::createToolbar()
     save->setToolTip("Save (Ctrl+S)");
     saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
 
-    updateToolActions_ = [rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
-        QAction* lookup[] = {rectangle, ellipse, arrow, pen, textB, highlight, numbered, mosaic, select, eraser, crop};
+    updateToolActions_ = [rectangle, ellipse, arrow, pen, textAction, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
+        QAction* lookup[] = {rectangle, ellipse, arrow, pen, textAction, highlight, numbered, mosaic, select, eraser, crop};
         const AnnotationTool tools[] = {AnnotationTool::Rectangle, AnnotationTool::Ellipse, AnnotationTool::Arrow,
             AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
             AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser, AnnotationTool::Crop};
@@ -1628,22 +1641,9 @@ void EditorWindow::createToolbar()
     connect(ellipse, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Ellipse); });
     connect(arrow, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Arrow); });
     connect(pen, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Pen); });
-    connect(textB, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
+    connect(textAction, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
     connect(highlight, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Highlight); });
     connect(numbered, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Numbered); });
-    auto* mosaicBlurBtn = new QToolButton(toolbar);
-    mosaicBlurBtn->setText("Blur");
-    mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");
-    mosaicBlurBtn->setFixedSize(32, 24);
-    mosaicBlurBtn->setCheckable(true);
-    mosaicBlurBtn->setStyleSheet(
-        "QToolButton { font: bold 9px; color: #bcbec6; }"
-        "QToolButton:checked { color: #2fbf9f; }");
-    connect(mosaicBlurBtn, &QToolButton::clicked, this, [this](bool checked) {
-        canvas_->setMosaicBlurred(checked);
-    });
-    toolbar->addWidget(mosaicBlurBtn);
-
     connect(mosaic, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Mosaic); });
     connect(select, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Select); });
     connect(crop, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Crop); });
