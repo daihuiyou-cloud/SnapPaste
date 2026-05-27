@@ -159,11 +159,11 @@ CaptureOverlay::CaptureOverlay(IScreenRegionDetector& regionDetector,
     setFocusPolicy(Qt::StrongFocus);
     setCursor(Qt::CrossCursor);
 
-    connect(actionBar_, &CaptureActionBar::copyRequested, this, [this] { confirmSelection(&CaptureOverlay::emitCopy); });
-    connect(actionBar_, &CaptureActionBar::pinRequested, this, [this] { confirmSelection(&CaptureOverlay::emitPin); });
-    connect(actionBar_, &CaptureActionBar::saveRequested, this, [this] { confirmSelection(&CaptureOverlay::emitSave); });
-    connect(actionBar_, &CaptureActionBar::editRequested, this, [this] { confirmSelection(&CaptureOverlay::emitEdit); });
-    connect(actionBar_, &CaptureActionBar::ocrRequested, this, [this] { confirmSelection(&CaptureOverlay::emitOcr); });
+    connect(actionBar_, &CaptureActionBar::copyRequested, this, [this] { confirmSelection(&CaptureOverlay::copyRequested); });
+    connect(actionBar_, &CaptureActionBar::pinRequested, this, [this] { confirmSelection(&CaptureOverlay::pinRequested); });
+    connect(actionBar_, &CaptureActionBar::saveRequested, this, [this] { confirmSelection(&CaptureOverlay::saveRequested); });
+    connect(actionBar_, &CaptureActionBar::editRequested, this, [this] { confirmSelection(&CaptureOverlay::editRequested); });
+    connect(actionBar_, &CaptureActionBar::ocrRequested, this, [this] { confirmSelection(&CaptureOverlay::ocrRequested); });
     connect(actionBar_, &CaptureActionBar::cancelRequested, this, [this] { cancel(); });
     actionBar_->hide();
 
@@ -268,9 +268,9 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         if (state_ == State::Idle && candidateRegion().isValid()) {
             selection_ = candidateRegion();
             finishReady();
-            confirmSelection(&CaptureOverlay::emitCopy);
+            confirmSelection(&CaptureOverlay::copyRequested);
         } else if (state_ == State::Ready && selectedRegion().isValid()) {
-            confirmSelection(&CaptureOverlay::emitCopy);
+            confirmSelection(&CaptureOverlay::copyRequested);
         }
         return;
     }
@@ -296,28 +296,28 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         case Qt::Key_Enter:
             selection_ = candidateRegion();
             finishReady();
-            confirmSelection(&CaptureOverlay::emitCopy);
+            confirmSelection(&CaptureOverlay::copyRequested);
             return;
         case Qt::Key_F3:
             selection_ = candidateRegion();
             finishReady();
-            confirmSelection(&CaptureOverlay::emitPin);
+            confirmSelection(&CaptureOverlay::pinRequested);
             return;
         case Qt::Key_Space:
             selection_ = candidateRegion();
             finishReady();
-            confirmSelection(&CaptureOverlay::emitEdit);
+            confirmSelection(&CaptureOverlay::editRequested);
             return;
         case Qt::Key_O:
             selection_ = candidateRegion();
             finishReady();
-            confirmSelection(&CaptureOverlay::emitOcr);
+            confirmSelection(&CaptureOverlay::ocrRequested);
             return;
         case Qt::Key_S:
             if (event->modifiers().testFlag(Qt::ControlModifier)) {
                 selection_ = candidateRegion();
                 finishReady();
-                confirmSelection(&CaptureOverlay::emitSave);
+                confirmSelection(&CaptureOverlay::saveRequested);
                 return;
             }
             break;
@@ -340,16 +340,16 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_Return:
     case Qt::Key_Enter:
-        confirmSelection(&CaptureOverlay::emitCopy);
+        confirmSelection(&CaptureOverlay::copyRequested);
         return;
     case Qt::Key_F3:
-        confirmSelection(&CaptureOverlay::emitPin);
+        confirmSelection(&CaptureOverlay::pinRequested);
         return;
     case Qt::Key_Space:
-        confirmSelection(&CaptureOverlay::emitEdit);
+        confirmSelection(&CaptureOverlay::editRequested);
         return;
     case Qt::Key_O:
-        confirmSelection(&CaptureOverlay::emitOcr);
+        confirmSelection(&CaptureOverlay::ocrRequested);
         return;
     case Qt::Key_Tab: {
         refreshSmartCandidates(selection_.center());
@@ -403,7 +403,7 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
     }
     case Qt::Key_S:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            confirmSelection(&CaptureOverlay::emitSave);
+            confirmSelection(&CaptureOverlay::saveRequested);
             return;
         }
         break;
@@ -833,31 +833,6 @@ void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(cons
     selectionHistory_.add(region);
     hide();
     (this->*signalEmitter)(region);
-}
-
-void CaptureOverlay::emitCopy(const QRect& region)
-{
-    emit copyRequested(region);
-}
-
-void CaptureOverlay::emitPin(const QRect& region)
-{
-    emit pinRequested(region);
-}
-
-void CaptureOverlay::emitSave(const QRect& region)
-{
-    emit saveRequested(region);
-}
-
-void CaptureOverlay::emitEdit(const QRect& region)
-{
-    emit editRequested(region);
-}
-
-void CaptureOverlay::emitOcr(const QRect& region)
-{
-    emit ocrRequested(region);
 }
 
 void CaptureOverlay::applyHistorySelection(bool forward)

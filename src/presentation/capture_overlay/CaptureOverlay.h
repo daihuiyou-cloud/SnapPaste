@@ -30,7 +30,6 @@ public:
     void showForCapture();
 
 signals:
-    void regionSelected(const QRect& region);
     void copyRequested(const QRect& region);
     void pinRequested(const QRect& region);
     void saveRequested(const QRect& region);
@@ -88,11 +87,6 @@ private:
     void selectCandidate(int index);
     void cycleCandidate(int step);
     void confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&));
-    void emitCopy(const QRect& region);
-    void emitPin(const QRect& region);
-    void emitSave(const QRect& region);
-    void emitEdit(const QRect& region);
-    void emitOcr(const QRect& region);
     void applyHistorySelection(bool forward);
     void updateSampledColor(const QPoint& globalPosition);
     void copySampledColor();
