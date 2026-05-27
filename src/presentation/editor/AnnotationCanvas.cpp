@@ -944,7 +944,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
                 "Ctrl+Scroll / Ctrl++ / Ctrl+- - Zoom<br>"
                 "Ctrl+0 - 100%<br>Ctrl+9 - Fit to window<br><br>"
                 "<b>File</b><br>"
-                "Ctrl+S - Save<br>Ctrl+Shift+S - Save As...<br>"
+                "Ctrl+C - Copy image<br>Ctrl+S - Save<br>"
+                "Ctrl+Shift+S - Export...<br>"
                 "F3 - Pin image<br>"
                 "Escape - Close editor");
             event->accept();
@@ -959,8 +960,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
 void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
 {
     QMenu menu;
-    auto* copyImage = menu.addAction("Copy Image\tCtrl+Shift+C");
-    auto* saveAs = menu.addAction("Save As...");
+    auto* copyImage = menu.addAction("Copy Image\tCtrl+C");
+    auto* saveAs = menu.addAction("Export...");
     QAction* deleteAnn = nullptr;
     QAction* duplicateAnn = nullptr;
     QAction* bringForward = nullptr;

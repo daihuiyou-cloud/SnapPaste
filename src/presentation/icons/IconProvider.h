@@ -23,7 +23,10 @@ enum class IconName {
     Line,
     Pen,
     Text,
-    Mosaic
+    Mosaic,
+    Undo,
+    Redo,
+    Export
 };
 
 class IconProvider final {

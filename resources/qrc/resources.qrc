@@ -21,5 +21,8 @@
         <file alias="icons/pen.svg">../icons/pen.svg</file>
         <file alias="icons/text.svg">../icons/text.svg</file>
         <file alias="icons/mosaic.svg">../icons/mosaic.svg</file>
+        <file alias="icons/undo.svg">../icons/undo.svg</file>
+        <file alias="icons/redo.svg">../icons/redo.svg</file>
+        <file alias="icons/export.svg">../icons/export.svg</file>
     </qresource>
 </RCC>

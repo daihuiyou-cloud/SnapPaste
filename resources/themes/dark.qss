@@ -68,13 +68,13 @@ QToolButton:pressed {
 }
 
 QToolButton:checked {
-    background: #1d3d38;
-    border-color: #2fbf9f;
+    background: #2a5a4e;
+    border-color: #34d9a8;
 }
 
 QToolButton:hover:checked {
-    background: #244a44;
-    border-color: #2fbf9f;
+    background: #306a5c;
+    border-color: #34d9a8;
 }
 
 QToolButton#colorWell {

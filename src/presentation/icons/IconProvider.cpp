@@ -45,6 +45,12 @@ QString pathFor(IconName name)
         return ":/icons/text.svg";
     case IconName::Mosaic:
         return ":/icons/mosaic.svg";
+    case IconName::Undo:
+        return ":/icons/undo.svg";
+    case IconName::Redo:
+        return ":/icons/redo.svg";
+    case IconName::Export:
+        return ":/icons/export.svg";
     }
     return ":/icons/app.svg";
 }

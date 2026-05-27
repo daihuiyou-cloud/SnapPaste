@@ -171,10 +171,11 @@ EditorWindow::EditorWindow(QWidget* parent)
     addAction(redoAction);
 
     auto* copyImageAction = new QAction("Copy Image", this);
-    copyImageAction->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C));
+    copyImageAction->setShortcuts({QKeySequence::Copy, QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C)});
     connect(copyImageAction, &QAction::triggered, this, [this] {
-        QApplication::clipboard()->setImage(canvas_->renderedImage());
-        statusBar()->showMessage("Image copied to clipboard", 3000);
+        emit imageEdited(canvas_->renderedImage());
+        emit copyRequested();
+        statusBar()->showMessage("Copied to clipboard", 3000);
     });
     addAction(copyImageAction);
 
@@ -189,12 +190,12 @@ EditorWindow::EditorWindow(QWidget* parent)
     });
     addAction(pasteAction);
 
-    auto* saveAsAction = new QAction("Save As", this);
+    auto* saveAsAction = new QAction("Export", this);
     saveAsAction->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_S));
     connect(saveAsAction, &QAction::triggered, this, [this] {
         QSettings settings;
         auto dir = settings.value("editor/lastSaveDir").toString();
-        auto path = QFileDialog::getSaveFileName(this, "Save As", dir,
+        auto path = QFileDialog::getSaveFileName(this, "Export", dir,
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
             canvas_->renderedImage().save(path);
@@ -202,6 +203,31 @@ EditorWindow::EditorWindow(QWidget* parent)
         }
     });
     addAction(saveAsAction);
+
+    auto* closeAction = new QAction("Close", this);
+    closeAction->setShortcut(QKeySequence(Qt::Key_Escape));
+    connect(closeAction, &QAction::triggered, this, &QWidget::close);
+    addAction(closeAction);
+
+    auto* saveAction = new QAction("Save", this);
+    saveAction->setShortcut(QKeySequence::Save);
+    connect(saveAction, &QAction::triggered, this, [this] {
+        canvas_->clearModified();
+        emit imageEdited(canvas_->renderedImage());
+        emit saveRequested();
+        statusBar()->showMessage("Saved", 3000);
+    });
+    addAction(saveAction);
+
+    auto* pinAction = new QAction("Pin", this);
+    pinAction->setShortcut(QKeySequence(Qt::Key_F3));
+    connect(pinAction, &QAction::triggered, this, [this] {
+        auto img = canvas_->renderedImage();
+        emit imageEdited(img);
+        emit pinRequested(img);
+        statusBar()->showMessage("Image pinned", 3000);
+    });
+    addAction(pinAction);
 }
 
 void EditorWindow::closeEvent(QCloseEvent* event)
@@ -438,20 +464,20 @@ void EditorWindow::createToolbar()
     // Group 3: Actions (bottom)
     // ─────────────────────────────────────────────
     toolbar->addSeparator();
-    auto* undo = toolbar->addAction(QIcon::fromTheme("edit-undo"), "Undo");
-    auto* redo = toolbar->addAction(QIcon::fromTheme("edit-redo"), "Redo");
+    auto* undo = toolbar->addAction(IconProvider::icon(IconName::Undo), "Undo");
+    auto* redo = toolbar->addAction(IconProvider::icon(IconName::Redo), "Redo");
     auto* copy = toolbar->addAction(IconProvider::icon(IconName::Copy), "Copy");
     auto* pinBtn = toolbar->addAction(IconProvider::icon(IconName::Pin), "Pin");
     auto* save = toolbar->addAction(IconProvider::icon(IconName::Save), "Save");
-    auto* saveAs = toolbar->addAction("Save As...");
+    auto* saveAs = toolbar->addAction(IconProvider::icon(IconName::Export), "Export...");
 
     // ── ToolTips ──
     undo->setToolTip("Undo (Ctrl+Z)");
     redo->setToolTip("Redo (Ctrl+Y)");
-    copy->setToolTip("Copy");
+    copy->setToolTip("Copy Image (Ctrl+Shift+C)");
     pinBtn->setToolTip("Pin (F3)");
-    save->setToolTip("Save (Ctrl+S)");
-    saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
+    save->setToolTip("Save to SnapPaste (Ctrl+S)");
+    saveAs->setToolTip("Export to file (Ctrl+Shift+S)");
 
     // ── updateToolActions callback ──
     updateToolActions_ = [toolActions](AnnotationTool tool) {
