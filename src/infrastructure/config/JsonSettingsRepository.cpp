@@ -39,6 +39,17 @@ bool isLegacyCaptureDefault(const Hotkey& hotkey)
     return hotkey.ctrl && hotkey.alt && !hotkey.shift && hotkey.key == 'A';
 }
 
+Hotkey readHotkeyFromObject(const QJsonObject& root, const QString& key, const Hotkey& fallback)
+{
+    const auto obj = root.value(key).toObject();
+    Hotkey hk;
+    hk.ctrl = obj.value("ctrl").toBool(fallback.ctrl);
+    hk.alt = obj.value("alt").toBool(fallback.alt);
+    hk.shift = obj.value("shift").toBool(fallback.shift);
+    hk.key = obj.value("key").toInt(fallback.key);
+    return hk;
+}
+
 } // namespace
 
 Result<AppSettings> JsonSettingsRepository::load()
@@ -72,32 +83,14 @@ Result<AppSettings> JsonSettingsRepository::load()
     settings.ocrLanguage = object.value("ocrLanguage").toString();
     settings.autoSaveOnCapture = object.value("autoSaveOnCapture").toBool(false);
 
-    const auto hotkey = object.value("captureHotkey").toObject();
-    settings.captureHotkey.ctrl = hotkey.value("ctrl").toBool(settings.captureHotkey.ctrl);
-    settings.captureHotkey.alt = hotkey.value("alt").toBool(settings.captureHotkey.alt);
-    settings.captureHotkey.shift = hotkey.value("shift").toBool(settings.captureHotkey.shift);
-    settings.captureHotkey.key = hotkey.value("key").toInt(settings.captureHotkey.key);
+    settings.captureHotkey = readHotkeyFromObject(object, "captureHotkey", settings.captureHotkey);
     if (!object.contains("settingsVersion") && isLegacyCaptureDefault(settings.captureHotkey)) {
         settings.captureHotkey = defaultSettingsInternal().captureHotkey;
     }
 
-    const auto pasteHotkey = object.value("pasteHotkey").toObject();
-    settings.pasteHotkey.ctrl = pasteHotkey.value("ctrl").toBool(settings.pasteHotkey.ctrl);
-    settings.pasteHotkey.alt = pasteHotkey.value("alt").toBool(settings.pasteHotkey.alt);
-    settings.pasteHotkey.shift = pasteHotkey.value("shift").toBool(settings.pasteHotkey.shift);
-    settings.pasteHotkey.key = pasteHotkey.value("key").toInt(settings.pasteHotkey.key);
-
-    const auto hidePinsHotkey = object.value("hidePinsHotkey").toObject();
-    settings.hidePinsHotkey.ctrl = hidePinsHotkey.value("ctrl").toBool(settings.hidePinsHotkey.ctrl);
-    settings.hidePinsHotkey.alt = hidePinsHotkey.value("alt").toBool(settings.hidePinsHotkey.alt);
-    settings.hidePinsHotkey.shift = hidePinsHotkey.value("shift").toBool(settings.hidePinsHotkey.shift);
-    settings.hidePinsHotkey.key = hidePinsHotkey.value("key").toInt(settings.hidePinsHotkey.key);
-
-    const auto repeatCaptureHotkey = object.value("repeatCaptureHotkey").toObject();
-    settings.repeatCaptureHotkey.ctrl = repeatCaptureHotkey.value("ctrl").toBool(settings.repeatCaptureHotkey.ctrl);
-    settings.repeatCaptureHotkey.alt = repeatCaptureHotkey.value("alt").toBool(settings.repeatCaptureHotkey.alt);
-    settings.repeatCaptureHotkey.shift = repeatCaptureHotkey.value("shift").toBool(settings.repeatCaptureHotkey.shift);
-    settings.repeatCaptureHotkey.key = repeatCaptureHotkey.value("key").toInt(settings.repeatCaptureHotkey.key);
+    settings.pasteHotkey = readHotkeyFromObject(object, "pasteHotkey", settings.pasteHotkey);
+    settings.hidePinsHotkey = readHotkeyFromObject(object, "hidePinsHotkey", settings.hidePinsHotkey);
+    settings.repeatCaptureHotkey = readHotkeyFromObject(object, "repeatCaptureHotkey", settings.repeatCaptureHotkey);
 
     if (shouldPersistMigratedSettings) {
         const auto saveResult = save(settings);

@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QRandomGenerator>
 #include <QUuid>
 
 namespace snappaste {
@@ -42,8 +43,8 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
 
 QString LocalImageStorage::nextBaseName() const
 {
-    const auto suffix = QUuid::createUuid().toString(QUuid::Id128).left(8);
-    return "SnapPaste_" + QDateTime::currentDateTimeUtc().toString("yyyyMMdd_HHmmss_zzz") + "_" + suffix;
+    return "SnapPaste_" + QDateTime::currentDateTimeUtc().toString("yyyyMMdd_HHmmss_zzz")
+           + "_" + QString::number(QRandomGenerator::global()->bounded(100000));
 }
 
 } // namespace snappaste

@@ -920,11 +920,6 @@ void PinWindow::setOpacityValue(double opacity)
     emitStateChanged();
 }
 
-void PinWindow::invalidateRenderedCache()
-{
-    renderedCache_ = {};
-}
-
 void PinWindow::flipH()
 {
     pushUndoState();
@@ -961,14 +956,20 @@ void PinWindow::toggleClickThrough()
 
 QImage PinWindow::renderedImage() const
 {
-    if (renderedCache_.isNull()) {
+    if (cachedRenderedVersion_ != renderedVersion_) {
         QTransform transform;
         transform.rotate(item_.state.transform.rotationDegrees);
         transform.scale(item_.state.transform.flippedHorizontally ? -1.0 : 1.0,
                         item_.state.transform.flippedVertically ? -1.0 : 1.0);
         renderedCache_ = item_.image.transformed(transform, Qt::SmoothTransformation);
+        cachedRenderedVersion_ = renderedVersion_;
     }
     return renderedCache_;
+}
+
+void PinWindow::invalidateRenderedCache()
+{
+    ++renderedVersion_;
 }
 
 } // namespace snappaste

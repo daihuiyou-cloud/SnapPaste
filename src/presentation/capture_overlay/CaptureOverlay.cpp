@@ -174,14 +174,19 @@ CaptureOverlay::CaptureOverlay(IScreenRegionDetector& regionDetector,
 
 void CaptureOverlay::prepareForCapture()
 {
-    pixelSampler_.refresh(desktopBounds());
+    cachedDesktopBounds_ = computeDesktopBounds();
+    desktopBoundsValid_ = true;
+    pixelSampler_.refresh(cachedDesktopBounds_);
 }
 
 void CaptureOverlay::showForCapture()
 {
-    const auto bounds = desktopBounds();
-    if (bounds.isValid()) {
-        setGeometry(bounds);
+    if (!desktopBoundsValid_) {
+        cachedDesktopBounds_ = computeDesktopBounds();
+        desktopBoundsValid_ = true;
+    }
+    if (cachedDesktopBounds_.isValid()) {
+        setGeometry(cachedDesktopBounds_);
     }
 
     show();
@@ -676,7 +681,7 @@ QRect CaptureOverlay::availableGeometry() const
     return geometry();
 }
 
-QRect CaptureOverlay::desktopBounds() const
+QRect CaptureOverlay::computeDesktopBounds() const
 {
     QRect bounds;
     for (auto* screen : QGuiApplication::screens()) {
@@ -688,6 +693,14 @@ QRect CaptureOverlay::desktopBounds() const
         bounds = QGuiApplication::primaryScreen()->geometry();
     }
     return bounds;
+}
+
+QRect CaptureOverlay::desktopBounds() const
+{
+    if (desktopBoundsValid_) {
+        return cachedDesktopBounds_;
+    }
+    return computeDesktopBounds();
 }
 
 QRect CaptureOverlay::candidateRegion() const
@@ -922,6 +935,7 @@ void CaptureOverlay::cancel()
     state_ = State::Cancelled;
     clearSmartCandidates();
     actionBar_->hide();
+    desktopBoundsValid_ = false;
     hide();
     emit cancelled();
 }

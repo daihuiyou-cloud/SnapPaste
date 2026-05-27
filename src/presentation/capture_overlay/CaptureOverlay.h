@@ -77,6 +77,7 @@ private:
     QRect localScreenGeometryFor(const QRect& globalRegion) const;
     QRect availableGeometry() const;
     QRect desktopBounds() const;
+    QRect computeDesktopBounds() const;
     QRect candidateRegion() const;
     QRect handleRect(Handle handle) const;
     Handle hitTest(const QPoint& globalPosition) const;
@@ -137,6 +138,8 @@ private:
     QElapsedTimer frameLimiter_;
     QElapsedTimer smartCandidateLimiter_;
     bool repaintQueued_ = false;
+    QRect cachedDesktopBounds_;
+    bool desktopBoundsValid_ = false;
 };
 
 } // namespace snappaste

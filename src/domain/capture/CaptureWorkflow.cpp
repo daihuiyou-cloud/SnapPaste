@@ -2,8 +2,6 @@
 
 #include "shared/utils/TimeProvider.h"
 
-constexpr int kMinCaptureSize = 8;
-
 namespace snappaste {
 
 CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
@@ -17,29 +15,32 @@ CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
 {
 }
 
-Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
+Result<void> CaptureWorkflow::validateRegion(const QRect& region)
 {
     if (!region.isValid()) {
-        return Result<QImage>::failure("Selection is empty. Please select a region to capture.");
+        return Result<void>::failure("Selection is empty. Please select a region to capture.");
     }
-    if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
-        return Result<QImage>::failure("Selection too small. Please select a larger area.");
+    if (region.width() < 8 || region.height() < 8) {
+        return Result<void>::failure("Selection too small. Please select a larger area.");
     }
+    return Result<void>::success();
+}
 
-    const std::lock_guard<std::mutex> lock(captureMutex_);
+Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
+{
+    auto validation = validateRegion(region);
+    if (validation.isError()) {
+        return Result<QImage>::failure(validation.error());
+    }
     return captureService_.captureRegion(region);
 }
 
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
 {
-    if (!region.isValid()) {
-        return Result<QImage>::failure("Selection is empty. Please select a region to capture.");
+    auto validation = validateRegion(region);
+    if (validation.isError()) {
+        return Result<QImage>::failure(validation.error());
     }
-    if (region.width() < kMinCaptureSize || region.height() < kMinCaptureSize) {
-        return Result<QImage>::failure("Selection too small. Please select a larger area.");
-    }
-
-    const std::lock_guard<std::mutex> lock(captureMutex_);
     return captureService_.captureRegion(region, segments);
 }
 

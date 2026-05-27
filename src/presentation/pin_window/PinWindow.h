@@ -91,6 +91,8 @@ private:
     bool dragDropping_ = false;
     QPropertyAnimation* showAnimation_ = nullptr;
     mutable QImage renderedCache_;
+    mutable int cachedRenderedVersion_ = -1;
+    int renderedVersion_ = 0;
     static constexpr int kMaxPinUndo = 20;
     QVector<PinnedImageState> undoStack_;
 };

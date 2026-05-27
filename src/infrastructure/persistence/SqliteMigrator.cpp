@@ -8,8 +8,13 @@ namespace snappaste {
 
 Result<void> SqliteMigrator::migrate(QSqlDatabase database)
 {
+    if (!database.transaction()) {
+        return Result<void>::failure(database.lastError().text());
+    }
+
     auto versionResult = currentVersion(database);
     if (versionResult.isError()) {
+        database.rollback();
         return Result<void>::failure(versionResult.error());
     }
 
@@ -17,6 +22,7 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
     if (version < 1) {
         const auto result = applyVersion1(database);
         if (result.isError()) {
+            database.rollback();
             return result;
         }
         version = 1;
@@ -24,6 +30,7 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
     if (version < 2) {
         const auto result = applyVersion2(database);
         if (result.isError()) {
+            database.rollback();
             return result;
         }
         version = 2;
@@ -31,9 +38,14 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
     if (version < 3) {
         const auto result = applyVersion3(database);
         if (result.isError()) {
+            database.rollback();
             return result;
         }
         version = 3;
+    }
+
+    if (!database.commit()) {
+        return Result<void>::failure(database.lastError().text());
     }
 
     return Result<void>::success();
@@ -60,9 +72,6 @@ Result<int> SqliteMigrator::currentVersion(QSqlDatabase database)
 Result<void> SqliteMigrator::applyVersion1(QSqlDatabase database)
 {
     QSqlQuery query(database);
-    if (!database.transaction()) {
-        return Result<void>::failure(database.lastError().text());
-    }
 
     const QString createCaptures =
         "CREATE TABLE IF NOT EXISTS captures ("
@@ -78,23 +87,16 @@ Result<void> SqliteMigrator::applyVersion1(QSqlDatabase database)
         ")";
 
     if (!query.exec(createCaptures)) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
     }
 
     if (!query.exec("CREATE INDEX IF NOT EXISTS idx_captures_created_at ON captures(created_at DESC)")) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
     }
 
     query.prepare("INSERT INTO schema_version(version, applied_at) VALUES(1, datetime('now'))");
     if (!query.exec()) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
-    }
-
-    if (!database.commit()) {
-        return Result<void>::failure(database.lastError().text());
     }
 
     return Result<void>::success();
@@ -103,9 +105,6 @@ Result<void> SqliteMigrator::applyVersion1(QSqlDatabase database)
 Result<void> SqliteMigrator::applyVersion2(QSqlDatabase database)
 {
     QSqlQuery query(database);
-    if (!database.transaction()) {
-        return Result<void>::failure(database.lastError().text());
-    }
 
     const QString createPinnedItems =
         "CREATE TABLE IF NOT EXISTS pinned_items ("
@@ -129,23 +128,16 @@ Result<void> SqliteMigrator::applyVersion2(QSqlDatabase database)
         ")";
 
     if (!query.exec(createPinnedItems)) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
     }
 
     if (!query.exec("CREATE INDEX IF NOT EXISTS idx_pinned_items_closed ON pinned_items(closed, updated_at)")) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
     }
 
     query.prepare("INSERT INTO schema_version(version, applied_at) VALUES(2, datetime('now'))");
     if (!query.exec()) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
-    }
-
-    if (!database.commit()) {
-        return Result<void>::failure(database.lastError().text());
     }
 
     return Result<void>::success();
@@ -154,23 +146,14 @@ Result<void> SqliteMigrator::applyVersion2(QSqlDatabase database)
 Result<void> SqliteMigrator::applyVersion3(QSqlDatabase database)
 {
     QSqlQuery query(database);
-    if (!database.transaction()) {
-        return Result<void>::failure(database.lastError().text());
-    }
 
     if (!query.exec("ALTER TABLE pinned_items ADD COLUMN always_on_top INTEGER NOT NULL DEFAULT 1")) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
     }
 
     query.prepare("INSERT INTO schema_version(version, applied_at) VALUES(3, datetime('now'))");
     if (!query.exec()) {
-        database.rollback();
         return Result<void>::failure(query.lastError().text());
-    }
-
-    if (!database.commit()) {
-        return Result<void>::failure(database.lastError().text());
     }
 
     return Result<void>::success();
