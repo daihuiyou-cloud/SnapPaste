@@ -9,7 +9,6 @@
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QInputDialog>
-#include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
@@ -17,7 +16,6 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>

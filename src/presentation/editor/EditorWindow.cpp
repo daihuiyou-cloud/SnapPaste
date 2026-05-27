@@ -11,28 +11,18 @@
 #include <QColorDialog>
 #include <QButtonGroup>
 #include <QCloseEvent>
-#include <QDragEnterEvent>
-#include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QInputDialog>
 #include <QLabel>
-#include <QMimeData>
-#include <QInputMethodEvent>
-#include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QScrollArea>
-#include <QScrollBar>
 #include <QSettings>
-#include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
-#include <QWheelEvent>
 
 namespace snappaste {
 
