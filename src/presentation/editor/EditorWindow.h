@@ -4,9 +4,11 @@
 
 #include <functional>
 
+#include <QAction>
 #include <QCloseEvent>
 #include <QImage>
 #include <QMainWindow>
+#include <QToolButton>
 
 namespace snappaste {
 
@@ -33,8 +35,12 @@ signals:
 
 private:
     void createToolbar();
+    void rebuildColorMenu();
+    void updateColorWell(const QColor& c);
 
     AnnotationCanvas* canvas_ = nullptr;
+    QToolButton* colorBtn_ = nullptr;
+    QAction* eyeAction_ = nullptr;
     std::function<void(AnnotationTool)> updateToolActions_;
 };
 

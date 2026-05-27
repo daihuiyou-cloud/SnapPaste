@@ -240,6 +240,66 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
     }
 }
 
+void EditorWindow::updateColorWell(const QColor& c)
+{
+    QPixmap px(18, 18);
+    px.fill(c);
+    QPainter p(&px);
+    p.setPen(QPen(QColor(255, 255, 255, 48), 1));
+    p.drawRect(QRectF(0.5, 0.5, 17, 17));
+    p.end();
+    colorBtn_->setIcon(QIcon(px));
+}
+
+void EditorWindow::rebuildColorMenu()
+{
+    const QColor fixedColors[] = {
+        QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
+        QColor("#34c759"), QColor("#007aff"), QColor("#af52de"),
+        QColor("#ffffff"), QColor("#000000")
+    };
+
+    auto actions = colorBtn_->menu()->actions();
+    for (auto* a : actions) {
+        if (a != eyeAction_) {
+            colorBtn_->menu()->removeAction(a);
+            delete a;
+        }
+    }
+    auto recent = canvas_->recentColors();
+    if (!recent.isEmpty()) {
+        for (const auto& c : recent) {
+            auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorBtn_->menu());
+            colorBtn_->menu()->insertAction(eyeAction_, a);
+            connect(a, &QAction::triggered, this, [this, c] {
+                canvas_->setColor(c);
+                updateColorWell(c);
+            });
+        }
+        colorBtn_->menu()->insertSeparator(eyeAction_);
+    }
+    for (const auto& c : fixedColors) {
+        auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorBtn_->menu());
+        colorBtn_->menu()->insertAction(eyeAction_, a);
+        connect(a, &QAction::triggered, this, [this, c] {
+            canvas_->setColor(c);
+            updateColorWell(c);
+        });
+    }
+    colorBtn_->menu()->insertSeparator(eyeAction_);
+    auto* customAction = new QAction("Custom Color...", colorBtn_->menu());
+    colorBtn_->menu()->insertAction(eyeAction_, customAction);
+    connect(customAction, &QAction::triggered, this, [this] {
+        auto color = QColorDialog::getColor(Qt::white, this, "Choose Color");
+        if (color.isValid()) {
+            canvas_->setColor(color);
+            canvas_->addRecentColor(color);
+            updateColorWell(color);
+        }
+    });
+    colorBtn_->menu()->insertSeparator(eyeAction_);
+}
+
 void EditorWindow::createToolbar()
 {
     auto* toolbar = new QToolBar("Editor", this);
@@ -290,42 +350,26 @@ void EditorWindow::createToolbar()
     // Group 2: Properties — Outline, Fill, Blur,
     //           Stroke(S/M/L), Font, Color
     // ─────────────────────────────────────────────
-    auto* outlineBtn = new QToolButton(toolbar);
-    outlineBtn->setText("Outline");
-    outlineBtn->setToolTip("Toggle text outline");
-    outlineBtn->setFixedHeight(24);
-    outlineBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    outlineBtn->setCheckable(true);
-    outlineBtn->setChecked(true);
-    outlineBtn->setStyleSheet(toggleBtnStyle);
-    connect(outlineBtn, &QToolButton::clicked, this, [this](bool checked) {
-        canvas_->setTextOutlineEnabled(checked);
-    });
-    toolbar->addWidget(outlineBtn);
-
-    auto* fillBtn = new QToolButton(toolbar);
-    fillBtn->setText("Fill");
-    fillBtn->setToolTip("Toggle fill for shapes");
-    fillBtn->setFixedHeight(24);
-    fillBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    fillBtn->setCheckable(true);
-    fillBtn->setStyleSheet(toggleBtnStyle);
-    connect(fillBtn, &QToolButton::clicked, this, [this](bool checked) {
-        canvas_->setFilled(checked);
-    });
-    toolbar->addWidget(fillBtn);
-
-    auto* mosaicBlurBtn = new QToolButton(toolbar);
-    mosaicBlurBtn->setText("Blur");
-    mosaicBlurBtn->setToolTip("Toggle mosaic blur mode");
-    mosaicBlurBtn->setFixedHeight(24);
-    mosaicBlurBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mosaicBlurBtn->setCheckable(true);
-    mosaicBlurBtn->setStyleSheet(toggleBtnStyle);
-    connect(mosaicBlurBtn, &QToolButton::clicked, this, [this](bool checked) {
-        canvas_->setMosaicBlurred(checked);
-    });
-    toolbar->addWidget(mosaicBlurBtn);
+    struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
+    const PropToggle props[] = {
+        {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
+        {"Fill", "Toggle fill for shapes", false, &AnnotationCanvas::setFilled},
+        {"Blur", "Toggle mosaic blur mode", false, &AnnotationCanvas::setMosaicBlurred},
+    };
+    for (const auto& p : props) {
+        auto* btn = new QToolButton(toolbar);
+        btn->setText(p.text);
+        btn->setToolTip(p.tip);
+        btn->setFixedHeight(24);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        btn->setCheckable(true);
+        btn->setChecked(p.defaultOn);
+        btn->setStyleSheet(toggleBtnStyle);
+        connect(btn, &QToolButton::clicked, this, [this, p](bool checked) {
+            (canvas_->*p.setter)(checked);
+        });
+        toolbar->addWidget(btn);
+    }
 
     // Stroke presets
     struct StrokePreset { QString label; int width; };
@@ -359,83 +403,29 @@ void EditorWindow::createToolbar()
     });
 
     // Color picker
-    auto* colorBtn = new QToolButton(toolbar);
-    colorBtn->setObjectName("colorWell");
-    colorBtn->setFixedHeight(26);
-    colorBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    colorBtn->setPopupMode(QToolButton::InstantPopup);
-    colorBtn->setToolTip("Color");
+    colorBtn_ = new QToolButton(toolbar);
+    colorBtn_->setObjectName("colorWell");
+    colorBtn_->setFixedHeight(26);
+    colorBtn_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    colorBtn_->setPopupMode(QToolButton::InstantPopup);
+    colorBtn_->setToolTip("Color");
+    updateColorWell(QColor("#ff3b30"));
 
-    auto updateColorIcon = [colorBtn](const QColor& c) {
-        QPixmap px(18, 18);
-        px.fill(c);
-        QPainter p(&px);
-        p.setPen(QPen(QColor(255, 255, 255, 48), 1));
-        p.drawRect(QRectF(0.5, 0.5, 17, 17));
-        p.end();
-        colorBtn->setIcon(QIcon(px));
-    };
-    updateColorIcon(QColor("#ff3b30"));
-
-    const QColor fixedColors[] = {
-        QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
-        QColor("#34c759"), QColor("#007aff"), QColor("#af52de"),
-        QColor("#ffffff"), QColor("#000000")
-    };
-
-    auto* colorMenu = new QMenu(colorBtn);
-    auto* eyeAction = new QAction(makeEyedropperIcon(), "Eyedropper", nullptr);
-    eyeAction->setCheckable(true);
-    connect(eyeAction, &QAction::triggered, this, [this, eyeAction] {
-        canvas_->setPickingColor(eyeAction->isChecked());
+    auto* colorMenu = new QMenu(colorBtn_);
+    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", nullptr);
+    eyeAction_->setCheckable(true);
+    connect(eyeAction_, &QAction::triggered, this, [this] {
+        canvas_->setPickingColor(eyeAction_->isChecked());
     });
-    canvas_->setOnPickingColorChanged([eyeAction](bool picking) {
-        eyeAction->setChecked(picking);
+    canvas_->setOnPickingColorChanged([this](bool picking) {
+        eyeAction_->setChecked(picking);
     });
-    colorMenu->addAction(eyeAction);
+    colorMenu->addAction(eyeAction_);
 
-    connect(colorMenu, &QMenu::aboutToShow, this, [this, colorMenu, fixedColors, updateColorIcon, eyeAction]() {
-        auto actions = colorMenu->actions();
-        for (auto* action : actions) {
-            if (action != eyeAction) {
-                colorMenu->removeAction(action);
-                delete action;
-            }
-        }
-        auto recent = canvas_->recentColors();
-        if (!recent.isEmpty()) {
-            for (const auto& c : recent) {
-                auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorMenu);
-                colorMenu->insertAction(eyeAction, a);
-                connect(a, &QAction::triggered, this, [this, c, updateColorIcon] {
-                    canvas_->setColor(c); updateColorIcon(c);
-                });
-            }
-            colorMenu->insertSeparator(eyeAction);
-        }
-        for (const auto& c : fixedColors) {
-            auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), colorMenu);
-            colorMenu->insertAction(eyeAction, a);
-            connect(a, &QAction::triggered, this, [this, c, updateColorIcon] {
-                canvas_->setColor(c); updateColorIcon(c);
-            });
-        }
-        colorMenu->insertSeparator(eyeAction);
-        auto* customAction = new QAction("Custom Color...", colorMenu);
-        colorMenu->insertAction(eyeAction, customAction);
-        connect(customAction, &QAction::triggered, this, [this, updateColorIcon] {
-            auto color = QColorDialog::getColor(Qt::white, this, "Choose Color");
-            if (color.isValid()) {
-                canvas_->setColor(color);
-                canvas_->addRecentColor(color);
-                updateColorIcon(color);
-            }
-        });
-        colorMenu->insertSeparator(eyeAction);
-    });
+    connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
 
-    colorBtn->setMenu(colorMenu);
-    toolbar->addWidget(colorBtn);
+    colorBtn_->setMenu(colorMenu);
+    toolbar->addWidget(colorBtn_);
 
     // ── Spacer: push actions to bottom ──
     auto* spacer = new QWidget(toolbar);
@@ -464,13 +454,8 @@ void EditorWindow::createToolbar()
 
     // ── updateToolActions callback ──
     updateToolActions_ = [toolActions](AnnotationTool tool) {
-        for (auto* a : toolActions) a->setChecked(false);
-        for (auto* a : toolActions) {
-            if (static_cast<AnnotationTool>(a->data().toInt()) == tool) {
-                a->setChecked(true);
-                break;
-            }
-        }
+        for (auto* a : toolActions)
+            a->setChecked(static_cast<AnnotationTool>(a->data().toInt()) == tool);
     };
     updateToolActions_(AnnotationTool::Rectangle);
 
