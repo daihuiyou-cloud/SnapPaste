@@ -258,33 +258,30 @@ void EditorWindow::createToolbar()
         "QToolButton:checked { color: #fff; background: #2fbf9f; }"
         "QToolButton:hover:checked { background: #269d84; }";
 
-    // ─────────────────────────────────────────────
-    // Group 1: Drawing Tools
-    // ─────────────────────────────────────────────
-    auto* rectangle = toolbar->addAction(IconProvider::icon(IconName::Rectangle), "Rectangle");
-    rectangle->setCheckable(true);
-    auto* ellipse = toolbar->addAction(makeEllipseIcon(), "Ellipse");
-    ellipse->setCheckable(true);
-    auto* arrow = toolbar->addAction(IconProvider::icon(IconName::Arrow), "Arrow");
-    arrow->setCheckable(true);
-    auto* lineTool = toolbar->addAction(IconProvider::icon(IconName::Line), "Line");
-    lineTool->setCheckable(true);
-    auto* pen = toolbar->addAction(IconProvider::icon(IconName::Pen), "Pen");
-    pen->setCheckable(true);
-    auto* textAction = toolbar->addAction(IconProvider::icon(IconName::Text), "Text");
-    textAction->setCheckable(true);
-    auto* highlight = toolbar->addAction(makeHighlightIcon(), "Highlight");
-    highlight->setCheckable(true);
-    auto* numbered = toolbar->addAction(makeNumberedIcon(), "Numbered");
-    numbered->setCheckable(true);
-    auto* mosaic = toolbar->addAction(IconProvider::icon(IconName::Mosaic), "Mosaic");
-    mosaic->setCheckable(true);
-    auto* eraser = toolbar->addAction(makeEraserIcon(), "Eraser");
-    eraser->setCheckable(true);
-    auto* select = toolbar->addAction(makeSelectIcon(), "Select");
-    select->setCheckable(true);
-    auto* crop = toolbar->addAction(makeCropIcon(), "Crop");
-    crop->setCheckable(true);
+    // ── Tool buttons ──
+    struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tooltip; AnnotationTool tool; };
+    const ToolDef toolDefs[] = {
+        {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rectangle", "Rectangle (R)", AnnotationTool::Rectangle},
+        {makeEllipseIcon, "Ellipse", "Ellipse (E)", AnnotationTool::Ellipse},
+        {[]{ return IconProvider::icon(IconName::Arrow); }, "Arrow", "Arrow (A)", AnnotationTool::Arrow},
+        {[]{ return IconProvider::icon(IconName::Line); }, "Line", "Line (L)", AnnotationTool::Line},
+        {[]{ return IconProvider::icon(IconName::Pen); }, "Pen", "Pen (P)", AnnotationTool::Pen},
+        {[]{ return IconProvider::icon(IconName::Text); }, "Text", "Text (T)", AnnotationTool::Text},
+        {makeHighlightIcon, "Highlight", "Highlight (H)", AnnotationTool::Highlight},
+        {makeNumberedIcon, "Numbered", "Numbered (N)", AnnotationTool::Numbered},
+        {[]{ return IconProvider::icon(IconName::Mosaic); }, "Mosaic", "Mosaic (M)", AnnotationTool::Mosaic},
+        {makeEraserIcon, "Eraser", "Eraser (X)", AnnotationTool::Eraser},
+        {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
+        {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
+    };
+    QAction* toolActions[12];
+    for (int i = 0; i < 12; ++i) {
+        auto* a = toolbar->addAction(toolDefs[i].iconFn(), toolDefs[i].name);
+        a->setCheckable(true);
+        a->setToolTip(toolDefs[i].tooltip);
+        a->setData(static_cast<int>(toolDefs[i].tool));
+        toolActions[i] = a;
+    }
 
     toolbar->addSeparator();
 
@@ -457,18 +454,6 @@ void EditorWindow::createToolbar()
     auto* saveAs = toolbar->addAction("Save As...");
 
     // ── ToolTips ──
-    rectangle->setToolTip("Rectangle (R)");
-    ellipse->setToolTip("Ellipse (E)");
-    arrow->setToolTip("Arrow (A)");
-    lineTool->setToolTip("Line (L)");
-    pen->setToolTip("Pen (P)");
-    textAction->setToolTip("Text (T)");
-    highlight->setToolTip("Highlight (H)");
-    numbered->setToolTip("Numbered (N)");
-    mosaic->setToolTip("Mosaic (M)");
-    eraser->setToolTip("Eraser (X)");
-    select->setToolTip("Select (V)");
-    crop->setToolTip("Crop (C)");
     undo->setToolTip("Undo (Ctrl+Z)");
     redo->setToolTip("Redo (Ctrl+Y)");
     copy->setToolTip("Copy");
@@ -477,14 +462,13 @@ void EditorWindow::createToolbar()
     saveAs->setToolTip("Save As... (Ctrl+Shift+S)");
 
     // ── updateToolActions callback ──
-    updateToolActions_ = [rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop](AnnotationTool tool) {
-        QAction* lookup[] = {rectangle, ellipse, arrow, lineTool, pen, textAction, highlight, numbered, mosaic, select, eraser, crop};
-        const AnnotationTool tools[] = {AnnotationTool::Rectangle, AnnotationTool::Ellipse, AnnotationTool::Arrow,
-            AnnotationTool::Line, AnnotationTool::Pen, AnnotationTool::Text, AnnotationTool::Highlight, AnnotationTool::Numbered,
-            AnnotationTool::Mosaic, AnnotationTool::Select, AnnotationTool::Eraser, AnnotationTool::Crop};
-        for (auto* action : lookup) action->setChecked(false);
-        for (int i = 0; i < 12; ++i) {
-            if (tools[i] == tool) { lookup[i]->setChecked(true); break; }
+    updateToolActions_ = [toolActions](AnnotationTool tool) {
+        for (auto* a : toolActions) a->setChecked(false);
+        for (auto* a : toolActions) {
+            if (static_cast<AnnotationTool>(a->data().toInt()) == tool) {
+                a->setChecked(true);
+                break;
+            }
         }
     };
     updateToolActions_(AnnotationTool::Rectangle);
@@ -492,18 +476,11 @@ void EditorWindow::createToolbar()
     // ── Connections ──
     connect(undo, &QAction::triggered, this, [this] { canvas_->undo(); });
     connect(redo, &QAction::triggered, this, [this] { canvas_->redo(); });
-    connect(rectangle, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Rectangle); });
-    connect(ellipse, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Ellipse); });
-    connect(arrow, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Arrow); });
-    connect(lineTool, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Line); });
-    connect(pen, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Pen); });
-    connect(textAction, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Text); });
-    connect(highlight, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Highlight); });
-    connect(numbered, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Numbered); });
-    connect(mosaic, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Mosaic); });
-    connect(select, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Select); });
-    connect(crop, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Crop); });
-    connect(eraser, &QAction::triggered, this, [this] { canvas_->setTool(AnnotationTool::Eraser); });
+    for (int i = 0; i < 12; ++i) {
+        connect(toolActions[i], &QAction::triggered, this, [this, tool = toolDefs[i].tool] {
+            canvas_->setTool(tool);
+        });
+    }
     connect(copy, &QAction::triggered, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();
