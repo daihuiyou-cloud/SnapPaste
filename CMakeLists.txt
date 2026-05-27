@@ -22,7 +22,6 @@ set(SNAPPASTE_CORE_SOURCES
 
     src/domain/capture/CaptureWorkflow.cpp
     src/domain/capture/CaptureSelectionHistory.cpp
-    src/domain/editor/AnnotationDocument.cpp
     src/domain/history/HistoryService.cpp
     src/domain/pin/PinnedImageService.cpp
     src/domain/settings/SettingsService.cpp
