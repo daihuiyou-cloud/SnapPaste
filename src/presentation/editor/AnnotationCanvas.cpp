@@ -571,14 +571,12 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
 void AnnotationCanvas::mouseMoveEvent(QMouseEvent* event)
 {
     if (!drawing_) {
-        if (currentTool_ == AnnotationTool::Pen)
-            setCursor(Qt::CrossCursor);
-        else if (currentTool_ == AnnotationTool::Text)
+        if (currentTool_ == AnnotationTool::Text)
             setCursor(Qt::IBeamCursor);
         else if (currentTool_ == AnnotationTool::Eraser || currentTool_ == AnnotationTool::Mosaic)
             setCursor(Qt::PointingHandCursor);
         else
-            setCursor(Qt::CrossCursor);
+            setCursor(Qt::ArrowCursor);
     }
     if (panning_) {
         auto delta = event->pos() - panStart_;
