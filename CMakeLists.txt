@@ -49,6 +49,7 @@ set(SNAPPASTE_CORE_SOURCES
 
     src/presentation/capture_actions/CaptureActionBar.cpp
     src/presentation/capture_overlay/CaptureOverlay.cpp
+    src/presentation/editor/AnnotationCanvas.cpp
     src/presentation/editor/EditorWindow.cpp
     src/presentation/history/HistoryWidget.cpp
     src/presentation/icons/IconProvider.cpp

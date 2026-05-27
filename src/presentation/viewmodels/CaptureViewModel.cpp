@@ -9,6 +9,8 @@
 #include <QPointer>
 #include <QRunnable>
 #include <QScreen>
+
+#include <memory>
 #include <QVector>
 
 namespace snappaste {
@@ -107,7 +109,7 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
         }, Qt::QueuedConnection);
     };
 
-    workerPool_.start(new FunctionRunnable(std::move(task)));
+    workerPool_.start(std::make_unique<FunctionRunnable>(std::move(task)).release());
 }
 
 void CaptureViewModel::saveImage(const QImage& image, const QString& sourceScreen)

@@ -18,10 +18,7 @@ public:
 
 public slots:
     void load();
-    void save(QString saveDirectory, QString imageFormat, int themeIndex,
-              Hotkey captureHotkey = {}, Hotkey pasteHotkey = {}, Hotkey hidePinsHotkey = {},
-              QString ocrLanguage = {}, bool autoSaveOnCapture = false,
-              Hotkey repeatCaptureHotkey = {});
+    void save(const AppSettings& settings);
     void restoreDefaults();
 
 signals:
@@ -29,7 +26,7 @@ signals:
     void saved();
     void errorOccurred(const QString& message);
 
-private:
+public:
     static ThemeMode themeFromIndex(int index);
 
     SettingsService& service_;

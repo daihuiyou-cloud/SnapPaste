@@ -8,9 +8,11 @@
 #include <QImage>
 #include <QMainWindow>
 
+#include "presentation/editor/AnnotationCanvas.h"
+
 namespace snappaste {
 
-class AnnotationCanvas;
+
 
 class EditorWindow final : public QMainWindow {
     Q_OBJECT

@@ -26,21 +26,10 @@ void SettingsViewModel::load()
     emit loaded(settings_);
 }
 
-void SettingsViewModel::save(QString saveDirectory, QString imageFormat, int themeIndex,
-                             Hotkey captureHotkey, Hotkey pasteHotkey, Hotkey hidePinsHotkey,
-                             QString ocrLanguage, bool autoSaveOnCapture,
-                             Hotkey repeatCaptureHotkey)
+void SettingsViewModel::save(const AppSettings& settings)
 {
-    AppSettings newSettings;
-    newSettings.saveDirectory = std::move(saveDirectory);
-    newSettings.imageFormat = std::move(imageFormat).toLower();
-    newSettings.themeMode = themeFromIndex(themeIndex);
-    newSettings.captureHotkey = std::move(captureHotkey);
-    newSettings.pasteHotkey = std::move(pasteHotkey);
-    newSettings.hidePinsHotkey = std::move(hidePinsHotkey);
-    newSettings.ocrLanguage = std::move(ocrLanguage);
-    newSettings.autoSaveOnCapture = autoSaveOnCapture;
-    newSettings.repeatCaptureHotkey = std::move(repeatCaptureHotkey);
+    auto newSettings = settings;
+    newSettings.imageFormat = newSettings.imageFormat.toLower();
 
     const auto result = service_.save(newSettings);
     if (result.isError()) {

@@ -211,15 +211,17 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         }
     });
     connect(saveButton, &QPushButton::clicked, this, [this] {
-        viewModel_.save(saveDirectoryEdit_->text(),
-                        imageFormatCombo_->currentText(),
-                        themeCombo_->currentIndex(),
-                        captureHotkeyInput_->hotkey(),
-                        pasteHotkeyInput_->hotkey(),
-                        hidePinsHotkeyInput_->hotkey(),
-                        ocrLanguageCombo_->currentData().toString(),
-                        autoSaveCheckbox_->isChecked(),
-                        repeatCaptureHotkeyInput_->hotkey());
+        AppSettings settings;
+        settings.saveDirectory = saveDirectoryEdit_->text();
+        settings.imageFormat = imageFormatCombo_->currentText();
+        settings.themeMode = SettingsViewModel::themeFromIndex(themeCombo_->currentIndex());
+        settings.captureHotkey = captureHotkeyInput_->hotkey();
+        settings.pasteHotkey = pasteHotkeyInput_->hotkey();
+        settings.hidePinsHotkey = hidePinsHotkeyInput_->hotkey();
+        settings.ocrLanguage = ocrLanguageCombo_->currentData().toString();
+        settings.autoSaveOnCapture = autoSaveCheckbox_->isChecked();
+        settings.repeatCaptureHotkey = repeatCaptureHotkeyInput_->hotkey();
+        viewModel_.save(settings);
     });
     connect(restoreButton, &QPushButton::clicked, this, [this] {
         auto ret = QMessageBox::question(this, "Restore Defaults",
