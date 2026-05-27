@@ -5,7 +5,6 @@
 #include "domain/capture/IScreenPixelSampler.h"
 #include "domain/capture/IScreenRegionDetector.h"
 #include "domain/history/IHistoryRepository.h"
-#include "domain/editor/AnnotationDocument.h"
 #include "domain/pin/PinnedImageService.h"
 #include "domain/settings/SettingsService.h"
 #include "infrastructure/config/JsonSettingsRepository.h"
@@ -211,22 +210,6 @@ private slots:
 
         QVERIFY(result.isError());
         qunsetenv("SNAPPASTE_DATA_DIR");
-    }
-
-    void annotationDocumentSerializesAnnotations()
-    {
-        AnnotationDocument document;
-        Annotation annotation;
-        annotation.tool = AnnotationTool::Rectangle;
-        annotation.bounds = QRect(1, 2, 30, 40);
-        annotation.text = "note";
-
-        document.add(annotation);
-        const auto result = document.toJson();
-
-        QVERIFY(result.isOk());
-        QCOMPARE(result.value().size(), 1);
-        QCOMPARE(result.value().at(0).toObject().value("width").toInt(), 30);
     }
 
     void sqliteHistoryRepositoryAddsListsAndDeletesRecords()

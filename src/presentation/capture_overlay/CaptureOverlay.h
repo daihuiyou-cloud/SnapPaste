@@ -102,7 +102,6 @@ private:
     void scheduleOverlayUpdate();
     void drawCandidate(QPainter& painter, const QRect& globalRegion);
     void drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize);
-    void drawDimensionLines(QPainter& painter, const QRect& localRegion, const QSize& regionSize);
     void drawMagnifier(QPainter& painter);
 
     IScreenRegionDetector& regionDetector_;

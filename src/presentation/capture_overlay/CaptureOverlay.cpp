@@ -1070,58 +1070,6 @@ void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, 
     painter.drawText(label, Qt::AlignCenter, text);
 }
 
-void CaptureOverlay::drawDimensionLines(QPainter& painter, const QRect& local, const QSize& size)
-{
-    if (local.width() < 60 || local.height() < 30)
-        return;
-
-    const int kOff = 18;
-
-    painter.setFont(QFont("Segoe UI", 9));
-    const auto fm = painter.fontMetrics();
-
-    int l = local.left(), r = local.right(), t = local.top(), b = local.bottom();
-    int cx = local.center().x(), cy = local.center().y();
-
-    // Width line below
-    int wY = b + kOff;
-    bool wFlip = (wY + 10 > height() - 6);
-    if (wFlip) wY = t - 10;
-
-    if (wY >= 6 && wY <= height() - 6) {
-        painter.setPen(QPen(kSelectionColor, 1));
-        painter.drawLine(l, wY, r, wY);
-        painter.drawLine(l, wY - 3, l, wY + 3);
-        painter.drawLine(r, wY - 3, r, wY + 3);
-
-        QString w = QString::number(size.width());
-        int tw = fm.horizontalAdvance(w) + 8;
-        int tx = qBound(l + 4, cx - tw / 2, r - tw - 4);
-        painter.fillRect(tx, wY - 8, tw, 16, QColor(14, 20, 26, 200));
-        painter.setPen(kLabelTextColor);
-        painter.drawText(tx + 4, wY - 7, tw - 8, 14, Qt::AlignCenter, w);
-    }
-
-    // Height line on right
-    int hX = r + kOff;
-    bool hFlip = (hX + 10 > width() - 6);
-    if (hFlip) hX = l - 10;
-
-    if (hX >= 6 && hX <= width() - 6) {
-        painter.setPen(QPen(kSelectionColor, 1));
-        painter.drawLine(hX, t, hX, b);
-        painter.drawLine(hX - 3, t, hX + 3, t);
-        painter.drawLine(hX - 3, b, hX + 3, b);
-
-        QString h = QString::number(size.height());
-        int th = fm.height() + 8;
-        int ty = qBound(t + 4, cy - th / 2, b - th - 4);
-        painter.fillRect(hX - 8, ty, 16, th, QColor(14, 20, 26, 200));
-        painter.setPen(kLabelTextColor);
-        painter.drawText(hX - 7, ty + 4, 14, th - 8, Qt::AlignCenter, h);
-    }
-}
-
 void CaptureOverlay::drawMagnifier(QPainter& painter)
 {
     if (lastMouseGlobal_.isNull() || state_ == State::Ready || state_ == State::ActionPending) {
