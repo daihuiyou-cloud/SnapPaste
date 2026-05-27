@@ -335,13 +335,14 @@ void EditorWindow::createToolbar()
         {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
         {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
     };
-    QAction* toolActions[12];
-    for (int i = 0; i < 12; ++i) {
-        auto* a = toolbar->addAction(toolDefs[i].iconFn(), toolDefs[i].name);
+    QVector<QAction*> toolActions;
+    toolActions.reserve(std::size(toolDefs));
+    for (const auto& td : toolDefs) {
+        auto* a = toolbar->addAction(td.iconFn(), td.name);
         a->setCheckable(true);
-        a->setToolTip(toolDefs[i].tooltip);
-        a->setData(static_cast<int>(toolDefs[i].tool));
-        toolActions[i] = a;
+        a->setToolTip(td.tooltip);
+        a->setData(static_cast<int>(td.tool));
+        toolActions.push_back(a);
     }
 
     toolbar->addSeparator();
@@ -462,8 +463,8 @@ void EditorWindow::createToolbar()
     // ── Connections ──
     connect(undo, &QAction::triggered, this, [this] { canvas_->undo(); });
     connect(redo, &QAction::triggered, this, [this] { canvas_->redo(); });
-    for (int i = 0; i < 12; ++i) {
-        connect(toolActions[i], &QAction::triggered, this, [this, tool = toolDefs[i].tool] {
+    for (auto* a : toolActions) {
+        connect(a, &QAction::triggered, this, [this, tool = static_cast<AnnotationTool>(a->data().toInt())] {
             canvas_->setTool(tool);
         });
     }
