@@ -3,12 +3,13 @@
 #include <QColor>
 #include <QElapsedTimer>
 #include <QPoint>
-#include <QPropertyAnimation>
 #include <QRect>
 #include <QVector>
 #include <QWidget>
 
 #include <optional>
+
+class QPropertyAnimation;
 
 namespace snappaste {
 

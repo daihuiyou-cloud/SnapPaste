@@ -13,6 +13,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPointer>
+#include <QPropertyAnimation>
 #include <QScreen>
 #include <QTimer>
 

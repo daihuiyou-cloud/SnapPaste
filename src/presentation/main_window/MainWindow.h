@@ -1,11 +1,13 @@
 #pragma once
 
-#include "presentation/history/HistoryWidget.h"
-#include "presentation/settings/SettingsWidget.h"
-
 #include <QMainWindow>
 
 namespace snappaste {
+
+class HistoryViewModel;
+class SettingsViewModel;
+class HistoryWidget;
+class SettingsWidget;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT

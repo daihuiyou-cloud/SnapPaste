@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "presentation/editor/AnnotationCanvas.h"
 #include "presentation/editor/EditorWindow.h"
 
 #include "presentation/icons/IconProvider.h"

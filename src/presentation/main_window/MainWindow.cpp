@@ -1,4 +1,6 @@
 #include "presentation/main_window/MainWindow.h"
+#include "presentation/history/HistoryWidget.h"
+#include "presentation/settings/SettingsWidget.h"
 
 #include <QPushButton>
 #include <QTabWidget>

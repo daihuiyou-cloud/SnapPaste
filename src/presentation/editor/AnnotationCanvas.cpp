@@ -8,6 +8,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
+#include <QFont>
 #include <QInputDialog>
 #include <QMenu>
 #include <QMessageBox>

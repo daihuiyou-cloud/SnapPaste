@@ -3,7 +3,6 @@
 #include "domain/editor/Annotation.h"
 
 #include <QColor>
-#include <QFont>
 #include <QImage>
 #include <QPoint>
 #include <QRect>
