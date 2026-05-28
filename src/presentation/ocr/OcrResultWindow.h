@@ -2,7 +2,9 @@
 
 #include "domain/ocr/OcrTypes.h"
 
+#include <QFrame>
 #include <QImage>
+#include <QLabel>
 #include <QPoint>
 #include <QRect>
 #include <QSet>
@@ -10,7 +12,8 @@
 #include <QVector>
 #include <QWidget>
 
-class QLabel;
+class QPushButton;
+class QScrollArea;
 
 namespace snappaste {
 
@@ -32,27 +35,46 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     void performCopy();
     void performPaste();
     void rebuildCache();
-    int hitTest(const QPoint& pos) const;
+    void updateImageOverlay();
     QString selectedText() const;
+    void toggleIndex(int idx);
+    void selectAll();
+    void deselectAll();
+    void updateTextRow(int i);
+    void updateTextRows();
+    void updateToolbar();
 
     QImage source_;
     QVector<OcrBlockInfo> blocks_;
     QString fullText_;
-    QPixmap cachedPixmap_;
+    QPixmap basePixmap_;
     QVector<QRect> scaledRects_;
     int hoveredIndex_ = -1;
     QSet<int> selectedIndices_;
     QPoint dragStart_;
     bool dragging_ = false;
-    static constexpr int kCornerRadius = 8;
-    static constexpr int kTitleBarHeight = 32;
-    static constexpr int kMaxWidth = 680;
-    static constexpr int kMaxHeight = 520;
+
+    QLabel* imageLabel_ = nullptr;
+    QLabel* selectionInfo_ = nullptr;
+    QPushButton* copyBtn_ = nullptr;
+    QPushButton* pasteBtn_ = nullptr;
+    QScrollArea* imageScrollArea_ = nullptr;
+    QScrollArea* textScrollArea_ = nullptr;
+    QWidget* textListContainer_ = nullptr;
+    QVector<QFrame*> textRows_;
+
+    static constexpr int kCornerRadius = 10;
+    static constexpr int kTitleBarHeight = 38;
+    static constexpr int kDefaultWidth = 820;
+    static constexpr int kDefaultHeight = 560;
+    static constexpr int kMinWidth = 500;
+    static constexpr int kMinHeight = 360;
     static constexpr int kBlockPadding = 3;
 };
 

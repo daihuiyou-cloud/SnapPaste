@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QEvent>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -10,6 +11,9 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSplitter>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -46,19 +50,24 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     setAttribute(Qt::WA_DeleteOnClose, true);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
+    setMinimumSize(kMinWidth, kMinHeight);
+    resize(kDefaultWidth, kDefaultHeight);
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
 
+    // --- Title bar ---
     auto* titleBar = new QWidget(this);
     titleBar->setFixedHeight(kTitleBarHeight);
-    titleBar->setStyleSheet("background: rgba(40, 48, 58, 200); border-top-left-radius: 8px; border-top-right-radius: 8px;");
+    titleBar->setStyleSheet(
+        "background: #1c2128; border-top-left-radius: 10px;"
+        " border-top-right-radius: 10px;");
     auto* titleLayout = new QHBoxLayout(titleBar);
-    titleLayout->setContentsMargins(12, 0, 8, 0);
+    titleLayout->setContentsMargins(14, 0, 10, 0);
 
     auto* titleLabel = new QLabel(QStringLiteral("OCR Result"), titleBar);
-    titleLabel->setStyleSheet("color: #edf1f5; font-size: 12px; font-weight: bold; background: transparent;");
+    titleLabel->setStyleSheet("color: #edf1f5; font-size: 13px; font-weight: 600;");
     titleLayout->addWidget(titleLabel);
     titleLayout->addStretch();
 
@@ -66,64 +75,158 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     closeBtn->setFixedSize(28, 28);
     closeBtn->setFocusPolicy(Qt::NoFocus);
     closeBtn->setToolTip("Close (Esc)");
+    closeBtn->setCursor(Qt::ArrowCursor);
     closeBtn->setStyleSheet(
-        "QPushButton { background: rgba(255,255,255,16); color: #bcc8d4; font-size: 14px;"
-        " border: none; border-radius: 6px; font-weight: bold; }"
+        "QPushButton { background: transparent; color: #8a9aa8; font-size: 14px;"
+        " border: none; border-radius: 6px; }"
         "QPushButton:hover { background: #e03a3a; color: #ffffff; }"
         "QPushButton:pressed { background: #c03030; }");
     connect(closeBtn, &QPushButton::clicked, this, &QWidget::close);
     titleLayout->addWidget(closeBtn);
 
-    auto* buttonBar = new QWidget(this);
-    auto* buttonLayout = new QHBoxLayout(buttonBar);
-    buttonLayout->setContentsMargins(10, 6, 10, 8);
-
-    auto* copyBtn = new QPushButton(QStringLiteral("Copy All"), buttonBar);
-    copyBtn->setStyleSheet(
-        "QPushButton { background: #2fbf9f; color: #ffffff; border: none; border-radius: 4px;"
-        " padding: 5px 14px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: #3ddbab; }"
-        "QPushButton:pressed { background: #28a88c; }");
-    connect(copyBtn, &QPushButton::clicked, this, &OcrResultWindow::performCopy);
-
-    auto* pasteBtn = new QPushButton(QStringLiteral("Paste && Close"), buttonBar);
-    pasteBtn->setStyleSheet(
-        "QPushButton { background: #364150; color: #edf1f5; border: 1px solid #52677e;"
-        " border-radius: 4px; padding: 5px 14px; font-size: 12px; }"
-        "QPushButton:hover { background: #43536a; }"
-        "QPushButton:pressed { background: #2d3b4e; }");
-    connect(pasteBtn, &QPushButton::clicked, this, &OcrResultWindow::performPaste);
-
-    auto* escHint = new QPushButton(QStringLiteral("Esc"), buttonBar);
-    escHint->setFixedHeight(26);
-    escHint->setStyleSheet(
-        "QPushButton { background: transparent; color: #6a7a88; border: 1px solid #3a414c;"
-        " border-radius: 4px; padding: 4px 10px; font-size: 11px; }"
-        "QPushButton:hover { color: #8a9aa8; border-color: #52677e; }");
-    connect(escHint, &QPushButton::clicked, this, &QWidget::close);
-
-    buttonLayout->addWidget(copyBtn);
-    buttonLayout->addWidget(pasteBtn);
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(escHint);
-
     root->addWidget(titleBar);
-    root->addStretch(1);
-    root->addWidget(buttonBar);
 
-    double aspect = static_cast<double>(source_.width()) / source_.height();
-    int w = std::min(kMaxWidth, source_.width() + 24);
-    int h = std::min(kMaxHeight, static_cast<int>(w / aspect) + kTitleBarHeight + 50);
-    w = std::max(240, std::min(w, kMaxWidth));
-    h = std::max(180, h);
-    setFixedSize(w, h);
+    // --- Horizontal split: image | text list ---
+    auto* splitter = new QSplitter(Qt::Horizontal, this);
+    splitter->setHandleWidth(1);
+    splitter->setChildrenCollapsible(false);
+    splitter->setStyleSheet(
+        "QSplitter::handle { background: #252c35; }");
 
-    rebuildCache();
+    // Left pane: scrollable image
+    auto* imagePanel = new QWidget(splitter);
+    auto* imageLayout = new QVBoxLayout(imagePanel);
+    imageLayout->setContentsMargins(0, 0, 0, 0);
+
+    imageScrollArea_ = new QScrollArea(imagePanel);
+    imageScrollArea_->setWidgetResizable(true);
+    imageScrollArea_->setFrameShape(QFrame::NoFrame);
+    imageScrollArea_->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    imageScrollArea_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    imageScrollArea_->setStyleSheet(
+        "QScrollArea { background: #1c2128; border: none; }"
+        "QScrollBar:vertical { background: #252c35; width: 8px; margin: 0; }"
+        "QScrollBar::handle:vertical { background: #3a4455; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #4f5b70; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar:horizontal { background: #252c35; height: 8px; margin: 0; }"
+        "QScrollBar::handle:horizontal { background: #3a4455; border-radius: 4px; min-width: 30px; }"
+        "QScrollBar::handle:horizontal:hover { background: #4f5b70; }"
+        "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }");
+
+    imageLabel_ = new QLabel(imageScrollArea_);
+    imageLabel_->setAlignment(Qt::AlignCenter);
+    imageLabel_->setMouseTracking(true);
+    imageScrollArea_->setWidget(imageLabel_);
+
+    imageLayout->addWidget(imageScrollArea_);
+    splitter->addWidget(imagePanel);
+
+    // Right pane: scrollable text list
+    auto* textPanel = new QWidget(splitter);
+    textPanel->setStyleSheet("background: #161a20;");
+    auto* textPanelLayout = new QVBoxLayout(textPanel);
+    textPanelLayout->setContentsMargins(0, 0, 0, 0);
+    textPanelLayout->setSpacing(0);
+
+    auto* textHeader = new QLabel(QStringLiteral("  TEXT BLOCKS"), textPanel);
+    textHeader->setFixedHeight(30);
+    textHeader->setStyleSheet(
+        "color: #6a7a88; font-size: 10px; font-weight: 600; letter-spacing: 1px;"
+        " background: #13171c; border-bottom: 1px solid #252c35;");
+    textPanelLayout->addWidget(textHeader);
+
+    textScrollArea_ = new QScrollArea(textPanel);
+    textScrollArea_->setWidgetResizable(true);
+    textScrollArea_->setFrameShape(QFrame::NoFrame);
+    textScrollArea_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    textScrollArea_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    textScrollArea_->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollBar:vertical { background: #1c2128; width: 8px; margin: 0; }"
+        "QScrollBar::handle:vertical { background: #3a4455; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #4f5b70; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+
+    textListContainer_ = new QWidget(textScrollArea_);
+    textListContainer_->setStyleSheet("background: transparent;");
+    auto* textListLayout = new QVBoxLayout(textListContainer_);
+    textListLayout->setContentsMargins(0, 0, 0, 0);
+    textListLayout->setSpacing(0);
+
+    textRows_.reserve(blocks_.size());
+    for (int i = 0; i < blocks_.size(); ++i) {
+        auto* row = new QFrame(textListContainer_);
+        row->setFixedHeight(42);
+        row->setCursor(Qt::PointingHandCursor);
+        row->installEventFilter(this);
+        row->setProperty("blockIndex", i);
+
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(14, 0, 14, 0);
+        rowLayout->setSpacing(0);
+
+        auto* textLabel = new QLabel(blocks_[i].text, row);
+        textLabel->setStyleSheet("background: transparent; color: #c8d0d8; font-size: 12px;");
+        textLabel->setCursor(Qt::PointingHandCursor);
+        rowLayout->addWidget(textLabel, 1);
+
+        textListLayout->addWidget(row);
+        textRows_.append(row);
+    }
+    textListLayout->addStretch();
+
+    textScrollArea_->setWidget(textListContainer_);
+    textPanelLayout->addWidget(textScrollArea_, 1);
+    splitter->addWidget(textPanel);
+
+    splitter->setStretchFactor(0, 45);
+    splitter->setStretchFactor(1, 55);
+    splitter->setSizes({kDefaultWidth * 45 / 100, kDefaultWidth * 55 / 100});
+
+    root->addWidget(splitter, 1);
+
+    // --- Bottom toolbar ---
+    auto* toolBar = new QWidget(this);
+    toolBar->setStyleSheet(
+        "background: #1c2128; border-bottom-left-radius: 10px;"
+        " border-bottom-right-radius: 10px;");
+    auto* toolLayout = new QHBoxLayout(toolBar);
+    toolLayout->setContentsMargins(12, 8, 12, 10);
+
+    auto btnBase = QStringLiteral(
+        "QPushButton { background: %1; color: %2; border: none; border-radius: 5px;"
+        " padding: 6px 16px; font-size: 12px; font-weight: 600; }"
+        "QPushButton:hover { background: %3; }"
+        "QPushButton:pressed { background: %4; }");
+
+    copyBtn_ = new QPushButton(QStringLiteral("Copy All"), toolBar);
+    copyBtn_->setStyleSheet(
+        btnBase.arg("#2fbf9f", "#ffffff", "#3ddbab", "#28a88c"));
+    connect(copyBtn_, &QPushButton::clicked, this, &OcrResultWindow::performCopy);
+
+    pasteBtn_ = new QPushButton(QStringLiteral("Paste && Close"), toolBar);
+    pasteBtn_->setStyleSheet(
+        btnBase.arg("#364150", "#edf1f5", "#43536a", "#2d3b4e"));
+    connect(pasteBtn_, &QPushButton::clicked, this, &OcrResultWindow::performPaste);
+
+    selectionInfo_ = new QLabel(toolBar);
+    selectionInfo_->setStyleSheet("color: #6a7a88; font-size: 11px; padding: 0 6px;");
+
+    toolLayout->addWidget(copyBtn_);
+    toolLayout->addWidget(pasteBtn_);
+    toolLayout->addStretch();
+    toolLayout->addWidget(selectionInfo_);
+
+    root->addWidget(toolBar);
+
+    updateTextRows();
+    updateToolbar();
 
     const auto cursor = QCursor::pos();
-    move(clampToScreen(cursor + QPoint(12, -h / 2), {w, h}));
+    move(clampToScreen(cursor + QPoint(12, -height() / 2),
+                       {kDefaultWidth, kDefaultHeight}));
 
-    setAttribute(Qt::WA_ShowWithoutActivating, false);
     show();
     activateWindow();
     raise();
@@ -133,37 +236,148 @@ void OcrResultWindow::rebuildCache()
 {
     if (source_.isNull()) return;
 
-    int imgW = width() - 12;
-    int imgH = height() - kTitleBarHeight - 50;
-    if (imgW < 1 || imgH < 1) return;
+    double scale = 1.0;
+    int margin = 20;
 
-    double scale = std::min(static_cast<double>(imgW) / source_.width(),
-                            static_cast<double>(imgH) / source_.height());
+    int availW = qMax(100, imageScrollArea_->viewport()->width() - margin * 2);
+    int availH = qMax(100, imageScrollArea_->viewport()->height() - margin * 2);
+
+    if (source_.width() > availW || source_.height() > availH) {
+        scale = qMin(static_cast<double>(availW) / source_.width(),
+                     static_cast<double>(availH) / source_.height());
+    }
 
     int destW = static_cast<int>(source_.width() * scale);
     int destH = static_cast<int>(source_.height() * scale);
-    int offsetX = (imgW - destW) / 2 + 6;
-    int offsetY = (imgH - destH) / 2 + kTitleBarHeight;
 
-    cachedPixmap_ = QPixmap(size());
-    cachedPixmap_.fill(Qt::transparent);
+    basePixmap_ = QPixmap(destW + margin * 2, destH + margin * 2);
+    basePixmap_.fill(Qt::transparent);
 
-    QPainter p(&cachedPixmap_);
+    QPainter p(&basePixmap_);
     p.setRenderHint(QPainter::SmoothPixmapTransform);
-    p.drawImage(QRect(offsetX, offsetY, destW, destH), source_);
+    p.drawImage(QRect(margin, margin, destW, destH), source_);
 
     scaledRects_.resize(blocks_.size());
     for (int i = 0; i < blocks_.size(); ++i) {
         const auto& b = blocks_[i];
-        int x = offsetX + static_cast<int>(b.rect.x() * scale);
-        int y = offsetY + static_cast<int>(b.rect.y() * scale);
+        int x = margin + static_cast<int>(b.rect.x() * scale);
+        int y = margin + static_cast<int>(b.rect.y() * scale);
         int w = static_cast<int>(b.rect.width() * scale);
         int h = static_cast<int>(b.rect.height() * scale);
         scaledRects_[i] = QRect(x - kBlockPadding, y - kBlockPadding,
                                 w + kBlockPadding * 2, h + kBlockPadding * 2);
     }
     p.end();
-    update();
+
+    updateImageOverlay();
+}
+
+void OcrResultWindow::updateImageOverlay()
+{
+    if (source_.isNull() || basePixmap_.isNull()) return;
+
+    QPixmap pm = basePixmap_;
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    for (int i = 0; i < scaledRects_.size(); ++i) {
+        bool hover = (i == hoveredIndex_);
+        bool sel = selectedIndices_.contains(i);
+
+        int bw = hover ? 2 : sel ? 2 : 1;
+        QColor fill, border;
+
+        if (hover) {
+            fill = QColor(47, 191, 159, 100);
+            border = QColor(47, 191, 159, 240);
+        } else if (sel) {
+            fill = QColor(47, 191, 159, 70);
+            border = QColor(47, 191, 159, 180);
+        } else {
+            fill = QColor(47, 191, 159, 20);
+            border = QColor(47, 191, 159, 90);
+        }
+
+        p.setBrush(fill);
+        p.setPen(QPen(border, bw));
+        p.drawRoundedRect(scaledRects_[i].adjusted(0, 0, -1, -1), 2, 2);
+    }
+    p.end();
+
+    imageLabel_->setPixmap(pm);
+    imageLabel_->setFixedSize(pm.size());
+}
+
+void OcrResultWindow::updateTextRow(int i)
+{
+    if (i < 0 || i >= textRows_.size()) return;
+    auto* row = textRows_[i];
+    bool sel = selectedIndices_.contains(i);
+    bool hover = (i == hoveredIndex_);
+
+    if (sel) {
+        row->setStyleSheet(
+            "QFrame { background: #1a2d2a; border: none; border-left: 3px solid #2fbf9f;"
+            " border-bottom: 1px solid #1c2128; }");
+    } else if (hover) {
+        row->setStyleSheet(
+            "QFrame { background: #252c38; border: none; border-left: 3px solid #3a5a5a;"
+            " border-bottom: 1px solid #1c2128; }");
+    } else {
+        row->setStyleSheet(
+            "QFrame { background: transparent; border: none; border-left: 3px solid transparent;"
+            " border-bottom: 1px solid #1c2128; }");
+    }
+}
+
+void OcrResultWindow::updateTextRows()
+{
+    for (int i = 0; i < textRows_.size(); ++i) {
+        updateTextRow(i);
+    }
+}
+
+void OcrResultWindow::updateToolbar()
+{
+    if (selectedIndices_.isEmpty()) {
+        selectionInfo_->setText(QStringLiteral("%1 text blocks").arg(blocks_.size()));
+        copyBtn_->setText(QStringLiteral("Copy All"));
+    } else {
+        selectionInfo_->setText(QStringLiteral("%1/%2 selected")
+                                    .arg(selectedIndices_.size())
+                                    .arg(blocks_.size()));
+        copyBtn_->setText(QStringLiteral("Copy (%1)").arg(selectedIndices_.size()));
+    }
+}
+
+void OcrResultWindow::toggleIndex(int idx)
+{
+    if (selectedIndices_.contains(idx)) {
+        selectedIndices_.remove(idx);
+    } else {
+        selectedIndices_.insert(idx);
+    }
+    updateTextRow(idx);
+    updateImageOverlay();
+    updateToolbar();
+}
+
+void OcrResultWindow::selectAll()
+{
+    for (int i = 0; i < blocks_.size(); ++i) {
+        selectedIndices_.insert(i);
+    }
+    updateTextRows();
+    updateImageOverlay();
+    updateToolbar();
+}
+
+void OcrResultWindow::deselectAll()
+{
+    selectedIndices_.clear();
+    updateTextRows();
+    updateImageOverlay();
+    updateToolbar();
 }
 
 void OcrResultWindow::paintEvent(QPaintEvent* event)
@@ -171,46 +385,9 @@ void OcrResultWindow::paintEvent(QPaintEvent* event)
     Q_UNUSED(event)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-
     p.setBrush(QColor(28, 33, 40, 245));
     p.setPen(QPen(QColor(70, 80, 93, 180), 1));
     p.drawRoundedRect(rect().adjusted(1, 1, -1, -1), kCornerRadius, kCornerRadius);
-
-    QRect clip(6, kTitleBarHeight, width() - 12, height() - kTitleBarHeight - 50);
-    p.setClipRect(clip);
-
-    if (!cachedPixmap_.isNull()) {
-        p.drawPixmap(0, 0, cachedPixmap_);
-    }
-
-    for (int i = 0; i < scaledRects_.size(); ++i) {
-        const bool hover = (i == hoveredIndex_);
-        const bool sel = selectedIndices_.contains(i);
-
-        QColor fill(47, 191, 159, hover || sel ? 55 : 30);
-        QColor border(47, 191, 159, hover || sel ? 200 : 100);
-        int bw = hover || sel ? 2 : 1;
-
-        p.setBrush(fill);
-        p.setPen(QPen(border, bw));
-        p.drawRoundedRect(scaledRects_[i].adjusted(0, 0, -1, -1), 3, 3);
-
-        if (sel) {
-            p.setPen(QColor(47, 191, 159));
-            p.setFont(QFont("Segoe UI", 10));
-            p.drawText(scaledRects_[i].adjusted(4, 2, -4, -2),
-                       Qt::AlignLeft | Qt::AlignVCenter,
-                       blocks_[i].text);
-        }
-    }
-}
-
-int OcrResultWindow::hitTest(const QPoint& pos) const
-{
-    for (int i = 0; i < scaledRects_.size(); ++i) {
-        if (scaledRects_[i].contains(pos)) return i;
-    }
-    return -1;
 }
 
 void OcrResultWindow::mousePressEvent(QMouseEvent* event)
@@ -218,25 +395,6 @@ void OcrResultWindow::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton && event->y() <= kTitleBarHeight) {
         dragStart_ = event->globalPos() - frameGeometry().topLeft();
         dragging_ = true;
-        return;
-    }
-    if (event->button() == Qt::LeftButton) {
-        int idx = hitTest(event->pos());
-        if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            if (idx >= 0) {
-                if (selectedIndices_.contains(idx)) {
-                    selectedIndices_.remove(idx);
-                } else {
-                    selectedIndices_.insert(idx);
-                }
-            }
-        } else {
-            selectedIndices_.clear();
-            if (idx >= 0) {
-                selectedIndices_.insert(idx);
-            }
-        }
-        update();
         return;
     }
     QWidget::mousePressEvent(event);
@@ -247,16 +405,6 @@ void OcrResultWindow::mouseMoveEvent(QMouseEvent* event)
     if (dragging_ && (event->buttons() & Qt::LeftButton)) {
         move(clampToScreen(event->globalPos() - dragStart_, size()));
         return;
-    }
-    int idx = hitTest(event->pos());
-    if (idx != hoveredIndex_) {
-        hoveredIndex_ = idx;
-        if (idx >= 0) {
-            setCursor(Qt::PointingHandCursor);
-        } else {
-            setCursor(Qt::ArrowCursor);
-        }
-        update();
     }
     QWidget::mouseMoveEvent(event);
 }
@@ -269,6 +417,41 @@ void OcrResultWindow::mouseReleaseEvent(QMouseEvent* event)
     QWidget::mouseReleaseEvent(event);
 }
 
+bool OcrResultWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    auto* frame = qobject_cast<QFrame*>(watched);
+    if (!frame) return QWidget::eventFilter(watched, event);
+
+    bool ok = false;
+    int idx = frame->property("blockIndex").toInt(&ok);
+    if (!ok || idx < 0 || idx >= textRows_.size()) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+        if (static_cast<QMouseEvent*>(event)->button() == Qt::LeftButton) {
+            toggleIndex(idx);
+            return true;
+        }
+        break;
+    case QEvent::Enter:
+        hoveredIndex_ = idx;
+        updateImageOverlay();
+        updateTextRow(idx);
+        updateTextRow(hoveredIndex_);
+        return true;
+    case QEvent::Leave:
+        hoveredIndex_ = -1;
+        updateImageOverlay();
+        updateTextRow(idx);
+        return true;
+    default:
+        break;
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 void OcrResultWindow::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Escape) {
@@ -276,11 +459,9 @@ void OcrResultWindow::keyPressEvent(QKeyEvent* event)
     } else if (event->key() == Qt::Key_C && event->modifiers().testFlag(Qt::ControlModifier)) {
         performCopy();
     } else if (event->key() == Qt::Key_A && event->modifiers().testFlag(Qt::ControlModifier)) {
-        selectedIndices_.clear();
-        for (int i = 0; i < blocks_.size(); ++i) {
-            selectedIndices_.insert(i);
-        }
-        update();
+        selectAll();
+    } else if (event->key() == Qt::Key_D && event->modifiers().testFlag(Qt::ControlModifier)) {
+        deselectAll();
     } else {
         QWidget::keyPressEvent(event);
     }
@@ -308,22 +489,22 @@ QString OcrResultWindow::selectedText() const
 
 void OcrResultWindow::performCopy()
 {
-    QApplication::clipboard()->setText(selectedText());
-    auto buttons = findChildren<QPushButton*>();
-    for (auto* btn : buttons) {
-        if (btn->text().contains(QStringLiteral("Copy"))) {
-            btn->setText(QStringLiteral("Copied"));
-            QTimer::singleShot(1500, this, [btn] { btn->setText(QStringLiteral("Copy All")); });
-            break;
-        }
-    }
+    QString text = selectedText();
+    if (text.isEmpty()) return;
+    QApplication::clipboard()->setText(text);
+
+    QString orig = copyBtn_->text();
+    copyBtn_->setText(QStringLiteral("Copied!"));
+    QTimer::singleShot(1500, this, [this, orig] { copyBtn_->setText(orig); });
 }
 
 void OcrResultWindow::performPaste()
 {
     performCopy();
-    emit pasteRequested();
-    close();
+    QTimer::singleShot(200, this, [this] {
+        emit pasteRequested();
+        close();
+    });
 }
 
 } // namespace snappaste
