@@ -466,10 +466,18 @@ void EditorWindow::createToolPanel()
         });
         propsLayout->addWidget(btn);
     }
+
+    auto* fontSizeLabel = new QLabel("Font: 14px", content);
+    fontSizeLabel->setToolTip("Font size for Text / Numbered tools");
+    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 2px 5px; background: transparent;");
+    propsLayout->addWidget(fontSizeLabel);
+    canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
+        fontSizeLabel->setText(QString("Font: %1px").arg(size));
+    });
     addSection("PROPERTIES", propsLayout);
 
     // ════════════════════════════════════════════
-    // Section 3: Stroke & Font Size
+    // Section 3: Stroke
     // ════════════════════════════════════════════
     auto* strokeRow = new QHBoxLayout();
     strokeRow->setContentsMargins(0, 0, 0, 0);
@@ -494,15 +502,7 @@ void EditorWindow::createToolPanel()
         });
         strokeRow->addWidget(btn);
     }
-
-    auto* fontSizeLabel = new QLabel("14px", content);
-    fontSizeLabel->setToolTip("Font size");
-    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0 6px; background: transparent;");
-    strokeRow->addWidget(fontSizeLabel);
-    canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
-        fontSizeLabel->setText(QString("%1px").arg(size));
-    });
-    addSection("STROKE & TEXT", strokeRow);
+    addSection("STROKE", strokeRow);
 
     // ════════════════════════════════════════════
     // Section 4: Color
