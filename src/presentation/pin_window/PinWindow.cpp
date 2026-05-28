@@ -700,7 +700,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.drawImage(QPoint(0, 0), renderedImage());
+    painter.drawImage(rect(), renderedImage());
 
     if (thumbnailMode_) {
         painter.setPen(QColor("#31c7a4"));
