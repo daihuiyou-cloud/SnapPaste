@@ -502,7 +502,7 @@ void EditorWindow::createToolPanel()
     canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
         fontSizeLabel->setText(QString("%1px").arg(size));
     });
-    addSection("STROKE", strokeRow);
+    addSection("STROKE & TEXT", strokeRow);
 
     // ════════════════════════════════════════════
     // Section 4: Color
