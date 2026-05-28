@@ -30,12 +30,11 @@ WinHotkeyService::~WinHotkeyService()
 
 bool WinHotkeyService::registerHotkey(HotkeyAction action, const Hotkey& hotkey)
 {
-    unregisterHotkey(action);
-
 #ifdef Q_OS_WIN
     const auto id = idFor(action);
     const auto registered = RegisterHotKey(nullptr, id, modifiersFor(hotkey), static_cast<UINT>(hotkey.key)) != FALSE;
     if (registered) {
+        unregisterHotkey(action);
         registeredActions_.insert(action);
     }
     return registered;
@@ -83,8 +82,9 @@ bool WinHotkeyService::nativeEventFilter(const QByteArray& eventType, void* mess
         const auto callback = callbacks_.find(action);
         if (callback != callbacks_.end() && callback->second) {
             callback->second();
+            return true;
         }
-        return true;
+        return false;
     }
 #else
     Q_UNUSED(message)

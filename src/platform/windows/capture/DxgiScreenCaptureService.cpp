@@ -150,13 +150,30 @@ QRect toPhysicalRegion(const QRect& logicalRegion,
     return QRect(QPoint(left, top), QPoint(right - 1, bottom - 1)).normalized();
 }
 
-QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, int height)
+QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, int height, DXGI_FORMAT format)
 {
-    QImage image(width, height, QImage::Format_RGB32);
-    const auto rowBytes = width * 4;
+    QImage::Format qfmt = QImage::Format_RGB32;
+    switch (format) {
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+        qfmt = QImage::Format_RGB32;
+        break;
+    case DXGI_FORMAT_R10G10B10A2_UNORM:
+        qfmt = QImage::Format_BGR30;  // closest match
+        break;
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+        qfmt = QImage::Format_RGBA64_Premultiplied;
+        break;
+    default:
+        qfmt = QImage::Format_RGB32;
+        break;
+    }
+
+    QImage image(width, height, qfmt);
+    const auto rowBytes = static_cast<size_t>(width) * 4;
     for (int y = 0; y < height; ++y) {
         const auto* source = static_cast<const uchar*>(mapped.pData) + (static_cast<size_t>(y) * mapped.RowPitch);
-        std::memcpy(image.scanLine(y), source, rowBytes);
+        std::memcpy(image.scanLine(y), source, std::min(rowBytes, static_cast<size_t>(mapped.RowPitch)));
         auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
         for (int x = 0; x < width; ++x) {
             pixels[x] |= 0xff000000;
@@ -258,7 +275,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
         return Result<QImage>::failure("Failed to map DXGI readback texture.");
     }
 
-    auto image = mappedTextureToImage(mapped, width, height);
+    auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
     context.Unmap(stagingTexture.Get(), 0);
     duplication->ReleaseFrame();
     return Result<QImage>::success(std::move(image));
@@ -293,16 +310,6 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
     }
 
 #ifdef Q_OS_WIN
-    std::scoped_lock lock(mutex_);
-
-    ComPtr<ID3D11DeviceContext> context;
-    auto deviceResult = createD3dDevice(context);
-    const auto dxgiReady = deviceResult.isOk();
-    ComPtr<ID3D11Device> device;
-    if (dxgiReady) {
-        device = deviceResult.value();
-    }
-
     if (segments.size() > 1) {
         QRect physicalBounds;
         qreal compositeDpr = 1.0;
@@ -325,9 +332,15 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         QPainter painter(&composite);
 
         for (const auto& segment : segments) {
-            auto segmentResult = dxgiReady
-                ? captureSegmentWithDxgi(segment, *device.Get(), *context.Get())
-                : Result<QImage>::failure(deviceResult.error());
+            auto segmentResult = [&]() -> Result<QImage> {
+                std::scoped_lock lock(mutex_);
+                ComPtr<ID3D11DeviceContext> context;
+                auto deviceResult = createD3dDevice(context);
+                if (deviceResult.isOk()) {
+                    return captureSegmentWithDxgi(segment, *deviceResult.value().Get(), *context.Get());
+                }
+                return Result<QImage>::failure(deviceResult.error());
+            }();
             if (segmentResult.isError()) {
                 segmentResult = fallback_.captureRegion(segment.logicalRegion);
             }
@@ -347,9 +360,15 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         return Result<QImage>::success(std::move(composite));
     }
 
-    auto dxgiResult = dxgiReady
-        ? captureSegmentWithDxgi(segments.first(), *device.Get(), *context.Get())
-        : Result<QImage>::failure(deviceResult.error());
+    auto dxgiResult = [&]() -> Result<QImage> {
+        std::scoped_lock lock(mutex_);
+        ComPtr<ID3D11DeviceContext> context;
+        auto deviceResult = createD3dDevice(context);
+        if (deviceResult.isOk()) {
+            return captureSegmentWithDxgi(segments.first(), *deviceResult.value().Get(), *context.Get());
+        }
+        return Result<QImage>::failure(deviceResult.error());
+    }();
     if (dxgiResult.isError()) {
         dxgiResult = fallback_.captureRegion(region);
     }

@@ -12,6 +12,7 @@
 #include <QtGlobal>
 
 #include <algorithm>
+#include <atomic>
 
 namespace snappaste {
 
@@ -211,19 +212,34 @@ void buildUiAutomationCache(HWND hwnd, QVector<QRect>& outRects)
 
 } // namespace
 
-WinScreenRegionDetector::WinScreenRegionDetector()
+namespace detail {
+
+namespace {
+std::atomic<int> s_comRefCount{0};
+}
+
+ComInitializer::ComInitializer()
 {
 #ifdef Q_OS_WIN
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (s_comRefCount.fetch_add(1) == 0) {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    }
 #endif
 }
 
-WinScreenRegionDetector::~WinScreenRegionDetector()
+ComInitializer::~ComInitializer()
 {
 #ifdef Q_OS_WIN
-    CoUninitialize();
+    if (s_comRefCount.fetch_sub(1) == 1) {
+        CoUninitialize();
+    }
 #endif
 }
+
+} // namespace detail
+
+WinScreenRegionDetector::WinScreenRegionDetector() = default;
+WinScreenRegionDetector::~WinScreenRegionDetector() = default;
 
 #ifdef Q_OS_WIN
 void WinScreenRegionDetector::rebuildCache(HWND hwnd, const QRect& desktopBounds)

@@ -2,6 +2,8 @@
 
 #include "domain/ocr/IOcrService.h"
 
+#include <QMutex>
+
 namespace snappaste {
 
 class WindowsOcrService final : public IOcrService {
@@ -14,6 +16,8 @@ public:
 
 private:
     QString language_;
+    QMutex mutex_;
+    bool apartmentInitialized_ = false;
 };
 
 } // namespace snappaste

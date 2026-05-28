@@ -28,7 +28,7 @@ public:
         updateStyle();
         timer_.setSingleShot(true);
         timer_.setInterval(10000);
-        connect(&timer_, &QTimer::timeout, this, &HotkeyInput::cancelRecording);
+        connect(&timer_, &QTimer::timeout, this, [this] { cancelRecording(); });
     }
 
     Hotkey hotkey() const { return hotkey_; }

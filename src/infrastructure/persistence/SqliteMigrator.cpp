@@ -6,7 +6,7 @@
 
 namespace snappaste {
 
-Result<void> SqliteMigrator::migrate(QSqlDatabase database)
+Result<void> SqliteMigrator::migrate(QSqlDatabase& database)
 {
     if (!database.transaction()) {
         return Result<void>::failure(database.lastError().text());
@@ -67,7 +67,7 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
     return Result<void>::success();
 }
 
-Result<int> SqliteMigrator::currentVersion(QSqlDatabase database)
+Result<int> SqliteMigrator::currentVersion(QSqlDatabase& database)
 {
     QSqlQuery query(database);
     if (!query.exec("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL, applied_at TEXT NOT NULL)")) {
@@ -85,7 +85,7 @@ Result<int> SqliteMigrator::currentVersion(QSqlDatabase database)
     return Result<int>::success(0);
 }
 
-Result<void> SqliteMigrator::applyVersion1(QSqlDatabase database)
+Result<void> SqliteMigrator::applyVersion1(QSqlDatabase& database)
 {
     QSqlQuery query(database);
 
@@ -118,7 +118,7 @@ Result<void> SqliteMigrator::applyVersion1(QSqlDatabase database)
     return Result<void>::success();
 }
 
-Result<void> SqliteMigrator::applyVersion2(QSqlDatabase database)
+Result<void> SqliteMigrator::applyVersion2(QSqlDatabase& database)
 {
     QSqlQuery query(database);
 
@@ -159,7 +159,7 @@ Result<void> SqliteMigrator::applyVersion2(QSqlDatabase database)
     return Result<void>::success();
 }
 
-Result<void> SqliteMigrator::applyVersion3(QSqlDatabase database)
+Result<void> SqliteMigrator::applyVersion3(QSqlDatabase& database)
 {
     QSqlQuery query(database);
 
@@ -175,7 +175,7 @@ Result<void> SqliteMigrator::applyVersion3(QSqlDatabase database)
     return Result<void>::success();
 }
 
-Result<void> SqliteMigrator::applyVersion4(QSqlDatabase database)
+Result<void> SqliteMigrator::applyVersion4(QSqlDatabase& database)
 {
     QSqlQuery query(database);
 
@@ -191,7 +191,7 @@ Result<void> SqliteMigrator::applyVersion4(QSqlDatabase database)
     return Result<void>::success();
 }
 
-Result<void> SqliteMigrator::applyVersion5(QSqlDatabase database)
+Result<void> SqliteMigrator::applyVersion5(QSqlDatabase& database)
 {
     QSqlQuery query(database);
 

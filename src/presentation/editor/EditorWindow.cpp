@@ -198,8 +198,12 @@ EditorWindow::EditorWindow(QWidget* parent)
         auto path = QFileDialog::getSaveFileName(this, "Export", dir,
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
-            canvas_->renderedImage().save(path);
-            QSettings().setValue("editor/lastSaveDir", QFileInfo(path).absolutePath());
+            if (canvas_->renderedImage().save(path)) {
+                QSettings().setValue("editor/lastSaveDir", QFileInfo(path).absolutePath());
+                statusBar()->showMessage("Saved to " + path, 3000);
+            } else {
+                statusBar()->showMessage("Failed to save image", 3000);
+            }
         }
     });
     addAction(saveAsAction);
@@ -439,7 +443,7 @@ void EditorWindow::createToolbar()
     updateColorWell(QColor("#ff3b30"));
 
     auto* colorMenu = new QMenu(colorBtn_);
-    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", nullptr);
+    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", colorMenu);
     eyeAction_->setCheckable(true);
     connect(eyeAction_, &QAction::triggered, this, [this] {
         canvas_->setPickingColor(eyeAction_->isChecked());
@@ -515,8 +519,11 @@ void EditorWindow::createToolbar()
         auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
-            canvas_->renderedImage().save(path);
-            statusBar()->showMessage("Saved to " + path, 5000);
+            if (canvas_->renderedImage().save(path)) {
+                statusBar()->showMessage("Saved to " + path, 5000);
+            } else {
+                statusBar()->showMessage("Failed to save image", 5000);
+            }
         }
     });
 }

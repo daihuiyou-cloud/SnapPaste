@@ -29,11 +29,6 @@ QString filePathFromIndex(const QModelIndex& proxyIndex, QSortFilterProxyModel* 
     return proxy->mapToSource(proxyIndex).data(Qt::UserRole + 2).toString();
 }
 
-QImage loadImageFromIndex(const QModelIndex& proxyIndex, QSortFilterProxyModel* proxy)
-{
-    return QImage(filePathFromIndex(proxyIndex, proxy));
-}
-
 QVector<QString> selectedFilePaths(const QListView* view, QSortFilterProxyModel* proxy)
 {
     const auto selected = view->selectionModel()->selectedIndexes();
@@ -134,13 +129,19 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         if (ret == QMessageBox::Yes) {
             const auto selected = listView_->selectionModel()->selectedIndexes();
             QSet<int> processedRows;
+            QVector<int> rowsToDelete;
             for (const auto& idx : selected) {
                 const auto row = proxyModel_->mapToSource(idx).row();
                 if (!processedRows.contains(row)) {
                     processedRows.insert(row);
-                    viewModel_.deleteByRow(row);
+                    rowsToDelete.append(row);
                 }
             }
+            std::sort(rowsToDelete.begin(), rowsToDelete.end(), std::greater<int>());
+            for (const auto row : rowsToDelete) {
+                viewModel_.deleteByRow(row);
+            }
+            listView_->selectionModel()->clear();
         }
     });
     connect(copyButton, &QPushButton::clicked, this, [this] {
@@ -230,13 +231,19 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
             if (ret == QMessageBox::Yes) {
                 const auto selected = listView_->selectionModel()->selectedIndexes();
                 QSet<int> processedRows;
+                QVector<int> rowsToDelete;
                 for (const auto& idx : selected) {
                     const auto row = proxyModel_->mapToSource(idx).row();
                     if (!processedRows.contains(row)) {
                         processedRows.insert(row);
-                        viewModel_.deleteByRow(row);
+                        rowsToDelete.append(row);
                     }
                 }
+                std::sort(rowsToDelete.begin(), rowsToDelete.end(), std::greater<int>());
+                for (const auto row : rowsToDelete) {
+                    viewModel_.deleteByRow(row);
+                }
+                listView_->selectionModel()->clear();
             }
         }
     });
@@ -256,13 +263,19 @@ void HistoryWidget::deleteSelected()
     if (ret != QMessageBox::Yes) return;
     const auto selected = listView_->selectionModel()->selectedIndexes();
     QSet<int> processedRows;
+    QVector<int> rowsToDelete;
     for (const auto& idx : selected) {
         const auto row = proxyModel_->mapToSource(idx).row();
         if (!processedRows.contains(row)) {
             processedRows.insert(row);
-            viewModel_.deleteByRow(row);
+            rowsToDelete.append(row);
         }
     }
+    std::sort(rowsToDelete.begin(), rowsToDelete.end(), std::greater<int>());
+    for (const auto row : rowsToDelete) {
+        viewModel_.deleteByRow(row);
+    }
+    listView_->selectionModel()->clear();
 }
 
 bool HistoryWidget::eventFilter(QObject* obj, QEvent* event)

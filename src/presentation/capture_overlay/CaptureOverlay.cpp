@@ -582,6 +582,7 @@ void CaptureOverlay::mouseDoubleClickEvent(QMouseEvent* event)
     state_ = State::ActionPending;
     event->accept();
     hide();
+    emit hiddenAfterAction();
     emit copyRequested(selection_);
 }
 

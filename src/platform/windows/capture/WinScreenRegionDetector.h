@@ -11,6 +11,18 @@
 
 namespace snappaste {
 
+namespace detail {
+
+class ComInitializer {
+public:
+    ComInitializer();
+    ~ComInitializer();
+    ComInitializer(const ComInitializer&) = delete;
+    ComInitializer& operator=(const ComInitializer&) = delete;
+};
+
+} // namespace detail
+
 class WinScreenRegionDetector final : public IScreenRegionDetector {
 public:
     WinScreenRegionDetector();
@@ -27,6 +39,7 @@ private:
     QVector<QRect> cachedChildRects_;
     QVector<QRect> cachedUiRects_;
 #endif
+    detail::ComInitializer comInit_;
 };
 
 } // namespace snappaste

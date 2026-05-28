@@ -143,10 +143,12 @@ winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring
 } // namespace
 
 WindowsOcrService::WindowsOcrService()
+    : apartmentInitialized_(false)
 {
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     try {
         winrt::init_apartment(winrt::apartment_type::single_threaded);
+        apartmentInitialized_ = true;
     } catch (...) {
     }
 #endif
@@ -155,12 +157,15 @@ WindowsOcrService::WindowsOcrService()
 WindowsOcrService::~WindowsOcrService()
 {
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
-    winrt::uninit_apartment();
+    if (apartmentInitialized_) {
+        winrt::uninit_apartment();
+    }
 #endif
 }
 
 void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 {
+    QMutexLocker lock(&mutex_);
     language_ = bcp47Tag;
 }
 
@@ -172,18 +177,27 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
     }
 
     try {
+        QString lang;
+        {
+            QMutexLocker lock(&mutex_);
+            lang = language_;
+        }
+
         winrt::Windows::Media::Ocr::OcrEngine engine = nullptr;
-        if (language_.isEmpty()) {
+        if (lang.isEmpty()) {
             engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromUserProfileLanguages();
         } else {
-            auto lang = createLanguageFromTag(language_.toStdWString());
-            engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromLanguage(lang);
+            auto langObj = createLanguageFromTag(lang.toStdWString());
+            engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromLanguage(langObj);
         }
         if (engine == nullptr) {
             return {false, {}, "OCR is not available for the current Windows language profile.", {}, {}};
         }
 
         const auto processed = preprocessForOcr(source);
+        const double scaleX = static_cast<double>(source.width()) / processed.width();
+        const double scaleY = static_cast<double>(source.height()) / processed.height();
+
         winrt::Windows::Graphics::Imaging::SoftwareBitmap bitmap(
             winrt::Windows::Graphics::Imaging::BitmapPixelFormat::Bgra8,
             processed.width(),
@@ -228,7 +242,12 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
                 hasWord = true;
             }
             if (hasWord) {
-                blocks.push_back(OcrBlockInfo{t, QRect(minX, minY, maxX - minX, maxY - minY)});
+                QRect scaledRect(
+                    static_cast<int>(minX * scaleX),
+                    static_cast<int>(minY * scaleY),
+                    static_cast<int>((maxX - minX) * scaleX),
+                    static_cast<int>((maxY - minY) * scaleY));
+                blocks.push_back(OcrBlockInfo{t, scaledRect});
             }
         }
         const auto text = lines.join('\n').trimmed();

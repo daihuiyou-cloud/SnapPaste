@@ -463,7 +463,10 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
             QPainter p(&composited);
             drawAnnotations(&p, image_, false);
             p.end();
-            currentColor_ = QColor::fromRgba(composited.pixel(pos));
+            const auto dpr = image_.devicePixelRatio();
+            QPoint physicalPos(static_cast<int>(pos.x() * dpr),
+                               static_cast<int>(pos.y() * dpr));
+            currentColor_ = QColor::fromRgba(composited.pixel(physicalPos));
         }
         update();
         return;
@@ -869,6 +872,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
             return;
         }
         if (event->key() == Qt::Key_D && selectedIndex_ >= 0) {
+            editingTextIndex_ = -1;
+            preeditString_.clear();
             auto dup = annotations_.at(selectedIndex_);
             dup.bounds.translate(10, 10);
             pushUndo();

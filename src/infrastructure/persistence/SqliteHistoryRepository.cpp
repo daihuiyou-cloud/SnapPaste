@@ -91,7 +91,8 @@ Result<QSqlDatabase> SqliteHistoryRepository::readyDatabase()
     }
 
     if (!migrated_) {
-        const auto migrateResult = migrator_.migrate(dbResult.value());
+        auto db = dbResult.value();
+        const auto migrateResult = migrator_.migrate(db);
         if (migrateResult.isError()) {
             return Result<QSqlDatabase>::failure(migrateResult.error());
         }

@@ -123,15 +123,39 @@ Result<QImage> GdiScreenCaptureService::capturePrimaryScreen()
 Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 {
 #if defined(Q_OS_WIN)
-    auto* screen = QGuiApplication::screenAt(region.center());
-    const auto dpr = screen ? screen->devicePixelRatio() : 1.0;
-    auto physLeft = static_cast<int>(std::floor(region.x() * dpr));
-    auto physTop = static_cast<int>(std::floor(region.y() * dpr));
-    auto physRight = static_cast<int>(std::ceil((region.x() + region.width()) * dpr));
-    auto physBottom = static_cast<int>(std::ceil((region.y() + region.height()) * dpr));
-    QRect physicalRegion(physLeft, physTop, physRight - physLeft, physBottom - physTop);
+    QRect physicalRegion;
+    qreal dpr = 1.0;
+    bool mixedDpr = false;
+
+    for (auto* screen : QGuiApplication::screens()) {
+        if (screen == nullptr) continue;
+        const auto screenGeo = screen->geometry();
+        const auto intersection = screenGeo.intersected(region);
+        if (!intersection.isValid() || intersection.isEmpty()) continue;
+
+        const auto screenDpr = screen->devicePixelRatio();
+        if (dpr != 1.0 && std::abs(dpr - screenDpr) > 0.01) {
+            mixedDpr = true;
+        }
+        dpr = qMax(dpr, screenDpr);
+
+        QRect physSeg(qRound(intersection.x() * screenDpr),
+                      qRound(intersection.y() * screenDpr),
+                      qRound(intersection.width() * screenDpr),
+                      qRound(intersection.height() * screenDpr));
+        if (physicalRegion.isNull()) {
+            physicalRegion = physSeg;
+        } else {
+            physicalRegion = physicalRegion.united(physSeg);
+        }
+    }
+
+    if (physicalRegion.isNull()) {
+        return Result<QImage>::failure("Capture region does not intersect any screen.");
+    }
+
     auto result = captureRectWithGdi(physicalRegion);
-    if (result.isOk() && dpr > 1.0) {
+    if (result.isOk() && dpr > 1.0 && !mixedDpr) {
         auto image = result.value();
         image.setDevicePixelRatio(dpr);
         return Result<QImage>::success(std::move(image));

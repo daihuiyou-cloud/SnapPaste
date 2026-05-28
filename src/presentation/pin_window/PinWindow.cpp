@@ -78,8 +78,12 @@ const PinnedImageState& PinWindow::state() const noexcept
 void PinWindow::setPinnedVisible(bool visible)
 {
     item_.state.options.visible = visible;
-    item_.state.options.clickThrough = false;
-    windowInteraction_.setClickThrough(this, false);
+    if (!visible) {
+        item_.state.options.clickThrough = false;
+        windowInteraction_.setClickThrough(this, false);
+    } else {
+        windowInteraction_.setClickThrough(this, item_.state.options.clickThrough);
+    }
     if (visible) {
         show();
         raise();
@@ -311,8 +315,8 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
             auto pos = screenGeo.center() - rect().center();
             item_.state.position = pos;
             move(pos);
+            emitStateChanged();
         }
-        emitStateChanged();
     } else if (action == fitScreenAction) {
         auto imgSize = item_.state.size;
         if (!imgSize.isValid() || imgSize.isNull()) {
@@ -582,6 +586,7 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
             drag.setPixmap(QPixmap::fromImage(
                 img.scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
             drag.exec(Qt::CopyAction);
+            QFile::remove(tempPath);
         }
         event->accept();
         return;
