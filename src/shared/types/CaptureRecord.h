@@ -11,6 +11,7 @@ struct CaptureRecord final {
     QString thumbnailPath;
     int width = 0;
     int height = 0;
+    double devicePixelRatio = 1.0;
     QString format;
     QDateTime createdAt;
     QString sourceScreen;

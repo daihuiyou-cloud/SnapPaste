@@ -20,12 +20,13 @@ Result<CaptureRecord> SqliteHistoryRepository::add(const CaptureRecord& record)
 
     QSqlQuery query(dbResult.value());
     query.prepare(
-        "INSERT INTO captures(file_path, thumbnail_path, width, height, format, created_at, source_screen, deleted) "
-        "VALUES(:file_path, :thumbnail_path, :width, :height, :format, :created_at, :source_screen, 0)");
+        "INSERT INTO captures(file_path, thumbnail_path, width, height, device_pixel_ratio, format, created_at, source_screen, deleted) "
+        "VALUES(:file_path, :thumbnail_path, :width, :height, :device_pixel_ratio, :format, :created_at, :source_screen, 0)");
     query.bindValue(":file_path", record.filePath);
     query.bindValue(":thumbnail_path", record.thumbnailPath);
     query.bindValue(":width", record.width);
     query.bindValue(":height", record.height);
+    query.bindValue(":device_pixel_ratio", record.devicePixelRatio);
     query.bindValue(":format", record.format);
     query.bindValue(":created_at", record.createdAt.toUTC().toString(Qt::ISODate));
     query.bindValue(":source_screen", record.sourceScreen);
@@ -48,7 +49,7 @@ Result<QVector<CaptureRecord>> SqliteHistoryRepository::recent(int limit)
 
     QSqlQuery query(dbResult.value());
     query.prepare(
-        "SELECT id, file_path, thumbnail_path, width, height, format, created_at, source_screen, deleted "
+        "SELECT id, file_path, thumbnail_path, width, height, device_pixel_ratio, format, created_at, source_screen, deleted "
         "FROM captures WHERE deleted = 0 ORDER BY created_at DESC LIMIT :limit");
     query.bindValue(":limit", limit);
 
@@ -108,11 +109,12 @@ CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
     record.thumbnailPath = query.value(2).toString();
     record.width = query.value(3).toInt();
     record.height = query.value(4).toInt();
-    record.format = query.value(5).toString();
-    record.createdAt = QDateTime::fromString(query.value(6).toString(), Qt::ISODate);
+    record.devicePixelRatio = query.value(5).toDouble();
+    record.format = query.value(6).toString();
+    record.createdAt = QDateTime::fromString(query.value(7).toString(), Qt::ISODate);
     record.createdAt.setTimeSpec(Qt::UTC);
-    record.sourceScreen = query.value(7).toString();
-    record.deleted = query.value(8).toBool();
+    record.sourceScreen = query.value(8).toString();
+    record.deleted = query.value(9).toBool();
     return record;
 }
 

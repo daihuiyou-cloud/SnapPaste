@@ -36,6 +36,7 @@ void HistoryViewModel::refresh()
         item->setData(record.id, Qt::UserRole + 1);
         item->setData(record.filePath, Qt::UserRole + 2);
         item->setData(record.thumbnailPath, Qt::UserRole + 3);
+        item->setData(record.devicePixelRatio, Qt::UserRole + 4);
         if (!record.thumbnailPath.isEmpty()) {
             QPixmap thumb(record.thumbnailPath);
             if (!thumb.isNull()) {
@@ -46,6 +47,14 @@ void HistoryViewModel::refresh()
         item->setToolTip(QString("%1\n%2x%3").arg(record.filePath).arg(record.width).arg(record.height));
         model_.appendRow(item);
     }
+}
+
+double HistoryViewModel::devicePixelRatio(const QString& filePath) const
+{
+    for (const auto& r : records_) {
+        if (r.filePath == filePath) return r.devicePixelRatio;
+    }
+    return 1.0;
 }
 
 void HistoryViewModel::deleteByRow(int row)

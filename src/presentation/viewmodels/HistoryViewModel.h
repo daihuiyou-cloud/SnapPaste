@@ -13,6 +13,7 @@ public:
     explicit HistoryViewModel(HistoryService& service, QObject* parent = nullptr);
 
     QStandardItemModel* model() noexcept;
+    double devicePixelRatio(const QString& filePath) const;
 
 public slots:
     void refresh();

@@ -66,6 +66,7 @@ Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, co
     record.thumbnailPath = storedResult.value().thumbnailPath;
     record.width = image.width();
     record.height = image.height();
+    record.devicePixelRatio = image.devicePixelRatio();
     record.format = settingsResult.value().imageFormat;
     record.createdAt = TimeProvider::nowUtc();
     record.sourceScreen = sourceScreen;

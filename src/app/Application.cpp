@@ -150,6 +150,8 @@ void Application::showMainWindow()
         connect(mainWindow_.get(), &MainWindow::repinRequested, this, [this](const QString& filePath) {
             QImage img(filePath);
             if (!img.isNull()) {
+                const auto dpr = context_.historyViewModel().devicePixelRatio(filePath);
+                img.setDevicePixelRatio(dpr);
                 context_.pinViewModel().createFromImage(img, PinSource::Screenshot);
             }
         });

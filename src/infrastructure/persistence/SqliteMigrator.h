@@ -16,6 +16,7 @@ private:
     Result<void> applyVersion2(QSqlDatabase database);
     Result<void> applyVersion3(QSqlDatabase database);
     Result<void> applyVersion4(QSqlDatabase database);
+    Result<void> applyVersion5(QSqlDatabase database);
 };
 
 } // namespace snappaste

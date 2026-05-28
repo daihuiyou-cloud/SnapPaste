@@ -51,6 +51,14 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase database)
         }
         version = 4;
     }
+    if (version < 5) {
+        const auto result = applyVersion5(database);
+        if (result.isError()) {
+            database.rollback();
+            return result;
+        }
+        version = 5;
+    }
 
     if (!database.commit()) {
         return Result<void>::failure(database.lastError().text());
@@ -176,6 +184,22 @@ Result<void> SqliteMigrator::applyVersion4(QSqlDatabase database)
     }
 
     query.prepare("INSERT INTO schema_version(version, applied_at) VALUES(4, datetime('now'))");
+    if (!query.exec()) {
+        return Result<void>::failure(query.lastError().text());
+    }
+
+    return Result<void>::success();
+}
+
+Result<void> SqliteMigrator::applyVersion5(QSqlDatabase database)
+{
+    QSqlQuery query(database);
+
+    if (!query.exec("ALTER TABLE captures ADD COLUMN device_pixel_ratio REAL NOT NULL DEFAULT 1.0")) {
+        return Result<void>::failure(query.lastError().text());
+    }
+
+    query.prepare("INSERT INTO schema_version(version, applied_at) VALUES(5, datetime('now'))");
     if (!query.exec()) {
         return Result<void>::failure(query.lastError().text());
     }
