@@ -370,40 +370,37 @@ void EditorWindow::createToolPanel()
         "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
 
     const QString sectionFrameStyle =
-        "QFrame { background: rgba(255,255,255,0.03); border-radius: 6px; }";
+        "QFrame#sectionGroup { background: rgba(255,255,255,0.03); border-radius: 6px; }";
 
-    // Helper: section header with green accent
-    auto addSectionHeader = [&](const QString& title) {
-        auto* row = new QHBoxLayout();
-        row->setContentsMargins(0, 0, 0, 0);
-        row->setSpacing(6);
-        auto* accent = new QFrame(content);
-        accent->setFixedSize(3, 12);
-        accent->setStyleSheet("background: #2fbf9f; border-radius: 2px;");
-        row->addWidget(accent);
-        row->addWidget(new QLabel(title, content));
-        auto* label = qobject_cast<QLabel*>(row->itemAt(1)->widget());
-        if (label) label->setStyleSheet(sectionHeaderStyle);
-        row->addStretch();
-        layout->addLayout(row);
-    };
-
-    // Helper: wrap content in a styled frame
-    auto addSectionFrame = [&](QLayout* sectionLayout) {
+    // Helper: create a section card with header + content inside
+    auto addSection = [&](const QString& title, QLayout* contentLayout) {
         auto* frame = new QFrame(content);
+        frame->setObjectName("sectionGroup");
         frame->setStyleSheet(sectionFrameStyle);
         auto* frameLayout = new QVBoxLayout(frame);
-        frameLayout->setContentsMargins(6, 6, 6, 6);
-        frameLayout->setSpacing(2);
-        frameLayout->addLayout(sectionLayout);
+        frameLayout->setContentsMargins(6, 6, 6, 8);
+        frameLayout->setSpacing(4);
+
+        auto* headerRow = new QHBoxLayout();
+        headerRow->setContentsMargins(0, 0, 0, 0);
+        headerRow->setSpacing(6);
+        auto* accent = new QFrame(frame);
+        accent->setFixedSize(3, 12);
+        accent->setStyleSheet("background: #2fbf9f; border-radius: 2px;");
+        headerRow->addWidget(accent);
+        auto* label = new QLabel(title, frame);
+        label->setStyleSheet(sectionHeaderStyle);
+        headerRow->addWidget(label);
+        headerRow->addStretch();
+        frameLayout->addLayout(headerRow);
+
+        frameLayout->addLayout(contentLayout);
         layout->addWidget(frame);
     };
 
     // ════════════════════════════════════════════
     // Section 1: Annotation Tools (2-column grid)
     // ════════════════════════════════════════════
-    addSectionHeader("ANNOTATION TOOLS");
-
     struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tooltip; AnnotationTool tool; };
     const ToolDef toolDefs[] = {
         {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rectangle", "Rectangle (R)", AnnotationTool::Rectangle},
@@ -440,13 +437,11 @@ void EditorWindow::createToolPanel()
         toolsGrid->addWidget(btn, i / 2, i % 2);
         toolButtons.push_back(btn);
     }
-    addSectionFrame(toolsGrid);
+    addSection("ANNOTATION TOOLS", toolsGrid);
 
     // ════════════════════════════════════════════
     // Section 2: Properties
     // ════════════════════════════════════════════
-    addSectionHeader("PROPERTIES");
-
     struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
     const PropToggle props[] = {
         {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
@@ -471,13 +466,11 @@ void EditorWindow::createToolPanel()
         });
         propsLayout->addWidget(btn);
     }
-    addSectionFrame(propsLayout);
+    addSection("PROPERTIES", propsLayout);
 
     // ════════════════════════════════════════════
     // Section 3: Stroke & Font Size
     // ════════════════════════════════════════════
-    addSectionHeader("STROKE");
-
     auto* strokeRow = new QHBoxLayout();
     strokeRow->setContentsMargins(0, 0, 0, 0);
     strokeRow->setSpacing(2);
@@ -509,13 +502,11 @@ void EditorWindow::createToolPanel()
     canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
         fontSizeLabel->setText(QString("%1px").arg(size));
     });
-    addSectionFrame(strokeRow);
+    addSection("STROKE", strokeRow);
 
     // ════════════════════════════════════════════
     // Section 4: Color
     // ════════════════════════════════════════════
-    addSectionHeader("COLOR");
-
     colorBtn_ = new QToolButton(content);
     colorBtn_->setObjectName("colorWell");
     colorBtn_->setFixedHeight(32);
@@ -544,7 +535,7 @@ void EditorWindow::createToolPanel()
     auto* colorLayout = new QVBoxLayout();
     colorLayout->setContentsMargins(0, 0, 0, 0);
     colorLayout->addWidget(colorBtn_);
-    addSectionFrame(colorLayout);
+    addSection("COLOR", colorLayout);
 
     // ── Spacer: push actions to bottom ──
     layout->addStretch(1);
@@ -552,12 +543,6 @@ void EditorWindow::createToolPanel()
     // ════════════════════════════════════════════
     // Section 5: Actions (2-column grid)
     // ════════════════════════════════════════════
-    auto* actionsFrame = new QFrame(content);
-    actionsFrame->setStyleSheet(sectionFrameStyle);
-    auto* actionsGrid = new QGridLayout(actionsFrame);
-    actionsGrid->setContentsMargins(6, 6, 6, 6);
-    actionsGrid->setSpacing(2);
-
     struct ActionDef { QIcon icon; const char* text; const char* tip; };
     const ActionDef actionDefs[] = {
         {IconProvider::icon(IconName::Undo), "Undo", "Undo (Ctrl+Z)"},
@@ -567,6 +552,10 @@ void EditorWindow::createToolPanel()
         {IconProvider::icon(IconName::Save), "Save", "Save (Ctrl+S)"},
         {IconProvider::icon(IconName::Export), "Export...", "Export (Ctrl+Shift+S)"},
     };
+
+    auto* actionsGrid = new QGridLayout();
+    actionsGrid->setContentsMargins(0, 0, 0, 0);
+    actionsGrid->setSpacing(2);
 
     QVector<QToolButton*> actionButtons;
     actionButtons.reserve(std::size(actionDefs));
@@ -583,7 +572,7 @@ void EditorWindow::createToolPanel()
         actionsGrid->addWidget(btn, i / 2, i % 2);
         actionButtons.push_back(btn);
     }
-    layout->addWidget(actionsFrame);
+    addSection("ACTIONS", actionsGrid);
 
     // ── updateToolActions callback ──
     updateToolActions_ = [toolButtons](AnnotationTool tool) {
