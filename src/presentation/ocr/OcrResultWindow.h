@@ -35,6 +35,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
@@ -49,6 +51,7 @@ private:
     void updateTextRow(int i);
     void updateTextRows();
     void updateToolbar();
+    void updateTitleButtons();
 
     QImage source_;
     QVector<OcrBlockInfo> blocks_;
@@ -58,12 +61,17 @@ private:
     int hoveredIndex_ = -1;
     QSet<int> selectedIndices_;
     QPoint dragStart_;
+    QPoint dragMaximizeCheck_;
     bool dragging_ = false;
+    bool maximized_ = false;
+    QRect normalGeometry_;
 
     QLabel* imageLabel_ = nullptr;
     QLabel* selectionInfo_ = nullptr;
     QPushButton* copyBtn_ = nullptr;
     QPushButton* pasteBtn_ = nullptr;
+    QPushButton* minimizeBtn_ = nullptr;
+    QPushButton* maximizeBtn_ = nullptr;
     QScrollArea* imageScrollArea_ = nullptr;
     QScrollArea* textScrollArea_ = nullptr;
     QWidget* textListContainer_ = nullptr;

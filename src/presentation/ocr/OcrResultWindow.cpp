@@ -16,6 +16,7 @@
 #include <QSplitter>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QWindowStateChangeEvent>
 
 namespace snappaste {
 
@@ -36,6 +37,17 @@ QPoint clampToScreen(const QPoint& pos, const QSize& size)
     return {x, y};
 }
 
+QString titleBtnStyle(const char* hoverColor)
+{
+    return QStringLiteral(
+        "QPushButton { background: transparent; color: #8a9aa8; font-size: 12px;"
+        " border: none; border-radius: 6px; font-weight: 600; }"
+        "QPushButton:hover { background: %1; color: #ffffff; }"
+        "QPushButton:pressed { background: %2; }")
+        .arg(hoverColor)
+        .arg(hoverColor);
+}
+
 } // namespace
 
 OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInfo>& blocks,
@@ -45,7 +57,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     , blocks_(blocks)
     , fullText_(fullText)
 {
-    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
+    setWindowFlags(Qt::FramelessWindowHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground, true);
     setAttribute(Qt::WA_DeleteOnClose, true);
     setMouseTracking(true);
@@ -60,29 +72,58 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     // --- Title bar ---
     auto* titleBar = new QWidget(this);
     titleBar->setFixedHeight(kTitleBarHeight);
+    titleBar->setCursor(Qt::ArrowCursor);
     titleBar->setStyleSheet(
         "background: #1c2128; border-top-left-radius: 10px;"
         " border-top-right-radius: 10px;");
     auto* titleLayout = new QHBoxLayout(titleBar);
-    titleLayout->setContentsMargins(14, 0, 10, 0);
+    titleLayout->setContentsMargins(14, 0, 8, 0);
 
     auto* titleLabel = new QLabel(QStringLiteral("OCR Result"), titleBar);
-    titleLabel->setStyleSheet("color: #edf1f5; font-size: 13px; font-weight: 600;");
+    titleLabel->setStyleSheet("color: #edf1f5; font-size: 13px; font-weight: 600;"
+                              " background: transparent;");
     titleLayout->addWidget(titleLabel);
     titleLayout->addStretch();
 
-    auto* closeBtn = new QPushButton(QStringLiteral("x"), titleBar);
-    closeBtn->setFixedSize(28, 28);
+    // Minimize
+    minimizeBtn_ = new QPushButton(titleBar);
+    minimizeBtn_->setText(QString(QChar(0x2014)));
+    minimizeBtn_->setFixedSize(32, 28);
+    minimizeBtn_->setFocusPolicy(Qt::NoFocus);
+    minimizeBtn_->setToolTip("Minimize");
+    minimizeBtn_->setCursor(Qt::ArrowCursor);
+    minimizeBtn_->setStyleSheet(titleBtnStyle("#4f5b70"));
+    connect(minimizeBtn_, &QPushButton::clicked, this, &QWidget::showMinimized);
+    titleLayout->addWidget(minimizeBtn_);
+
+    // Maximize / Restore
+    maximizeBtn_ = new QPushButton(titleBar);
+    maximizeBtn_->setText(QString(QChar(0x25A1)));
+    maximizeBtn_->setFixedSize(32, 28);
+    maximizeBtn_->setFocusPolicy(Qt::NoFocus);
+    maximizeBtn_->setToolTip("Maximize");
+    maximizeBtn_->setCursor(Qt::ArrowCursor);
+    maximizeBtn_->setStyleSheet(titleBtnStyle("#4f5b70"));
+    connect(maximizeBtn_, &QPushButton::clicked, this, [this] {
+        if (maximized_) {
+            showNormal();
+        } else {
+            showMaximized();
+        }
+    });
+    titleLayout->addWidget(maximizeBtn_);
+
+    // Close
+    auto* closeBtn = new QPushButton(QString(QChar(0x2715)), titleBar);
+    closeBtn->setFixedSize(32, 28);
     closeBtn->setFocusPolicy(Qt::NoFocus);
     closeBtn->setToolTip("Close (Esc)");
     closeBtn->setCursor(Qt::ArrowCursor);
-    closeBtn->setStyleSheet(
-        "QPushButton { background: transparent; color: #8a9aa8; font-size: 14px;"
-        " border: none; border-radius: 6px; }"
-        "QPushButton:hover { background: #e03a3a; color: #ffffff; }"
-        "QPushButton:pressed { background: #c03030; }");
+    closeBtn->setStyleSheet(titleBtnStyle("#e03a3a"));
     connect(closeBtn, &QPushButton::clicked, this, &QWidget::close);
     titleLayout->addWidget(closeBtn);
+
+    updateTitleButtons();
 
     root->addWidget(titleBar);
 
@@ -167,7 +208,8 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
         rowLayout->setSpacing(0);
 
         auto* textLabel = new QLabel(blocks_[i].text, row);
-        textLabel->setStyleSheet("background: transparent; color: #c8d0d8; font-size: 12px;");
+        textLabel->setStyleSheet("background: transparent; color: #c8d0d8;"
+                                 " font-size: 12px;");
         textLabel->setCursor(Qt::PointingHandCursor);
         rowLayout->addWidget(textLabel, 1);
 
@@ -222,6 +264,9 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
 
     updateTextRows();
     updateToolbar();
+
+    // Defer rebuild so layout is ready
+    QTimer::singleShot(0, this, &OcrResultWindow::rebuildCache);
 
     const auto cursor = QCursor::pos();
     move(clampToScreen(cursor + QPoint(12, -height() / 2),
@@ -284,7 +329,7 @@ void OcrResultWindow::updateImageOverlay()
         bool hover = (i == hoveredIndex_);
         bool sel = selectedIndices_.contains(i);
 
-        int bw = hover ? 2 : sel ? 2 : 1;
+        int bw = (hover || sel) ? 2 : 1;
         QColor fill, border;
 
         if (hover) {
@@ -340,7 +385,8 @@ void OcrResultWindow::updateTextRows()
 void OcrResultWindow::updateToolbar()
 {
     if (selectedIndices_.isEmpty()) {
-        selectionInfo_->setText(QStringLiteral("%1 text blocks").arg(blocks_.size()));
+        selectionInfo_->setText(QStringLiteral("%1 text blocks")
+                                    .arg(blocks_.size()));
         copyBtn_->setText(QStringLiteral("Copy All"));
     } else {
         selectionInfo_->setText(QStringLiteral("%1/%2 selected")
@@ -394,6 +440,7 @@ void OcrResultWindow::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton && event->y() <= kTitleBarHeight) {
         dragStart_ = event->globalPos() - frameGeometry().topLeft();
+        dragMaximizeCheck_ = event->globalPos();
         dragging_ = true;
         return;
     }
@@ -403,6 +450,11 @@ void OcrResultWindow::mousePressEvent(QMouseEvent* event)
 void OcrResultWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if (dragging_ && (event->buttons() & Qt::LeftButton)) {
+        // If dragged beyond a threshold, treat as drag (not click-to-maximize)
+        QPoint delta = event->globalPos() - dragMaximizeCheck_;
+        if (delta.manhattanLength() > 4) {
+            dragMaximizeCheck_ = QPoint(); // invalidate
+        }
         move(clampToScreen(event->globalPos() - dragStart_, size()));
         return;
     }
@@ -411,10 +463,43 @@ void OcrResultWindow::mouseMoveEvent(QMouseEvent* event)
 
 void OcrResultWindow::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
+    if (event->button() == Qt::LeftButton && dragging_) {
         dragging_ = false;
+        // If barely moved, treat as toggle maximize
+        if (!dragMaximizeCheck_.isNull()) {
+            QPoint delta = event->globalPos() - dragMaximizeCheck_;
+            if (delta.manhattanLength() <= 4) {
+                if (maximized_) {
+                    showNormal();
+                } else {
+                    showMaximized();
+                }
+            }
+        }
+        return;
     }
     QWidget::mouseReleaseEvent(event);
+}
+
+void OcrResultWindow::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton && event->y() <= kTitleBarHeight) {
+        if (maximized_) {
+            showNormal();
+        } else {
+            showMaximized();
+        }
+    }
+    QWidget::mouseDoubleClickEvent(event);
+}
+
+void OcrResultWindow::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::WindowStateChange) {
+        maximized_ = windowState().testFlag(Qt::WindowMaximized);
+        updateTitleButtons();
+    }
+    QWidget::changeEvent(event);
 }
 
 bool OcrResultWindow::eventFilter(QObject* watched, QEvent* event)
@@ -439,7 +524,6 @@ bool OcrResultWindow::eventFilter(QObject* watched, QEvent* event)
         hoveredIndex_ = idx;
         updateImageOverlay();
         updateTextRow(idx);
-        updateTextRow(hoveredIndex_);
         return true;
     case QEvent::Leave:
         hoveredIndex_ = -1;
@@ -471,6 +555,13 @@ void OcrResultWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     rebuildCache();
+}
+
+void OcrResultWindow::updateTitleButtons()
+{
+    minimizeBtn_->setText(maximized_ ? QString(QChar(0x2212)) : QString(QChar(0x2014)));
+    maximizeBtn_->setText(maximized_ ? QString(QChar(0x2717)) : QString(QChar(0x25A1)));
+    maximizeBtn_->setToolTip(maximized_ ? "Restore" : "Maximize");
 }
 
 QString OcrResultWindow::selectedText() const
