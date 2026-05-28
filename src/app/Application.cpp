@@ -185,6 +185,7 @@ void Application::openFile()
         return;
     }
 
+    image.setDevicePixelRatio(context_.historyViewModel().devicePixelRatio(path));
     context_.pinViewModel().createFromImage(image, PinSource::File);
 }
 
