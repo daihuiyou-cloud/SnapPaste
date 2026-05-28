@@ -307,6 +307,19 @@ void AnnotationCanvas::updateTextBounds(int index)
 }
 
 int AnnotationCanvas::fontSize() const { return fontSize_; }
+void AnnotationCanvas::setFontSize(int size)
+{
+    size = qBound(8, size, 72);
+    if (size != fontSize_) {
+        fontSize_ = size;
+        if (currentTool_ == AnnotationTool::Text || currentTool_ == AnnotationTool::Numbered) {
+            markModified();
+        }
+        update();
+        if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+        QSettings().setValue("editor/fontSize", fontSize_);
+    }
+}
 void AnnotationCanvas::setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
 
 const QVector<QColor>& AnnotationCanvas::recentColors() const { return customColors_; }

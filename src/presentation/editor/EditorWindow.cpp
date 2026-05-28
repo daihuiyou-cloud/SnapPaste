@@ -467,12 +467,41 @@ void EditorWindow::createToolPanel()
         propsLayout->addWidget(btn);
     }
 
-    auto* fontSizeLabel = new QLabel("Font: 14px", content);
+    auto* fontSizeRow = new QHBoxLayout();
+    fontSizeRow->setContentsMargins(0, 0, 0, 0);
+    fontSizeRow->setSpacing(2);
+
+    auto* fontSizeDec = new QToolButton(content);
+    fontSizeDec->setText("−");
+    fontSizeDec->setToolTip("Decrease font size ( [ )");
+    fontSizeDec->setFixedSize(24, 24);
+    fontSizeDec->setStyleSheet(toggleBtnStyle);
+
+    auto* fontSizeLabel = new QLabel("14px", content);
     fontSizeLabel->setToolTip("Font size for Text / Numbered tools");
-    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 2px 5px; background: transparent;");
-    propsLayout->addWidget(fontSizeLabel);
+    fontSizeLabel->setAlignment(Qt::AlignCenter);
+    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
+    fontSizeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    auto* fontSizeInc = new QToolButton(content);
+    fontSizeInc->setText("+");
+    fontSizeInc->setToolTip("Increase font size ( ] )");
+    fontSizeInc->setFixedSize(24, 24);
+    fontSizeInc->setStyleSheet(toggleBtnStyle);
+
+    fontSizeRow->addWidget(fontSizeDec);
+    fontSizeRow->addWidget(fontSizeLabel);
+    fontSizeRow->addWidget(fontSizeInc);
+    propsLayout->addLayout(fontSizeRow);
+
+    connect(fontSizeDec, &QToolButton::clicked, this, [this] {
+        canvas_->setFontSize(canvas_->fontSize() - 2);
+    });
+    connect(fontSizeInc, &QToolButton::clicked, this, [this] {
+        canvas_->setFontSize(canvas_->fontSize() + 2);
+    });
     canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
-        fontSizeLabel->setText(QString("Font: %1px").arg(size));
+        fontSizeLabel->setText(QString("%1px").arg(size));
     });
     addSection("PROPERTIES", propsLayout);
 

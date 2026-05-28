@@ -42,6 +42,7 @@ public:
     void setFilled(bool filled);
     void updateTextBounds(int index);
     int fontSize() const;
+    void setFontSize(int size);
     void setOnFontSizeChanged(std::function<void(int)> cb);
     const QVector<QColor>& recentColors() const;
     void addRecentColor(const QColor& color);
