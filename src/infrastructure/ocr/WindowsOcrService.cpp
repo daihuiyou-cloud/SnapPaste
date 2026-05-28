@@ -20,10 +20,56 @@ namespace snappaste {
 
 namespace {
 
+// Compute Otsu threshold from grayscale histogram
+int otsuThreshold(const std::vector<int>& hist, int total)
+{
+    double sum = 0;
+    for (int i = 0; i < 256; ++i) sum += i * hist[i];
+
+    double sumB = 0;
+    int wB = 0;
+    double maxVariance = 0;
+    int threshold = 0;
+
+    for (int i = 0; i < 256; ++i) {
+        wB += hist[i];
+        if (wB == 0) continue;
+        int wF = total - wB;
+        if (wF == 0) break;
+        sumB += i * hist[i];
+        double mB = sumB / wB;
+        double mF = (sum - sumB) / wF;
+        double variance = static_cast<double>(wB) * wF * (mB - mF) * (mB - mF);
+        if (variance > maxVariance) {
+            maxVariance = variance;
+            threshold = i;
+        }
+    }
+    return threshold;
+}
+
+// Apply 3x3 sharpen kernel (unsharp mask)
+void sharpenImage(QImage& img)
+{
+    if (img.format() != QImage::Format_Grayscale8) return;
+    QImage src = img.copy();
+    for (int y = 1; y < img.height() - 1; ++y) {
+        const auto* s = src.constScanLine(y);
+        auto* d = img.scanLine(y);
+        for (int x = 1; x < img.width() - 1; ++x) {
+            int v = 5 * s[x]
+                  - s[x - 1] - s[x + 1]
+                  - src.constScanLine(y - 1)[x]
+                  - src.constScanLine(y + 1)[x];
+            d[x] = static_cast<uint8_t>(qBound(0, v, 255));
+        }
+    }
+}
+
 // Pre-process image for better OCR accuracy:
-//  - Convert to grayscale (remove color noise)
-//  - Stretch contrast (improve text/background separation)
-//  - Upscale if too small (Windows OCR needs ~20px+ text height)
+//  - Grayscale + sharpen to define text edges
+//  - Otsu binarization for clean text/background separation
+//  - Aggressive upscale to ensure readable text size
 QImage preprocessForOcr(const QImage& src)
 {
     if (src.isNull()) return {};
@@ -31,7 +77,10 @@ QImage preprocessForOcr(const QImage& src)
     // Step 1: grayscale
     QImage gray = src.convertToFormat(QImage::Format_Grayscale8);
 
-    // Step 2: contrast stretch (saturate at 1% and 99% percentiles)
+    // Step 2: sharpen to make text edges crisper
+    sharpenImage(gray);
+
+    // Step 3: Otsu binarization
     std::vector<int> hist(256, 0);
     for (int y = 0; y < gray.height(); ++y) {
         const auto* line = gray.constScanLine(y);
@@ -41,38 +90,26 @@ QImage preprocessForOcr(const QImage& src)
     }
 
     int total = gray.width() * gray.height();
-    int lowVal = 0, highVal = 255;
-    int accum = 0;
-    int lowTarget = static_cast<int>(total * 0.01);
-    int highTarget = static_cast<int>(total * 0.99);
-    for (int i = 0; i < 256; ++i) {
-        accum += hist[i];
-        if (accum >= lowTarget) { lowVal = i; break; }
-    }
-    accum = 0;
-    for (int i = 255; i >= 0; --i) {
-        accum += hist[i];
-        if (accum >= total - highTarget) { highVal = i; break; }
-    }
+    int threshold = otsuThreshold(hist, total);
 
-    if (highVal > lowVal) {
-        double scale = 255.0 / (highVal - lowVal);
-        for (int y = 0; y < gray.height(); ++y) {
-            auto* line = gray.scanLine(y);
-            for (int x = 0; x < gray.width(); ++x) {
-                int v = line[x];
-                if (v < lowVal) line[x] = 0;
-                else if (v > highVal) line[x] = 255;
-                else line[x] = static_cast<uint8_t>((v - lowVal) * scale);
-            }
+    // Determine if text is light-on-dark or dark-on-light
+    // Count pixels below threshold (potential text if dark-on-light)
+    int darkPixels = 0;
+    for (int i = 0; i < threshold; ++i) darkPixels += hist[i];
+    bool inverted = (darkPixels > total / 2);
+
+    for (int y = 0; y < gray.height(); ++y) {
+        auto* line = gray.scanLine(y);
+        for (int x = 0; x < gray.width(); ++x) {
+            line[x] = (line[x] > threshold) == inverted ? 0 : 255;
         }
     }
 
-    // Step 3: upscale if too small (OCR engine needs ~20px+ per character)
+    // Step 4: aggressive upscale — target min dimension 200px
     double minDim = qMin(gray.width(), gray.height());
     QImage result = gray;
-    if (minDim < 120) {
-        double factor = qMin(2.0, 120.0 / minDim);
+    if (minDim < 200) {
+        double factor = qMin(4.0, 200.0 / minDim);
         result = gray.scaled(static_cast<int>(gray.width() * factor),
                              static_cast<int>(gray.height() * factor),
                              Qt::KeepAspectRatio, Qt::SmoothTransformation);
