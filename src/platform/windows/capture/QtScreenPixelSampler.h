@@ -4,6 +4,7 @@
 
 #include <QImage>
 #include <QPoint>
+#include <QScreen>
 
 namespace snappaste {
 
@@ -14,8 +15,11 @@ public:
     QImage sampleRegion(const QPoint& center, int halfSize) const override;
 
 private:
+    QPoint physicalFromLogical(const QPoint& logicalPos) const;
+
     QRect bounds_;
     QImage snapshot_;
+    QPoint snapshotOrigin_;
 };
 
 } // namespace snappaste

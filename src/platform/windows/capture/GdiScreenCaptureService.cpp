@@ -94,7 +94,17 @@ Result<QImage> GdiScreenCaptureService::capturePrimaryScreen()
                                GetSystemMetrics(SM_YVIRTUALSCREEN),
                                GetSystemMetrics(SM_CXVIRTUALSCREEN),
                                GetSystemMetrics(SM_CYVIRTUALSCREEN));
-    return captureRectWithGdi(virtualDesktop);
+    auto result = captureRectWithGdi(virtualDesktop);
+    if (result.isOk()) {
+        auto* screen = QGuiApplication::primaryScreen();
+        auto dpr = screen ? screen->devicePixelRatio() : 1.0;
+        if (dpr > 1.0) {
+            auto image = result.value();
+            image.setDevicePixelRatio(dpr);
+            return Result<QImage>::success(std::move(image));
+        }
+    }
+    return result;
 #else
     auto* screen = QGuiApplication::primaryScreen();
     if (screen == nullptr) {
@@ -115,12 +125,11 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 #if defined(Q_OS_WIN)
     auto* screen = QGuiApplication::screenAt(region.center());
     const auto dpr = screen ? screen->devicePixelRatio() : 1.0;
-    QRect physicalRegion(
-        qRound(region.x() * dpr),
-        qRound(region.y() * dpr),
-        qRound(region.width() * dpr),
-        qRound(region.height() * dpr)
-    );
+    auto physLeft = static_cast<int>(std::floor(region.x() * dpr));
+    auto physTop = static_cast<int>(std::floor(region.y() * dpr));
+    auto physRight = static_cast<int>(std::ceil((region.x() + region.width()) * dpr));
+    auto physBottom = static_cast<int>(std::ceil((region.y() + region.height()) * dpr));
+    QRect physicalRegion(physLeft, physTop, physRight - physLeft, physBottom - physTop);
     auto result = captureRectWithGdi(physicalRegion);
     if (result.isOk() && dpr > 1.0) {
         auto image = result.value();
