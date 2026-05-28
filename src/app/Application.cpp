@@ -31,7 +31,7 @@ namespace snappaste {
 
 namespace {
 
-constexpr int kCaptureAfterHideDelayMs = 120;
+constexpr int kCaptureAfterHideDelayMs = 16;
 constexpr int kPinBaseOffset = 16;
 constexpr int kPinCascadeOffset = 24;
 constexpr int kPinCascadeSlots = 8;
@@ -73,6 +73,15 @@ void Application::connectCoreSignals()
     connect(&trayController_, &TrayController::showWindowRequested, this, &Application::showMainWindow);
     connect(&trayController_, &TrayController::hidePinsRequested, this, &Application::hideAllPins);
     connect(&trayController_, &TrayController::showPinsRequested, this, &Application::showAllPins);
+    connect(&trayController_, &TrayController::closeAllPinsRequested, this, [this] {
+        for (auto it = pinWindows_.begin(); it != pinWindows_.end(); it = pinWindows_.begin()) {
+            if (it->second) {
+                context_.pinViewModel().close(it->first);
+                pinWindows_.erase(it);
+            }
+        }
+        showStatus("All pinned images closed.");
+    });
     connect(&trayController_, &TrayController::quitRequested, &qtApplication_, &QApplication::quit);
     connect(QApplication::clipboard(), &QClipboard::dataChanged, this, [this] {
         preferLastPinnableImage_ = false;
@@ -283,23 +292,35 @@ void Application::showStatus(const QString& message, std::function<void()> onCli
 
 void Application::repeatLastCapture()
 {
-    if (lastCaptureRegion_.has_value()) {
-        captureAfterOverlayHidden(lastCaptureRegion_.value(), [this](const QImage&) {
-            const QSignalBlocker blocker(QApplication::clipboard());
-            context_.captureViewModel().copyCurrentImageToClipboard();
-        });
-    } else {
+    if (!lastCaptureRegion_.has_value()) {
         startCapture();
+        return;
     }
+    const auto region = lastCaptureRegion_.value();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    context_.captureViewModel().captureRegionAsync(region, [this](const QImage& image) {
+        QApplication::restoreOverrideCursor();
+        if (image.isNull()) return;
+        lastPinnableImage_ = image;
+        lastPinnableSource_ = PinSource::Screenshot;
+        preferLastPinnableImage_ = true;
+        if (cachedSettings_ && cachedSettings_->autoSaveOnCapture) {
+            context_.captureViewModel().saveImage(image, "capture");
+        }
+        const QSignalBlocker blocker(QApplication::clipboard());
+        context_.captureViewModel().copyCurrentImageToClipboard();
+    });
 }
 
 void Application::captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady)
 {
     lastCaptureRegion_ = region;
     overlay().hide();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
     QPointer<Application> guard(this);
     QTimer::singleShot(kCaptureAfterHideDelayMs, this, [guard, region, onReady = std::move(onReady)]() mutable {
         if (guard.isNull()) return;
+        QApplication::restoreOverrideCursor();
         guard->context_.captureViewModel().captureRegionAsync(region, [guard, onReady = std::move(onReady)](const QImage& image) mutable {
             if (guard.isNull()) return;
             if (!image.isNull()) {

@@ -75,6 +75,8 @@ private:
     static constexpr int kMaxUndo = 50;
 
     QImage image_;
+    mutable QImage annotationCache_;
+    mutable bool cacheValid_ = false;
     QVector<Annotation> annotations_;
     QVector<QVector<Annotation>> undoStack_;
     QVector<QVector<Annotation>> redoStack_;

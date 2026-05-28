@@ -18,6 +18,7 @@ TrayController::TrayController(QObject* parent)
     auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open SnapPaste");
     auto* hidePinsAction = menu_->addAction("Hide Pins");
     auto* showPinsAction = menu_->addAction("Show Pins");
+    auto* closeAllPinsAction = menu_->addAction("Close All Pins");
     menu_->addSeparator();
     auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), "Quit");
 
@@ -30,6 +31,7 @@ TrayController::TrayController(QObject* parent)
     connect(showAction, &QAction::triggered, this, &TrayController::showWindowRequested);
     connect(hidePinsAction, &QAction::triggered, this, &TrayController::hidePinsRequested);
     connect(showPinsAction, &QAction::triggered, this, &TrayController::showPinsRequested);
+    connect(closeAllPinsAction, &QAction::triggered, this, &TrayController::closeAllPinsRequested);
     connect(quitAction, &QAction::triggered, this, [this] {
         auto ret = QMessageBox::question(nullptr, "Quit SnapPaste",
             "Are you sure you want to quit?\nPinned images will be lost.",

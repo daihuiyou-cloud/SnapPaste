@@ -25,6 +25,7 @@ signals:
     void showWindowRequested();
     void hidePinsRequested();
     void showPinsRequested();
+    void closeAllPinsRequested();
     void quitRequested();
 
 private:

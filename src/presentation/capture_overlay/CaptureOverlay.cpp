@@ -833,6 +833,7 @@ void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(cons
     actionBar_->hide();
     selectionHistory_.add(region);
     hide();
+    emit hiddenAfterAction();
     (this->*signalEmitter)(region);
 }
 

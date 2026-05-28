@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <utility>
 
 namespace snappaste {
@@ -43,6 +44,8 @@ constexpr int kToolbarButtonCount = 7;
 constexpr int kMinPinSize = 40;
 constexpr int kThumbnailMaxSize = 200;
 constexpr int kOverflowBtnSize = 18;
+constexpr int kSnapThreshold = 12;
+constexpr int kSnapMargin = 6;
 
 } // namespace
 
@@ -595,8 +598,28 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    move(event->globalPos() - dragOffset_);
-    item_.state.position = frameGeometry().topLeft();
+    {
+        auto newPos = event->globalPos() - dragOffset_;
+        const auto frame = frameGeometry();
+        const auto screen = QGuiApplication::screenAt(frame.center());
+        if (screen != nullptr) {
+            const auto geo = screen->availableGeometry();
+            const auto rightEdge = geo.right() - frame.width() + 1;
+            const auto bottomEdge = geo.bottom() - frame.height() + 1;
+            if (std::abs(newPos.x() - geo.left()) < kSnapThreshold) {
+                newPos.setX(geo.left() + kSnapMargin);
+            } else if (std::abs(newPos.x() - rightEdge) < kSnapThreshold) {
+                newPos.setX(rightEdge - kSnapMargin);
+            }
+            if (std::abs(newPos.y() - geo.top()) < kSnapThreshold) {
+                newPos.setY(geo.top() + kSnapMargin);
+            } else if (std::abs(newPos.y() - bottomEdge) < kSnapThreshold) {
+                newPos.setY(bottomEdge - kSnapMargin);
+            }
+        }
+        move(newPos);
+        item_.state.position = frameGeometry().topLeft();
+    }
     emitStateChanged();
     event->accept();
 }
@@ -690,6 +713,14 @@ void PinWindow::paintEvent(QPaintEvent* event)
         painter.drawText(rect().adjusted(8, 8, -8, -8),
             Qt::AlignTop | Qt::AlignRight,
             QString("%1%").arg(zoomPct));
+    }
+
+    if (item_.state.options.clickThrough) {
+        QPen dashPen(QColor("#31c7a4"), 2, Qt::DashLine);
+        dashPen.setDashPattern({6, 4});
+        painter.setPen(dashPen);
+        painter.setBrush(QColor(20, 26, 33, 18));
+        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
     }
 
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;

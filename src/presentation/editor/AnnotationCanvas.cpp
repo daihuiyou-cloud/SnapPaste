@@ -114,6 +114,7 @@ void AnnotationCanvas::setImage(QImage image)
     undoStack_.clear();
     redoStack_.clear();
     modified_ = false;
+    cacheValid_ = false;
     nextNumber_ = 1;
     editingTextIndex_ = -1;
     preeditString_.clear();
@@ -129,6 +130,8 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     if (cropRect.width() < 5 || cropRect.height() < 5) return;
 
     image_ = image_.copy(cropRect);
+    annotationCache_ = {};
+    cacheValid_ = false;
     annotations_.clear();
     annotations_.squeeze();
     selectedIndex_ = -1;
@@ -157,7 +160,13 @@ void AnnotationCanvas::clearModified() { modified_ = false; updateWindowTitle();
 
 bool AnnotationCanvas::isModified() const { return modified_; }
 
-void AnnotationCanvas::markModified() { modified_ = true; updateWindowTitle(); update(); }
+void AnnotationCanvas::markModified()
+{
+    modified_ = true;
+    cacheValid_ = false;
+    updateWindowTitle();
+    update();
+}
 
 void AnnotationCanvas::zoomAt(double factor, QPoint center)
 {
@@ -208,10 +217,17 @@ QImage AnnotationCanvas::renderedImage() const
         return {};
     }
 
-    QImage output = image_.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    QPainter painter(&output);
-    drawAnnotations(&painter, image_, false);
-    return output;
+    if (cacheValid_) {
+        return annotationCache_;
+    }
+
+    annotationCache_ = image_.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    {
+        QPainter painter(&annotationCache_);
+        drawAnnotations(&painter, image_, false);
+    }
+    cacheValid_ = true;
+    return annotationCache_;
 }
 
 void AnnotationCanvas::setTool(AnnotationTool tool)

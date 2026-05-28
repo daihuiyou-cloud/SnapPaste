@@ -211,16 +211,44 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         }
     });
     connect(saveButton, &QPushButton::clicked, this, [this] {
+        if (saveDirectoryEdit_->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Validation", "Save directory cannot be empty.");
+            saveDirectoryEdit_->setFocus();
+            return;
+        }
+
+        const Hotkey hotkeys[] = {
+            captureHotkeyInput_->hotkey(),
+            pasteHotkeyInput_->hotkey(),
+            hidePinsHotkeyInput_->hotkey(),
+            repeatCaptureHotkeyInput_->hotkey()
+        };
+        const char* labels[] = {"Capture", "Paste", "Hide Pins", "Repeat Capture"};
+        for (int i = 0; i < 4; ++i) {
+            for (int j = i + 1; j < 4; ++j) {
+                if (hotkeys[i].key > 0 && hotkeys[j].key > 0
+                    && hotkeys[i].key == hotkeys[j].key
+                    && hotkeys[i].ctrl == hotkeys[j].ctrl
+                    && hotkeys[i].alt == hotkeys[j].alt
+                    && hotkeys[i].shift == hotkeys[j].shift) {
+                    QMessageBox::warning(this, "Hotkey Conflict",
+                        QString("\"%1\" and \"%2\" have the same shortcut.")
+                            .arg(labels[i], labels[j]));
+                    return;
+                }
+            }
+        }
+
         AppSettings settings;
-        settings.saveDirectory = saveDirectoryEdit_->text();
+        settings.saveDirectory = saveDirectoryEdit_->text().trimmed();
         settings.imageFormat = imageFormatCombo_->currentText();
         settings.themeMode = SettingsViewModel::themeFromIndex(themeCombo_->currentIndex());
-        settings.captureHotkey = captureHotkeyInput_->hotkey();
-        settings.pasteHotkey = pasteHotkeyInput_->hotkey();
-        settings.hidePinsHotkey = hidePinsHotkeyInput_->hotkey();
+        settings.captureHotkey = hotkeys[0];
+        settings.pasteHotkey = hotkeys[1];
+        settings.hidePinsHotkey = hotkeys[2];
         settings.ocrLanguage = ocrLanguageCombo_->currentData().toString();
         settings.autoSaveOnCapture = autoSaveCheckbox_->isChecked();
-        settings.repeatCaptureHotkey = repeatCaptureHotkeyInput_->hotkey();
+        settings.repeatCaptureHotkey = hotkeys[3];
         viewModel_.save(settings);
     });
     connect(restoreButton, &QPushButton::clicked, this, [this] {
@@ -245,8 +273,15 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                 repeatCaptureHotkeyInput_->setHotkey(settings.repeatCaptureHotkey);
             });
     connect(&viewModel_, &SettingsViewModel::saved, this, [this, saveButton] {
-        QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, 0)),
-                           "Settings saved", this);
+        const auto original = saveButton->text();
+        saveButton->setText("Saved [OK]");
+        saveButton->setStyleSheet("QPushButton { color: #34c759; font-weight: bold; }");
+        QTimer::singleShot(2000, this, [saveButton, original] {
+            saveButton->setText(original);
+            saveButton->setStyleSheet("");
+        });
+        QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, -20)),
+                           "Settings saved successfully", this, {}, 1500);
     });
     connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this](const QString& message) {
         QMessageBox::warning(this, "SnapPaste", message);

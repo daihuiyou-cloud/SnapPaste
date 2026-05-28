@@ -37,6 +37,7 @@ signals:
     void editRequested(const QRect& region);
     void ocrRequested(const QRect& region);
     void cancelled();
+    void hiddenAfterAction();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

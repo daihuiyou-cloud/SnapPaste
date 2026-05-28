@@ -4,6 +4,7 @@
 #include <QPoint>
 
 #include <functional>
+#include <queue>
 
 class QLabel;
 class QPropertyAnimation;
@@ -11,6 +12,11 @@ class QTimer;
 class QWidget;
 
 namespace snappaste {
+
+struct ToastMessage {
+    QString text;
+    std::function<void()> onClick;
+};
 
 class ToastNotifier final : public QObject {
     Q_OBJECT
@@ -31,12 +37,20 @@ private:
 
     void ensureToast();
     void positionToast(const QPoint& referencePosition);
+    void showNext();
+    void fadeOutCurrent();
 
     QWidget* toast_ = nullptr;
     QLabel* label_ = nullptr;
     QTimer* hideTimer_ = nullptr;
+    QTimer* hoverTimer_ = nullptr;
     QPropertyAnimation* fadeAnimation_ = nullptr;
+    QPropertyAnimation* slideAnimation_ = nullptr;
     std::function<void()> onClick_;
+    bool hovered_ = false;
+
+    std::queue<ToastMessage> pending_;
+    bool showing_ = false;
 };
 
 } // namespace snappaste

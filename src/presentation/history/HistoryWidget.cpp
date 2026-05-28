@@ -7,10 +7,12 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QImage>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
 #include <QMenu>
+#include <QSet>
 #include <QMessageBox>
 #include <QProcess>
 #include <QPushButton>
@@ -19,6 +21,35 @@
 
 namespace snappaste {
 
+namespace {
+
+QString filePathFromIndex(const QModelIndex& proxyIndex, QSortFilterProxyModel* proxy)
+{
+    if (!proxyIndex.isValid()) return {};
+    return proxy->mapToSource(proxyIndex).data(Qt::UserRole + 2).toString();
+}
+
+QImage loadImageFromIndex(const QModelIndex& proxyIndex, QSortFilterProxyModel* proxy)
+{
+    return QImage(filePathFromIndex(proxyIndex, proxy));
+}
+
+QVector<QString> selectedFilePaths(const QListView* view, QSortFilterProxyModel* proxy)
+{
+    const auto selected = view->selectionModel()->selectedIndexes();
+    QVector<QString> paths;
+    paths.reserve(selected.size());
+    for (const auto& idx : selected) {
+        auto p = filePathFromIndex(idx, proxy);
+        if (!p.isEmpty() && !paths.contains(p)) {
+            paths.append(p);
+        }
+    }
+    return paths;
+}
+
+} // namespace
+
 HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     : QWidget(parent)
     , viewModel_(viewModel)
@@ -26,7 +57,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     , searchBox_(new QLineEdit(this))
     , proxyModel_(new QSortFilterProxyModel(this))
 {
-    searchBox_->setPlaceholderText("Search history...");
+    searchBox_->setPlaceholderText("Search by filename...");
     searchBox_->setClearButtonEnabled(true);
     searchBox_->setStyleSheet(
         "QLineEdit {"
@@ -50,6 +81,9 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     listView_->setIconSize(QSize(48, 48));
     listView_->setSpacing(2);
     listView_->setContextMenuPolicy(Qt::CustomContextMenu);
+    listView_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    listView_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    listView_->installEventFilter(this);
 
     auto* searchLayout = new QHBoxLayout();
     auto* searchLabel = new QLabel("Search:", this);
@@ -76,65 +110,75 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     });
 
     connect(refreshButton, &QPushButton::clicked, &viewModel_, &HistoryViewModel::refresh);
-    auto emitRepin = [this] {
-        const auto proxyIndex = listView_->currentIndex();
-        if (!proxyIndex.isValid()) {
-            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+    auto emitRepinFirst = [this] {
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) {
+            QMessageBox::information(this, "SnapPaste", "No captures selected.");
             return;
         }
-        const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-        emit repinRequested(sourceIndex.data(Qt::UserRole + 2).toString());
+        emit repinRequested(paths.first());
     };
-    connect(pinButton, &QPushButton::clicked, this, emitRepin);
-    connect(listView_, &QListView::doubleClicked, this, emitRepin);
+    connect(pinButton, &QPushButton::clicked, this, emitRepinFirst);
+    connect(listView_, &QListView::doubleClicked, this, emitRepinFirst);
     connect(deleteButton, &QPushButton::clicked, this, [this] {
-        const auto proxyIndex = listView_->currentIndex();
-        if (!proxyIndex.isValid()) {
-            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) {
+            QMessageBox::information(this, "SnapPaste", "No captures selected.");
             return;
         }
-        auto ret = QMessageBox::question(this, "Delete Capture",
-            "Are you sure you want to delete this capture?",
+        const QString msg = paths.size() == 1
+            ? "Are you sure you want to delete this capture?"
+            : QString("Are you sure you want to delete %1 captures?").arg(paths.size());
+        auto ret = QMessageBox::question(this, "Delete Capture", msg,
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (ret == QMessageBox::Yes) {
-            const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-            viewModel_.deleteByRow(sourceIndex.row());
+            const auto selected = listView_->selectionModel()->selectedIndexes();
+            QSet<int> processedRows;
+            for (const auto& idx : selected) {
+                const auto row = proxyModel_->mapToSource(idx).row();
+                if (!processedRows.contains(row)) {
+                    processedRows.insert(row);
+                    viewModel_.deleteByRow(row);
+                }
+            }
         }
     });
     connect(copyButton, &QPushButton::clicked, this, [this] {
-        const auto proxyIndex = listView_->currentIndex();
-        if (!proxyIndex.isValid()) {
-            QMessageBox::information(this, "SnapPaste", "No capture selected.");
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) {
+            QMessageBox::information(this, "SnapPaste", "No captures selected.");
             return;
         }
-        const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-        const auto filePath = sourceIndex.data(Qt::UserRole + 2).toString();
-        QImage img(filePath);
-        if (img.isNull()) {
-            QMessageBox::warning(this, "SnapPaste", "Failed to load image.");
-            return;
+        if (paths.size() == 1) {
+            QImage img(paths.first());
+            if (img.isNull()) {
+                QMessageBox::warning(this, "SnapPaste", "Failed to load image.");
+                return;
+            }
+            QApplication::clipboard()->setImage(img);
+        } else {
+            QStringList fileList;
+            fileList.reserve(paths.size());
+            for (const auto& p : paths) {
+                fileList << QDir::toNativeSeparators(p);
+            }
+            QApplication::clipboard()->setText(fileList.join("\n"));
         }
-        QApplication::clipboard()->setImage(img);
     });
     connect(openButton, &QPushButton::clicked, this, [this] {
-        const auto proxyIndex = listView_->currentIndex();
-        if (!proxyIndex.isValid()) {
-            return;
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) return;
+        for (const auto& path : paths) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(path));
         }
-        const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-        const auto filePath = sourceIndex.data(Qt::UserRole + 2).toString();
-        QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
     });
     connect(showInExplorerButton, &QPushButton::clicked, this, [this] {
-        const auto proxyIndex = listView_->currentIndex();
-        if (!proxyIndex.isValid()) {
-            return;
-        }
-        const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-        const auto filePath = sourceIndex.data(Qt::UserRole + 2).toString();
-        const QFileInfo fi(filePath);
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) return;
+        const QString firstPath = paths.first();
+        const QFileInfo fi(firstPath);
 #ifdef Q_OS_WIN
-        QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(filePath)});
+        QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(firstPath)});
 #else
         QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absolutePath()));
 #endif
@@ -144,49 +188,97 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     });
 
     connect(listView_, &QListView::customContextMenuRequested, this, [this](const QPoint& pos) {
-        const auto proxyIndex = listView_->indexAt(pos);
-        if (!proxyIndex.isValid()) {
-            return;
-        }
-        const auto sourceIndex = proxyModel_->mapToSource(proxyIndex);
-        const auto filePath = sourceIndex.data(Qt::UserRole + 2).toString();
+        const auto paths = selectedFilePaths(listView_, proxyModel_);
+        if (paths.isEmpty()) return;
 
         QMenu menu(this);
-        auto* pinAction = menu.addAction("Pin");
-        auto* copyAction = menu.addAction("Copy");
+        auto* pinAction = paths.size() == 1 ? menu.addAction("Pin") : nullptr;
+        auto* copyAction = menu.addAction(paths.size() == 1 ? "Copy" : "Copy All");
         auto* openAction = menu.addAction("Open");
         auto* exploreAction = menu.addAction("Show in Explorer");
         menu.addSeparator();
-        auto* deleteAction = menu.addAction("Delete");
+        auto* deleteAction = menu.addAction(paths.size() == 1 ? "Delete" : "Delete All");
 
         const auto* action = menu.exec(listView_->mapToGlobal(pos));
-        if (action == pinAction) {
-            emit repinRequested(filePath);
+        if (action == pinAction && pinAction) {
+            emit repinRequested(paths.first());
         } else if (action == copyAction) {
-            QImage img(filePath);
-            if (!img.isNull()) {
-                QApplication::clipboard()->setImage(img);
+            if (paths.size() == 1) {
+                QImage img(paths.first());
+                if (!img.isNull()) QApplication::clipboard()->setImage(img);
+            } else {
+                QStringList fileList;
+                for (const auto& p : paths) fileList << QDir::toNativeSeparators(p);
+                QApplication::clipboard()->setText(fileList.join("\n"));
             }
         } else if (action == openAction) {
-            QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+            for (const auto& path : paths)
+                QDesktopServices::openUrl(QUrl::fromLocalFile(path));
         } else if (action == exploreAction) {
-            const QFileInfo fi(filePath);
+            const QFileInfo fi(paths.first());
 #ifdef Q_OS_WIN
-            QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(filePath)});
+            QProcess::startDetached("explorer.exe", {"/select,", QDir::toNativeSeparators(paths.first())});
 #else
             QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absolutePath()));
 #endif
         } else if (action == deleteAction) {
-            auto ret = QMessageBox::question(this, "Delete Capture",
-                "Are you sure you want to delete this capture?",
+            const QString msg = paths.size() == 1
+                ? "Are you sure you want to delete this capture?"
+                : QString("Delete %1 captures?").arg(paths.size());
+            auto ret = QMessageBox::question(this, "Delete", msg,
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (ret == QMessageBox::Yes) {
-                viewModel_.deleteByRow(sourceIndex.row());
+                const auto selected = listView_->selectionModel()->selectedIndexes();
+                QSet<int> processedRows;
+                for (const auto& idx : selected) {
+                    const auto row = proxyModel_->mapToSource(idx).row();
+                    if (!processedRows.contains(row)) {
+                        processedRows.insert(row);
+                        viewModel_.deleteByRow(row);
+                    }
+                }
             }
         }
     });
 
     viewModel_.refresh();
+}
+
+void HistoryWidget::deleteSelected()
+{
+    const auto paths = selectedFilePaths(listView_, proxyModel_);
+    if (paths.isEmpty()) return;
+    const QString msg = paths.size() == 1
+        ? "Are you sure you want to delete this capture?"
+        : QString("Delete %1 captures?").arg(paths.size());
+    auto ret = QMessageBox::question(this, "Delete", msg,
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes) return;
+    const auto selected = listView_->selectionModel()->selectedIndexes();
+    QSet<int> processedRows;
+    for (const auto& idx : selected) {
+        const auto row = proxyModel_->mapToSource(idx).row();
+        if (!processedRows.contains(row)) {
+            processedRows.insert(row);
+            viewModel_.deleteByRow(row);
+        }
+    }
+}
+
+bool HistoryWidget::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == listView_ && event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Delete) {
+            deleteSelected();
+            return true;
+        }
+        if (keyEvent->key() == Qt::Key_A && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+            listView_->selectAll();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 } // namespace snappaste

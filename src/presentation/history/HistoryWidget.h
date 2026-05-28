@@ -19,7 +19,12 @@ public:
 signals:
     void repinRequested(const QString& filePath);
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 private:
+    void deleteSelected();
+
     HistoryViewModel& viewModel_;
     QListView* listView_ = nullptr;
     QLineEdit* searchBox_ = nullptr;
