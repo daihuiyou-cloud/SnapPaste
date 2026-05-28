@@ -472,7 +472,7 @@ void EditorWindow::createToolPanel()
     fontSizeRow->setSpacing(2);
 
     auto* fontSizeDec = new QToolButton(content);
-    fontSizeDec->setText("−");
+    fontSizeDec->setText("-");
     fontSizeDec->setToolTip("Decrease font size ( [ )");
     fontSizeDec->setFixedSize(24, 24);
     fontSizeDec->setStyleSheet(toggleBtnStyle);
