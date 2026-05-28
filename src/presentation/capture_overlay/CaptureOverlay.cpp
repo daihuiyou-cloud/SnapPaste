@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -832,9 +833,20 @@ void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(cons
     state_ = State::ActionPending;
     actionBar_->hide();
     selectionHistory_.add(region);
-    hide();
-    emit hiddenAfterAction();
-    (this->*signalEmitter)(region);
+
+    fadeAnimation_->stop();
+    fadeAnimation_->setStartValue(windowOpacity());
+    fadeAnimation_->setEndValue(0.0);
+    QPointer<CaptureOverlay> guard(this);
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(fadeAnimation_, &QPropertyAnimation::finished, this, [this, guard, conn, signalEmitter, region] {
+        disconnect(*conn);
+        if (guard.isNull()) return;
+        hide();
+        emit hiddenAfterAction();
+        (this->*signalEmitter)(region);
+    });
+    fadeAnimation_->start();
 }
 
 void CaptureOverlay::applyHistorySelection(bool forward)
@@ -909,12 +921,26 @@ void CaptureOverlay::applyResize(const QPoint& globalPosition)
 
 void CaptureOverlay::cancel()
 {
+    if (state_ == State::ActionPending || state_ == State::Cancelled) {
+        return;
+    }
     state_ = State::Cancelled;
     clearSmartCandidates();
     actionBar_->hide();
     desktopBoundsValid_ = false;
-    hide();
-    emit cancelled();
+
+    fadeAnimation_->stop();
+    fadeAnimation_->setStartValue(windowOpacity());
+    fadeAnimation_->setEndValue(0.0);
+    QPointer<CaptureOverlay> guard(this);
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(fadeAnimation_, &QPropertyAnimation::finished, this, [this, guard, conn] {
+        disconnect(*conn);
+        if (guard.isNull()) return;
+        hide();
+        emit cancelled();
+    });
+    fadeAnimation_->start();
 }
 
 void CaptureOverlay::finishReady()

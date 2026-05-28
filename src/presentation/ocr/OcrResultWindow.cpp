@@ -53,21 +53,24 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
 
     auto* titleBar = new QWidget(this);
     titleBar->setFixedHeight(kTitleBarHeight);
+    titleBar->setStyleSheet("background: rgba(40, 48, 58, 200); border-top-left-radius: 8px; border-top-right-radius: 8px;");
     auto* titleLayout = new QHBoxLayout(titleBar);
     titleLayout->setContentsMargins(12, 0, 8, 0);
 
     auto* titleLabel = new QLabel(QStringLiteral("OCR Result"), titleBar);
-    titleLabel->setStyleSheet("color: #edf1f5; font-size: 12px; font-weight: bold;");
+    titleLabel->setStyleSheet("color: #edf1f5; font-size: 12px; font-weight: bold; background: transparent;");
     titleLayout->addWidget(titleLabel);
     titleLayout->addStretch();
 
-    auto* closeBtn = new QPushButton(QStringLiteral("\u00D7"), titleBar);
-    closeBtn->setFixedSize(24, 24);
+    auto* closeBtn = new QPushButton(QStringLiteral("x"), titleBar);
+    closeBtn->setFixedSize(28, 28);
     closeBtn->setFocusPolicy(Qt::NoFocus);
+    closeBtn->setToolTip("Close (Esc)");
     closeBtn->setStyleSheet(
-        "QPushButton { background: transparent; color: #8a9aa8; font-size: 16px;"
-        " border: none; border-radius: 4px; }"
-        "QPushButton:hover { background: #c43e3e; color: #ffffff; }");
+        "QPushButton { background: rgba(255,255,255,16); color: #bcc8d4; font-size: 14px;"
+        " border: none; border-radius: 6px; font-weight: bold; }"
+        "QPushButton:hover { background: #e03a3a; color: #ffffff; }"
+        "QPushButton:pressed { background: #c03030; }");
     connect(closeBtn, &QPushButton::clicked, this, &QWidget::close);
     titleLayout->addWidget(closeBtn);
 

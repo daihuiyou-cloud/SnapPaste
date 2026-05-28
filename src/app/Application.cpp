@@ -102,7 +102,7 @@ void Application::connectCoreSignals()
     });
 
     connect(&context_.captureViewModel(), &CaptureViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(mainWindow_.get(), "SnapPaste", message);
+        showStatus(message);
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::copied, this, [this] {
         showStatus("Screenshot copied. Press F3 to pin.", [this] {
@@ -129,7 +129,7 @@ void Application::connectCoreSignals()
     connect(&context_.pinViewModel(), &PinViewModel::errorOccurred, this, [this](const QString& message) {
         pendingPinPosition_.reset();
         pendingPinAvoidRegion_.reset();
-        QMessageBox::warning(mainWindow_.get(), "SnapPaste", message);
+        showStatus(message);
     });
     connect(&context_.eventHub(), &EventHub::historyChanged, &context_.historyViewModel(), &HistoryViewModel::refresh);
     connect(&context_.eventHub(), &EventHub::settingsChanged, this, [this] {
@@ -261,12 +261,19 @@ void Application::editRegion(const QRect& region)
 void Application::ocrRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
+        if (image.isNull()) {
+            showStatus("Failed to capture image for OCR.");
+            return;
+        }
         QPointer<Application> guard(this);
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        showStatus("OCR processing...");
         std::thread worker([guard, image]() {
             if (guard.isNull()) return;
             const auto outcome = guard->ocrService_->recognizeText(image);
             QMetaObject::invokeMethod(qApp, [guard, outcome]() {
                 if (guard.isNull()) return;
+                QApplication::restoreOverrideCursor();
                 if (!outcome.ok) {
                     guard->showStatus(outcome.message);
                     return;

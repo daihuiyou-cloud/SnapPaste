@@ -283,8 +283,9 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, -20)),
                            "Settings saved successfully", this, {}, 1500);
     });
-    connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(this, "SnapPaste", message);
+    connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this, saveButton](const QString& message) {
+        QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, -20)),
+                           "Error: " + message, this, {}, 3000);
     });
 
     viewModel_.load();

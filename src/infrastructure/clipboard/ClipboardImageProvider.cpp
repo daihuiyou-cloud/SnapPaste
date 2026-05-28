@@ -16,12 +16,12 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
 {
     const auto* clipboard = QApplication::clipboard();
     if (clipboard == nullptr) {
-        return Result<QImage>::failure("Clipboard is not available.");
+        return Result<QImage>::failure("Cannot access clipboard.");
     }
 
     const auto* mimeData = clipboard->mimeData();
     if (mimeData == nullptr) {
-        return Result<QImage>::failure("Clipboard is empty.");
+        return Result<QImage>::failure("Nothing on clipboard \u2014 copy an image or text first, then press Paste.");
     }
 
     const auto image = clipboard->image();
@@ -47,7 +47,7 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
         return imageFromText(mimeData->text());
     }
 
-    return Result<QImage>::failure("Clipboard does not contain image, color, or text data.");
+    return Result<QImage>::failure("Clipboard content is not supported. Try copying an image or text first.");
 }
 
 Result<QImage> ClipboardImageProvider::imageFromHtml(const QString& html)
