@@ -19,11 +19,14 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
+#include <QDockWidget>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QScrollArea>
 #include <QSettings>
 #include <QStatusBar>
-#include <QToolBar>
 #include <QToolButton>
+#include <QVBoxLayout>
 
 namespace snappaste {
 
@@ -158,7 +161,7 @@ EditorWindow::EditorWindow(QWidget* parent)
     scrollArea->setAlignment(Qt::AlignCenter);
     setCentralWidget(scrollArea);
 
-    createToolbar();
+    createToolPanel();
 
     auto* undoAction = new QAction("Undo", this);
     undoAction->setShortcut(QKeySequence::Undo);
@@ -330,17 +333,28 @@ void EditorWindow::rebuildColorMenu()
     colorBtn_->menu()->insertSeparator(eyeAction_);
 }
 
-void EditorWindow::createToolbar()
+void EditorWindow::createToolPanel()
 {
-    auto* toolbar = new QToolBar("Editor", this);
-    addToolBar(Qt::RightToolBarArea, toolbar);
-    toolbar->setMovable(false);
-    toolbar->setIconSize(QSize(16, 16));
-    toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    toolbar->setStyleSheet(
-        "QToolBar { spacing: 1px; padding: 6px 4px; }"
-        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
-        "  padding: 3px 4px; text-align: left; }");
+    auto* dock = new QDockWidget("Tools", this);
+    dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    dock->setAllowedAreas(Qt::RightDockWidgetArea);
+    dock->setTitleBarWidget(new QWidget());
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+
+    auto* scrollArea = new QScrollArea(dock);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    auto* content = new QWidget(scrollArea);
+    auto* layout = new QVBoxLayout(content);
+    layout->setContentsMargins(8, 10, 8, 10);
+    layout->setSpacing(8);
+
+    // ── Styles ──
+    const QString sectionHeaderStyle =
+        "QLabel { color: #8e8e93; font: bold 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
+        "  padding: 0; }";
 
     const QString toggleBtnStyle =
         "QToolButton { font: bold 10px; color: #999; background: transparent;"
@@ -349,7 +363,47 @@ void EditorWindow::createToolbar()
         "QToolButton:checked { color: #fff; background: #2fbf9f; }"
         "QToolButton:hover:checked { background: #269d84; }";
 
-    // ── Tool buttons ──
+    const QString panelBtnStyle =
+        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
+        "  padding: 4px 6px; text-align: left; border: none; border-radius: 4px; }"
+        "QToolButton:hover { background: rgba(255,255,255,0.06); }"
+        "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
+
+    const QString sectionFrameStyle =
+        "QFrame { background: rgba(255,255,255,0.03); border-radius: 6px; }";
+
+    // Helper: section header with green accent
+    auto addSectionHeader = [&](const QString& title) {
+        auto* row = new QHBoxLayout();
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(6);
+        auto* accent = new QFrame(content);
+        accent->setFixedSize(3, 12);
+        accent->setStyleSheet("background: #2fbf9f; border-radius: 2px;");
+        row->addWidget(accent);
+        row->addWidget(new QLabel(title, content));
+        auto* label = qobject_cast<QLabel*>(row->itemAt(1)->widget());
+        if (label) label->setStyleSheet(sectionHeaderStyle);
+        row->addStretch();
+        layout->addLayout(row);
+    };
+
+    // Helper: wrap content in a styled frame
+    auto addSectionFrame = [&](QLayout* sectionLayout) {
+        auto* frame = new QFrame(content);
+        frame->setStyleSheet(sectionFrameStyle);
+        auto* frameLayout = new QVBoxLayout(frame);
+        frameLayout->setContentsMargins(6, 6, 6, 6);
+        frameLayout->setSpacing(2);
+        frameLayout->addLayout(sectionLayout);
+        layout->addWidget(frame);
+    };
+
+    // ════════════════════════════════════════════
+    // Section 1: Annotation Tools (2-column grid)
+    // ════════════════════════════════════════════
+    addSectionHeader("ANNOTATION TOOLS");
+
     struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tooltip; AnnotationTool tool; };
     const ToolDef toolDefs[] = {
         {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rectangle", "Rectangle (R)", AnnotationTool::Rectangle},
@@ -365,30 +419,46 @@ void EditorWindow::createToolbar()
         {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
         {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
     };
-    QVector<QAction*> toolActions;
-    toolActions.reserve(std::size(toolDefs));
-    for (const auto& td : toolDefs) {
-        auto* a = toolbar->addAction(td.iconFn(), td.name);
-        a->setCheckable(true);
-        a->setToolTip(td.tooltip);
-        a->setData(static_cast<int>(td.tool));
-        toolActions.push_back(a);
+
+    auto* toolsGrid = new QGridLayout();
+    toolsGrid->setSpacing(2);
+    toolsGrid->setContentsMargins(0, 0, 0, 0);
+
+    QVector<QToolButton*> toolButtons;
+    toolButtons.reserve(std::size(toolDefs));
+    for (int i = 0; i < std::size(toolDefs); ++i) {
+        auto* btn = new QToolButton(content);
+        btn->setIcon(toolDefs[i].iconFn());
+        btn->setText(toolDefs[i].name);
+        btn->setToolTip(toolDefs[i].tooltip);
+        btn->setCheckable(true);
+        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(panelBtnStyle);
+        btn->setFixedHeight(24);
+        btn->setProperty("tool", static_cast<int>(toolDefs[i].tool));
+        toolsGrid->addWidget(btn, i / 2, i % 2);
+        toolButtons.push_back(btn);
     }
+    addSectionFrame(toolsGrid);
 
-    toolbar->addSeparator();
+    // ════════════════════════════════════════════
+    // Section 2: Properties
+    // ════════════════════════════════════════════
+    addSectionHeader("PROPERTIES");
 
-    // ─────────────────────────────────────────────
-    // Group 2: Properties — Outline, Fill, Blur,
-    //           Stroke(S/M/L), Font, Color
-    // ─────────────────────────────────────────────
     struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
     const PropToggle props[] = {
         {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
         {"Fill", "Toggle fill for shapes", false, &AnnotationCanvas::setFilled},
         {"Blur", "Toggle mosaic blur mode", false, &AnnotationCanvas::setMosaicBlurred},
     };
+
+    auto* propsLayout = new QVBoxLayout();
+    propsLayout->setContentsMargins(0, 0, 0, 0);
+    propsLayout->setSpacing(2);
     for (const auto& p : props) {
-        auto* btn = new QToolButton(toolbar);
+        auto* btn = new QToolButton(content);
         btn->setText(p.text);
         btn->setToolTip(p.tip);
         btn->setFixedHeight(24);
@@ -399,16 +469,25 @@ void EditorWindow::createToolbar()
         connect(btn, &QToolButton::clicked, this, [this, p](bool checked) {
             (canvas_->*p.setter)(checked);
         });
-        toolbar->addWidget(btn);
+        propsLayout->addWidget(btn);
     }
+    addSectionFrame(propsLayout);
 
-    // Stroke presets
+    // ════════════════════════════════════════════
+    // Section 3: Stroke & Font Size
+    // ════════════════════════════════════════════
+    addSectionHeader("STROKE");
+
+    auto* strokeRow = new QHBoxLayout();
+    strokeRow->setContentsMargins(0, 0, 0, 0);
+    strokeRow->setSpacing(2);
+
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
-    auto* strokeGroup = new QButtonGroup(toolbar);
+    auto* strokeGroup = new QButtonGroup(content);
     strokeGroup->setExclusive(true);
     for (const auto& s : strokes) {
-        auto* btn = new QToolButton(toolbar);
+        auto* btn = new QToolButton(content);
         btn->setText(s.label);
         btn->setToolTip(QString("Stroke: %1px").arg(s.width));
         btn->setFixedHeight(24);
@@ -420,26 +499,33 @@ void EditorWindow::createToolbar()
         connect(btn, &QToolButton::clicked, this, [this, s] {
             canvas_->setStrokeWidth(s.width);
         });
-        toolbar->addWidget(btn);
+        strokeRow->addWidget(btn);
     }
 
-    // Font size label
-    auto* fontSizeLabel = new QLabel(toolbar);
-    fontSizeLabel->setText("14px");
+    auto* fontSizeLabel = new QLabel("14px", content);
     fontSizeLabel->setToolTip("Font size");
-    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0 4px; background: transparent;");
-    toolbar->addWidget(fontSizeLabel);
+    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0 6px; background: transparent;");
+    strokeRow->addWidget(fontSizeLabel);
     canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
         fontSizeLabel->setText(QString("%1px").arg(size));
     });
+    addSectionFrame(strokeRow);
 
-    // Color picker
-    colorBtn_ = new QToolButton(toolbar);
+    // ════════════════════════════════════════════
+    // Section 4: Color
+    // ════════════════════════════════════════════
+    addSectionHeader("COLOR");
+
+    colorBtn_ = new QToolButton(content);
     colorBtn_->setObjectName("colorWell");
-    colorBtn_->setFixedHeight(26);
+    colorBtn_->setFixedHeight(32);
     colorBtn_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     colorBtn_->setPopupMode(QToolButton::InstantPopup);
     colorBtn_->setToolTip("Color");
+    colorBtn_->setStyleSheet(
+        "QToolButton#colorWell { border: 1px solid rgba(255,255,255,0.12);"
+        "  border-radius: 4px; padding: 2px; }"
+        "QToolButton#colorWell:hover { border-color: rgba(255,255,255,0.25); }");
     updateColorWell(QColor("#ff3b30"));
 
     auto* colorMenu = new QMenu(colorBtn_);
@@ -452,70 +538,86 @@ void EditorWindow::createToolbar()
         eyeAction_->setChecked(picking);
     });
     colorMenu->addAction(eyeAction_);
-
     connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
-
     colorBtn_->setMenu(colorMenu);
-    toolbar->addWidget(colorBtn_);
+
+    auto* colorLayout = new QVBoxLayout();
+    colorLayout->setContentsMargins(0, 0, 0, 0);
+    colorLayout->addWidget(colorBtn_);
+    addSectionFrame(colorLayout);
 
     // ── Spacer: push actions to bottom ──
-    auto* spacer = new QWidget(toolbar);
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    spacer->setStyleSheet("background: transparent;");
-    toolbar->addWidget(spacer);
+    layout->addStretch(1);
 
-    // ─────────────────────────────────────────────
-    // Group 3: Actions (bottom)
-    // ─────────────────────────────────────────────
-    toolbar->addSeparator();
-    auto* undo = toolbar->addAction(IconProvider::icon(IconName::Undo), "Undo");
-    auto* redo = toolbar->addAction(IconProvider::icon(IconName::Redo), "Redo");
-    auto* copy = toolbar->addAction(IconProvider::icon(IconName::Copy), "Copy");
-    auto* pinBtn = toolbar->addAction(IconProvider::icon(IconName::Pin), "Pin");
-    auto* save = toolbar->addAction(IconProvider::icon(IconName::Save), "Save");
-    auto* saveAs = toolbar->addAction(IconProvider::icon(IconName::Export), "Export...");
+    // ════════════════════════════════════════════
+    // Section 5: Actions (2-column grid)
+    // ════════════════════════════════════════════
+    auto* actionsFrame = new QFrame(content);
+    actionsFrame->setStyleSheet(sectionFrameStyle);
+    auto* actionsGrid = new QGridLayout(actionsFrame);
+    actionsGrid->setContentsMargins(6, 6, 6, 6);
+    actionsGrid->setSpacing(2);
 
-    // ── ToolTips ──
-    undo->setToolTip("Undo (Ctrl+Z)");
-    redo->setToolTip("Redo (Ctrl+Y)");
-    copy->setToolTip("Copy Image (Ctrl+Shift+C)");
-    pinBtn->setToolTip("Pin (F3)");
-    save->setToolTip("Save to SnapPaste (Ctrl+S)");
-    saveAs->setToolTip("Export to file (Ctrl+Shift+S)");
+    struct ActionDef { QIcon icon; const char* text; const char* tip; };
+    const ActionDef actionDefs[] = {
+        {IconProvider::icon(IconName::Undo), "Undo", "Undo (Ctrl+Z)"},
+        {IconProvider::icon(IconName::Redo), "Redo", "Redo (Ctrl+Y)"},
+        {IconProvider::icon(IconName::Copy), "Copy", "Copy (Ctrl+Shift+C)"},
+        {IconProvider::icon(IconName::Pin), "Pin", "Pin (F3)"},
+        {IconProvider::icon(IconName::Save), "Save", "Save (Ctrl+S)"},
+        {IconProvider::icon(IconName::Export), "Export...", "Export (Ctrl+Shift+S)"},
+    };
+
+    QVector<QToolButton*> actionButtons;
+    actionButtons.reserve(std::size(actionDefs));
+    for (int i = 0; i < std::size(actionDefs); ++i) {
+        auto* btn = new QToolButton(content);
+        btn->setIcon(actionDefs[i].icon);
+        btn->setText(actionDefs[i].text);
+        btn->setToolTip(actionDefs[i].tip);
+        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(panelBtnStyle);
+        btn->setFixedHeight(24);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        actionsGrid->addWidget(btn, i / 2, i % 2);
+        actionButtons.push_back(btn);
+    }
+    layout->addWidget(actionsFrame);
 
     // ── updateToolActions callback ──
-    updateToolActions_ = [toolActions](AnnotationTool tool) {
-        for (auto* a : toolActions)
-            a->setChecked(static_cast<AnnotationTool>(a->data().toInt()) == tool);
+    updateToolActions_ = [toolButtons](AnnotationTool tool) {
+        for (auto* btn : toolButtons)
+            btn->setChecked(static_cast<AnnotationTool>(btn->property("tool").toInt()) == tool);
     };
     updateToolActions_(AnnotationTool::Rectangle);
 
     // ── Connections ──
-    connect(undo, &QAction::triggered, this, [this] { canvas_->undo(); });
-    connect(redo, &QAction::triggered, this, [this] { canvas_->redo(); });
-    for (auto* a : toolActions) {
-        connect(a, &QAction::triggered, this, [this, tool = static_cast<AnnotationTool>(a->data().toInt())] {
+    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); });
+    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); });
+    for (auto* btn : toolButtons) {
+        connect(btn, &QToolButton::clicked, this, [this, tool = static_cast<AnnotationTool>(btn->property("tool").toInt())] {
             canvas_->setTool(tool);
         });
     }
-    connect(copy, &QAction::triggered, this, [this] {
+    connect(actionButtons[2], &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();
         statusBar()->showMessage("Copied to clipboard", 3000);
     });
-    connect(pinBtn, &QAction::triggered, this, [this] {
+    connect(actionButtons[3], &QToolButton::clicked, this, [this] {
         auto img = canvas_->renderedImage();
         emit imageEdited(img);
         emit pinRequested(img);
         statusBar()->showMessage("Image pinned", 3000);
     });
-    connect(save, &QAction::triggered, this, [this] {
+    connect(actionButtons[4], &QToolButton::clicked, this, [this] {
         canvas_->clearModified();
         emit imageEdited(canvas_->renderedImage());
         emit saveRequested();
         statusBar()->showMessage("Saved", 3000);
     });
-    connect(saveAs, &QAction::triggered, this, [this] {
+    connect(actionButtons[5], &QToolButton::clicked, this, [this] {
         auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
@@ -526,6 +628,9 @@ void EditorWindow::createToolbar()
             }
         }
     });
+
+    scrollArea->setWidget(content);
+    dock->setWidget(scrollArea);
 }
 
 } // namespace snappaste

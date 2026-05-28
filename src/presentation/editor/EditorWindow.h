@@ -34,7 +34,7 @@ signals:
     void pinRequested(const QImage& image);
 
 private:
-    void createToolbar();
+    void createToolPanel();
     void rebuildColorMenu();
     void updateColorWell(const QColor& c);
 
