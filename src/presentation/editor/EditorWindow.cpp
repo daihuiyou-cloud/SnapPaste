@@ -348,59 +348,43 @@ void EditorWindow::createToolPanel()
 
     auto* content = new QWidget(scrollArea);
     auto* layout = new QVBoxLayout(content);
-    layout->setContentsMargins(8, 10, 8, 10);
-    layout->setSpacing(8);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(0);
 
-    // ── Styles ──
-    const QString sectionHeaderStyle =
+    // -- Styles --
+    const QString headerStyle =
         "QLabel { color: #8e8e93; font: bold 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
         "  padding: 0; }";
 
-    const QString toggleBtnStyle =
+    const QString toolStyle =
+        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
+        "  padding: 4px 6px; text-align: left; border: none; border-radius: 4px; }"
+        "QToolButton:hover { background: rgba(255,255,255,0.06); }"
+        "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
+
+    const QString activeStyle =
         "QToolButton { font: bold 10px; color: #999; background: transparent;"
         "  border: none; border-radius: 4px; padding: 3px 5px; }"
         "QToolButton:hover { background: rgba(47,191,159,0.1); color: #2fbf9f; }"
         "QToolButton:checked { color: #fff; background: #2fbf9f; }"
         "QToolButton:hover:checked { background: #269d84; }";
 
-    const QString panelBtnStyle =
-        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
-        "  padding: 4px 6px; text-align: left; border: none; border-radius: 4px; }"
-        "QToolButton:hover { background: rgba(255,255,255,0.06); }"
-        "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
+    const QString chipStyle =
+        "QToolButton { font: 9px; color: #999; background: rgba(255,255,255,0.04);"
+        "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
+        "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
+        "QToolButton:checked { background: #2fbf9f; color: #fff; border-color: #2fbf9f; }";
 
-    const QString sectionFrameStyle =
-        "QFrame#sectionGroup { background: rgba(255,255,255,0.03); border-radius: 6px; }";
-
-    // Helper: create a section card with header + content inside
-    auto addSection = [&](const QString& title, QLayout* contentLayout) {
-        auto* frame = new QFrame(content);
-        frame->setObjectName("sectionGroup");
-        frame->setStyleSheet(sectionFrameStyle);
-        auto* frameLayout = new QVBoxLayout(frame);
-        frameLayout->setContentsMargins(6, 6, 6, 8);
-        frameLayout->setSpacing(4);
-
-        auto* headerRow = new QHBoxLayout();
-        headerRow->setContentsMargins(0, 0, 0, 0);
-        headerRow->setSpacing(6);
-        auto* accent = new QFrame(frame);
-        accent->setFixedSize(3, 12);
-        accent->setStyleSheet("background: #2fbf9f; border-radius: 2px;");
-        headerRow->addWidget(accent);
-        auto* label = new QLabel(title, frame);
-        label->setStyleSheet(sectionHeaderStyle);
-        headerRow->addWidget(label);
-        headerRow->addStretch();
-        frameLayout->addLayout(headerRow);
-
-        frameLayout->addLayout(contentLayout);
-        layout->addWidget(frame);
+    auto addHr = [&]() {
+        auto* line = new QFrame(content);
+        line->setFrameShape(QFrame::HLine);
+        line->setStyleSheet("QFrame { color: rgba(255,255,255,0.06); max-height: 1px; }");
+        layout->addWidget(line);
     };
 
-    // ════════════════════════════════════════════
-    // Section 1: Annotation Tools (2-column grid)
-    // ════════════════════════════════════════════
+    // ==========================================
+    // Tools -- single column, compact
+    // ==========================================
     struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tooltip; AnnotationTool tool; };
     const ToolDef toolDefs[] = {
         {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rectangle", "Rectangle (R)", AnnotationTool::Rectangle},
@@ -416,101 +400,48 @@ void EditorWindow::createToolPanel()
         {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
         {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
     };
-
-    auto* toolsGrid = new QGridLayout();
-    toolsGrid->setSpacing(2);
-    toolsGrid->setContentsMargins(0, 0, 0, 0);
-
     QVector<QToolButton*> toolButtons;
     toolButtons.reserve(std::size(toolDefs));
-    for (int i = 0; i < std::size(toolDefs); ++i) {
+
+    auto* toolsLayout = new QVBoxLayout();
+    toolsLayout->setSpacing(2);
+    toolsLayout->setContentsMargins(0, 0, 0, 0);
+    for (const auto& td : toolDefs) {
         auto* btn = new QToolButton(content);
-        btn->setIcon(toolDefs[i].iconFn());
-        btn->setText(toolDefs[i].name);
-        btn->setToolTip(toolDefs[i].tooltip);
+        btn->setIcon(td.iconFn());
+        btn->setText(td.name);
+        btn->setToolTip(td.tooltip);
         btn->setCheckable(true);
         btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(panelBtnStyle);
+        btn->setStyleSheet(toolStyle);
         btn->setFixedHeight(24);
-        btn->setProperty("tool", static_cast<int>(toolDefs[i].tool));
-        toolsGrid->addWidget(btn, i / 2, i % 2);
+        btn->setProperty("tool", static_cast<int>(td.tool));
+        toolsLayout->addWidget(btn);
         toolButtons.push_back(btn);
     }
-    addSection("ANNOTATION TOOLS", toolsGrid);
+    layout->addLayout(toolsLayout);
 
-    // ════════════════════════════════════════════
-    // Section 2: Properties
-    // ════════════════════════════════════════════
-    struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
-    const PropToggle props[] = {
-        {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
-        {"Fill", "Toggle fill for shapes", false, &AnnotationCanvas::setFilled},
-        {"Blur", "Toggle mosaic blur mode", false, &AnnotationCanvas::setMosaicBlurred},
-    };
+    layout->addSpacing(8);
+    addHr();
+    layout->addSpacing(6);
 
-    auto* propsLayout = new QVBoxLayout();
-    propsLayout->setContentsMargins(0, 0, 0, 0);
-    propsLayout->setSpacing(2);
-    for (const auto& p : props) {
-        auto* btn = new QToolButton(content);
-        btn->setText(p.text);
-        btn->setToolTip(p.tip);
-        btn->setFixedHeight(24);
-        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        btn->setCheckable(true);
-        btn->setChecked(p.defaultOn);
-        btn->setStyleSheet(toggleBtnStyle);
-        connect(btn, &QToolButton::clicked, this, [this, p](bool checked) {
-            (canvas_->*p.setter)(checked);
-        });
-        propsLayout->addWidget(btn);
-    }
+    // ==========================================
+    // Properties -- stroke + toggles + font
+    // ==========================================
+    auto* propsHeader = new QLabel("PROPERTIES", content);
+    propsHeader->setStyleSheet(headerStyle);
+    layout->addWidget(propsHeader);
+    layout->addSpacing(6);
 
-    auto* fontSizeRow = new QHBoxLayout();
-    fontSizeRow->setContentsMargins(0, 0, 0, 0);
-    fontSizeRow->setSpacing(2);
-
-    auto* fontSizeDec = new QToolButton(content);
-    fontSizeDec->setText("-");
-    fontSizeDec->setToolTip("Decrease font size ( [ )");
-    fontSizeDec->setFixedSize(24, 24);
-    fontSizeDec->setStyleSheet(toggleBtnStyle);
-
-    auto* fontSizeLabel = new QLabel("14px", content);
-    fontSizeLabel->setToolTip("Font size for Text / Numbered tools");
-    fontSizeLabel->setAlignment(Qt::AlignCenter);
-    fontSizeLabel->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
-    fontSizeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-    auto* fontSizeInc = new QToolButton(content);
-    fontSizeInc->setText("+");
-    fontSizeInc->setToolTip("Increase font size ( ] )");
-    fontSizeInc->setFixedSize(24, 24);
-    fontSizeInc->setStyleSheet(toggleBtnStyle);
-
-    fontSizeRow->addWidget(fontSizeDec);
-    fontSizeRow->addWidget(fontSizeLabel);
-    fontSizeRow->addWidget(fontSizeInc);
-    propsLayout->addLayout(fontSizeRow);
-
-    connect(fontSizeDec, &QToolButton::clicked, this, [this] {
-        canvas_->setFontSize(canvas_->fontSize() - 2);
-    });
-    connect(fontSizeInc, &QToolButton::clicked, this, [this] {
-        canvas_->setFontSize(canvas_->fontSize() + 2);
-    });
-    canvas_->setOnFontSizeChanged([fontSizeLabel](int size) {
-        fontSizeLabel->setText(QString("%1px").arg(size));
-    });
-    addSection("PROPERTIES", propsLayout);
-
-    // ════════════════════════════════════════════
-    // Section 3: Stroke
-    // ════════════════════════════════════════════
+    // Stroke width
     auto* strokeRow = new QHBoxLayout();
     strokeRow->setContentsMargins(0, 0, 0, 0);
-    strokeRow->setSpacing(2);
+    strokeRow->setSpacing(4);
+
+    auto* widthLabel = new QLabel("Width", content);
+    widthLabel->setFixedWidth(34);
+    widthLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
 
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
@@ -523,7 +454,7 @@ void EditorWindow::createToolPanel()
         btn->setFixedHeight(24);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
-        btn->setStyleSheet(toggleBtnStyle);
+        btn->setStyleSheet(activeStyle);
         if (s.width == 4) btn->setChecked(true);
         strokeGroup->addButton(btn);
         connect(btn, &QToolButton::clicked, this, [this, s] {
@@ -531,11 +462,95 @@ void EditorWindow::createToolPanel()
         });
         strokeRow->addWidget(btn);
     }
-    addSection("STROKE", strokeRow);
+    strokeRow->insertWidget(0, widthLabel);
+    layout->addLayout(strokeRow);
 
-    // ════════════════════════════════════════════
-    // Section 4: Color
-    // ════════════════════════════════════════════
+    layout->addSpacing(4);
+
+    // Mode toggles (Outline / Fill / Blur)
+    struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
+    const PropToggle props[] = {
+        {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
+        {"Fill", "Toggle fill for shapes", false, &AnnotationCanvas::setFilled},
+        {"Blur", "Toggle mosaic blur mode", false, &AnnotationCanvas::setMosaicBlurred},
+    };
+
+    auto* chipRow = new QHBoxLayout();
+    chipRow->setContentsMargins(0, 0, 0, 0);
+    chipRow->setSpacing(4);
+    for (const auto& p : props) {
+        auto* btn = new QToolButton(content);
+        btn->setText(p.text);
+        btn->setToolTip(p.tip);
+        btn->setFixedHeight(22);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        btn->setCheckable(true);
+        btn->setChecked(p.defaultOn);
+        btn->setStyleSheet(chipStyle);
+        connect(btn, &QToolButton::clicked, this, [this, p](bool checked) {
+            (canvas_->*p.setter)(checked);
+        });
+        chipRow->addWidget(btn);
+    }
+    layout->addLayout(chipRow);
+
+    layout->addSpacing(4);
+
+    // Font size
+    auto* fontRow = new QHBoxLayout();
+    fontRow->setContentsMargins(0, 0, 0, 0);
+    fontRow->setSpacing(4);
+
+    auto* fontLabel = new QLabel("Font", content);
+    fontLabel->setFixedWidth(34);
+    fontLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+
+    auto* fontSizeDec = new QToolButton(content);
+    fontSizeDec->setText("-");
+    fontSizeDec->setToolTip("Decrease font size ( [ )");
+    fontSizeDec->setFixedSize(24, 24);
+    fontSizeDec->setStyleSheet(activeStyle);
+
+    auto* fontSizeVal = new QLabel("14px", content);
+    fontSizeVal->setToolTip("Font size for Text / Numbered tools");
+    fontSizeVal->setAlignment(Qt::AlignCenter);
+    fontSizeVal->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
+    fontSizeVal->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    auto* fontSizeInc = new QToolButton(content);
+    fontSizeInc->setText("+");
+    fontSizeInc->setToolTip("Increase font size ( ] )");
+    fontSizeInc->setFixedSize(24, 24);
+    fontSizeInc->setStyleSheet(activeStyle);
+
+    fontRow->addWidget(fontLabel);
+    fontRow->addWidget(fontSizeDec);
+    fontRow->addWidget(fontSizeVal);
+    fontRow->addWidget(fontSizeInc);
+    layout->addLayout(fontRow);
+
+    connect(fontSizeDec, &QToolButton::clicked, this, [this] {
+        canvas_->setFontSize(canvas_->fontSize() - 2);
+    });
+    connect(fontSizeInc, &QToolButton::clicked, this, [this] {
+        canvas_->setFontSize(canvas_->fontSize() + 2);
+    });
+    canvas_->setOnFontSizeChanged([fontSizeVal](int size) {
+        fontSizeVal->setText(QString("%1px").arg(size));
+    });
+
+    layout->addSpacing(8);
+    addHr();
+    layout->addSpacing(6);
+
+    // ==========================================
+    // Color
+    // ==========================================
+    auto* colorHeader = new QLabel("COLOR", content);
+    colorHeader->setStyleSheet(headerStyle);
+    layout->addWidget(colorHeader);
+    layout->addSpacing(6);
+
     colorBtn_ = new QToolButton(content);
     colorBtn_->setObjectName("colorWell");
     colorBtn_->setFixedHeight(32);
@@ -543,7 +558,7 @@ void EditorWindow::createToolPanel()
     colorBtn_->setPopupMode(QToolButton::InstantPopup);
     colorBtn_->setToolTip("Color");
     colorBtn_->setStyleSheet(
-        "QToolButton#colorWell { border: 1px solid rgba(255,255,255,0.12);"
+        "QToolButton#colorWell { border: 1px solid rgba(255,255,255,0.1);"
         "  border-radius: 4px; padding: 2px; }"
         "QToolButton#colorWell:hover { border-color: rgba(255,255,255,0.25); }");
     updateColorWell(QColor("#ff3b30"));
@@ -560,18 +575,18 @@ void EditorWindow::createToolPanel()
     colorMenu->addAction(eyeAction_);
     connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
     colorBtn_->setMenu(colorMenu);
+    layout->addWidget(colorBtn_);
 
-    auto* colorLayout = new QVBoxLayout();
-    colorLayout->setContentsMargins(0, 0, 0, 0);
-    colorLayout->addWidget(colorBtn_);
-    addSection("COLOR", colorLayout);
-
-    // ── Spacer: push actions to bottom ──
+    // -- Spacer --
     layout->addStretch(1);
 
-    // ════════════════════════════════════════════
-    // Section 5: Actions (2-column grid)
-    // ════════════════════════════════════════════
+    layout->addSpacing(4);
+    addHr();
+    layout->addSpacing(4);
+
+    // ==========================================
+    // Actions (2-column grid)
+    // ==========================================
     struct ActionDef { QIcon icon; const char* text; const char* tip; };
     const ActionDef actionDefs[] = {
         {IconProvider::icon(IconName::Undo), "Undo", "Undo (Ctrl+Z)"},
@@ -595,22 +610,22 @@ void EditorWindow::createToolPanel()
         btn->setToolTip(actionDefs[i].tip);
         btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(panelBtnStyle);
+        btn->setStyleSheet(toolStyle);
         btn->setFixedHeight(24);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         actionsGrid->addWidget(btn, i / 2, i % 2);
         actionButtons.push_back(btn);
     }
-    addSection("ACTIONS", actionsGrid);
+    layout->addLayout(actionsGrid);
 
-    // ── updateToolActions callback ──
+    // -- updateToolActions callback --
     updateToolActions_ = [toolButtons](AnnotationTool tool) {
         for (auto* btn : toolButtons)
             btn->setChecked(static_cast<AnnotationTool>(btn->property("tool").toInt()) == tool);
     };
     updateToolActions_(AnnotationTool::Rectangle);
 
-    // ── Connections ──
+    // -- Connections --
     connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); });
     connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); });
     for (auto* btn : toolButtons) {
