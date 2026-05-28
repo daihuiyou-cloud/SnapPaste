@@ -82,6 +82,7 @@ PinnedImageState PinnedImageService::defaultStateFor(const QImage& image)
     PinnedImageState state;
     state.position = QPoint(160, 140);
     state.size = image.size();
+    state.devicePixelRatio = image.devicePixelRatio();
     state.opacity = 1.0;
     state.transform.scale = 1.0;
     state.options.alwaysOnTop = true;

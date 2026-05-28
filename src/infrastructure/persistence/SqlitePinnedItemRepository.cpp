@@ -23,10 +23,10 @@ Result<PinnedItem> SqlitePinnedItemRepository::add(const PinnedItem& item)
     query.prepare(
         "INSERT INTO pinned_items("
         "image_png, source, x, y, width, height, opacity, scale, rotation, flip_h, flip_v, "
-        "always_on_top, click_through, visible, closed, created_at, updated_at"
+        "always_on_top, click_through, visible, device_pixel_ratio, closed, created_at, updated_at"
         ") VALUES("
         ":image_png, :source, :x, :y, :width, :height, :opacity, :scale, :rotation, :flip_h, :flip_v, "
-        ":always_on_top, :click_through, :visible, 0, :created_at, :updated_at)");
+        ":always_on_top, :click_through, :visible, :device_pixel_ratio, 0, :created_at, :updated_at)");
     query.bindValue(":image_png", encodeImage(item.image));
     query.bindValue(":source", static_cast<int>(item.source));
     query.bindValue(":x", item.state.position.x());
@@ -41,6 +41,7 @@ Result<PinnedItem> SqlitePinnedItemRepository::add(const PinnedItem& item)
     query.bindValue(":always_on_top", item.state.options.alwaysOnTop);
     query.bindValue(":click_through", item.state.options.clickThrough);
     query.bindValue(":visible", item.state.options.visible);
+    query.bindValue(":device_pixel_ratio", item.state.devicePixelRatio);
     query.bindValue(":created_at", item.createdAt.toUTC().toString(Qt::ISODate));
     query.bindValue(":updated_at", item.updatedAt.toUTC().toString(Qt::ISODate));
 
@@ -63,7 +64,7 @@ Result<QVector<PinnedItem>> SqlitePinnedItemRepository::restoreActive()
     QSqlQuery query(dbResult.value());
     if (!query.exec(
             "SELECT id, image_png, source, x, y, width, height, opacity, scale, rotation, "
-            "flip_h, flip_v, always_on_top, click_through, visible, created_at, updated_at "
+            "flip_h, flip_v, always_on_top, click_through, visible, device_pixel_ratio, created_at, updated_at "
             "FROM pinned_items WHERE closed = 0 ORDER BY updated_at ASC")) {
         return Result<QVector<PinnedItem>>::failure(query.lastError().text());
     }
@@ -88,6 +89,7 @@ Result<void> SqlitePinnedItemRepository::updateState(qint64 id, const PinnedImag
         "UPDATE pinned_items SET x = :x, y = :y, width = :width, height = :height, "
         "opacity = :opacity, scale = :scale, rotation = :rotation, flip_h = :flip_h, flip_v = :flip_v, "
         "always_on_top = :always_on_top, click_through = :click_through, visible = :visible, "
+        "device_pixel_ratio = :device_pixel_ratio, "
         "updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') WHERE id = :id");
     query.bindValue(":id", id);
     query.bindValue(":x", state.position.x());
@@ -102,6 +104,7 @@ Result<void> SqlitePinnedItemRepository::updateState(qint64 id, const PinnedImag
     query.bindValue(":always_on_top", state.options.alwaysOnTop);
     query.bindValue(":click_through", state.options.clickThrough);
     query.bindValue(":visible", state.options.visible);
+    query.bindValue(":device_pixel_ratio", state.devicePixelRatio);
 
     if (!query.exec()) {
         return Result<void>::failure(query.lastError().text());
@@ -208,9 +211,11 @@ PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
     item.state.options.alwaysOnTop = query.value(12).toBool();
     item.state.options.clickThrough = query.value(13).toBool();
     item.state.options.visible = query.value(14).toBool();
-    item.createdAt = QDateTime::fromString(query.value(15).toString(), Qt::ISODate);
+    item.state.devicePixelRatio = query.value(15).toDouble();
+    item.image.setDevicePixelRatio(item.state.devicePixelRatio);
+    item.createdAt = QDateTime::fromString(query.value(16).toString(), Qt::ISODate);
     item.createdAt.setTimeSpec(Qt::UTC);
-    item.updatedAt = QDateTime::fromString(query.value(16).toString(), Qt::ISODate);
+    item.updatedAt = QDateTime::fromString(query.value(17).toString(), Qt::ISODate);
     item.updatedAt.setTimeSpec(Qt::UTC);
     return item;
 }

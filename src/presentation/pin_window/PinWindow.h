@@ -61,6 +61,7 @@ private:
     void setScale(double scale);
     void setOpacityValue(double opacity);
     QImage renderedImage() const;
+    QSize logicalImageSize() const;
     void invalidateRenderedCache();
     void flipH();
     void flipV();

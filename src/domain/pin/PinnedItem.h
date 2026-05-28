@@ -35,6 +35,7 @@ struct PinnedImageState final {
     double opacity = 1.0;
     PinTransform transform;
     PinWindowOptions options;
+    double devicePixelRatio = 1.0;
 };
 
 inline PinnedImageState normalizedState(PinnedImageState state)

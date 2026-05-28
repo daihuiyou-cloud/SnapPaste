@@ -53,6 +53,7 @@ PinWindow::PinWindow(PinnedItem item, QWidget* parent)
     : QWidget(parent)
     , item_(std::move(item))
 {
+    item_.image.setDevicePixelRatio(item_.state.devicePixelRatio);
     applyWindowFlags();
     setAttribute(Qt::WA_TranslucentBackground);
     setFocusPolicy(Qt::StrongFocus);
@@ -117,7 +118,7 @@ PinWindow::ResizeEdge PinWindow::resizeEdgeAt(const QPoint& pos) const
 
 void PinWindow::applyResizeToScale()
 {
-    const auto imgSize = item_.image.size();
+    const auto imgSize = item_.image.size() / item_.image.devicePixelRatio();
     if (imgSize.isEmpty()) return;
     const auto winSize = frameGeometry().size();
     item_.state.transform.scale = std::max(0.1, std::min(8.0,
@@ -127,7 +128,7 @@ void PinWindow::applyResizeToScale()
 
 QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
 {
-    const auto imgSize = item_.image.size();
+    const auto imgSize = item_.image.size() / item_.image.devicePixelRatio();
     if (imgSize.isEmpty()) {
         return resizeStartGeometry_;
     }
@@ -315,7 +316,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     } else if (action == fitScreenAction) {
         auto imgSize = item_.state.size;
         if (!imgSize.isValid() || imgSize.isNull()) {
-            imgSize = renderedImage().size();
+            imgSize = logicalImageSize();
         }
         QRect screenGeo;
         auto* screen = QGuiApplication::screenAt(QCursor::pos());
@@ -445,7 +446,7 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             auto imgSize = item_.state.size;
             if (!imgSize.isValid() || imgSize.isNull()) {
-                imgSize = renderedImage().size();
+                imgSize = logicalImageSize();
             }
             QRect screenGeo;
             auto* screen = QGuiApplication::screenAt(QCursor::pos());
@@ -482,7 +483,7 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
         if (thumbnailMode_) {
             fullScale_ = item_.state.transform.scale;
             fullPosition_ = item_.state.position;
-            const auto imgSize = renderedImage().size();
+            const auto imgSize = logicalImageSize();
             const auto maxDim = std::max(imgSize.width(), imgSize.height());
             if (maxDim > 0) {
                 setScale(static_cast<double>(kThumbnailMaxSize) / maxDim);
@@ -491,7 +492,7 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
             item_.state.position = fullPosition_;
             item_.state.transform.scale = fullScale_;
             item_.state = normalizedState(item_.state);
-            resize(renderedImage().size() * item_.state.transform.scale);
+            resize(logicalImageSize() * item_.state.transform.scale);
             move(item_.state.position);
             update();
             emitStateChanged();
@@ -503,8 +504,9 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
             auto* screen = QGuiApplication::screenAt(QCursor::pos());
             if (screen) {
                 auto screenGeo = screen->geometry();
-                double fit = qMin(static_cast<double>(screenGeo.width()) / renderedImage().width(),
-                                  static_cast<double>(screenGeo.height()) / renderedImage().height());
+                auto logicalSize = logicalImageSize();
+                double fit = qMin(static_cast<double>(screenGeo.width()) / logicalSize.width(),
+                                  static_cast<double>(screenGeo.height()) / logicalSize.height());
                 if (fit > 0) {
                     pushUndoState();
                     setScale(fit);
@@ -698,7 +700,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.drawImage(rect(), renderedImage());
+    painter.drawImage(QPoint(0, 0), renderedImage());
 
     if (thumbnailMode_) {
         painter.setPen(QColor("#31c7a4"));
@@ -857,7 +859,7 @@ void PinWindow::applyState()
 {
     item_.state = normalizedState(item_.state);
     applyWindowFlags();
-    resize(renderedImage().size() * item_.state.transform.scale);
+    resize(logicalImageSize() * item_.state.transform.scale);
     move(item_.state.position);
     setWindowOpacity(item_.state.opacity);
     windowInteraction_.setClickThrough(this, item_.state.options.clickThrough);
@@ -880,7 +882,8 @@ void PinWindow::applyWindowFlags()
 void PinWindow::emitStateChanged()
 {
     item_.state.position = frameGeometry().topLeft();
-    item_.state.size = renderedImage().size();
+    item_.state.size = logicalImageSize();
+    item_.state.devicePixelRatio = item_.image.devicePixelRatio();
     item_.state = normalizedState(item_.state);
     setWindowOpacity(item_.state.opacity);
     emit stateChanged(item_.id, item_.state);
@@ -915,7 +918,7 @@ void PinWindow::undoTransform()
     item_.state = undoStack_.takeLast();
     item_.state = normalizedState(item_.state);
     invalidateRenderedCache();
-    resize(renderedImage().size() * item_.state.transform.scale);
+    resize(logicalImageSize() * item_.state.transform.scale);
     applyWindowFlags();
     update();
     emitStateChanged();
@@ -927,7 +930,7 @@ void PinWindow::rotateBy(int degrees)
     item_.state.transform.rotationDegrees += degrees;
     item_.state = normalizedState(item_.state);
     invalidateRenderedCache();
-    resize(renderedImage().size() * item_.state.transform.scale);
+    resize(logicalImageSize() * item_.state.transform.scale);
     update();
     emitStateChanged();
     QToolTip::showText(QCursor::pos(), QString("Rotated %1\xC2\xB0").arg(degrees), this);
@@ -993,9 +996,16 @@ QImage PinWindow::renderedImage() const
         transform.scale(item_.state.transform.flippedHorizontally ? -1.0 : 1.0,
                         item_.state.transform.flippedVertically ? -1.0 : 1.0);
         renderedCache_ = item_.image.transformed(transform, Qt::SmoothTransformation);
+        renderedCache_.setDevicePixelRatio(item_.image.devicePixelRatio());
         cachedRenderedVersion_ = renderedVersion_;
     }
     return renderedCache_;
+}
+
+QSize PinWindow::logicalImageSize() const
+{
+    auto img = renderedImage();
+    return img.size() / img.devicePixelRatio();
 }
 
 void PinWindow::invalidateRenderedCache()
