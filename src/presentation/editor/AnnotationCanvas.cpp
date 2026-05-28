@@ -602,7 +602,19 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
 void AnnotationCanvas::mouseMoveEvent(QMouseEvent* event)
 {
     if (!drawing_) {
-        if (currentTool_ == AnnotationTool::Text)
+        if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+            const auto pos = toImage(event->pos());
+            const auto r = annotations_[selectedIndex_].bounds;
+            const QPoint corners[] = {r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()};
+            Qt::CursorShape cursor = Qt::ArrowCursor;
+            for (int ci = 0; ci < 4; ++ci) {
+                if (QRect(corners[ci].x() - 8, corners[ci].y() - 8, 16, 16).contains(pos)) {
+                    cursor = (ci == 0 || ci == 3) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor;
+                    break;
+                }
+            }
+            setCursor(cursor);
+        } else if (currentTool_ == AnnotationTool::Text)
             setCursor(Qt::IBeamCursor);
         else if (currentTool_ == AnnotationTool::Eraser || currentTool_ == AnnotationTool::Mosaic)
             setCursor(Qt::PointingHandCursor);
