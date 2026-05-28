@@ -118,18 +118,25 @@ void AnnotationCanvas::setImage(QImage image)
     nextNumber_ = 1;
     editingTextIndex_ = -1;
     preeditString_.clear();
-    setMinimumSize(image_.size());
-    resize(image_.size());
+    auto dpr = image_.devicePixelRatio();
+    QSize logicalSize(image_.size() / dpr);
+    setMinimumSize(logicalSize);
+    resize(logicalSize);
     updateWindowTitle();
     update();
 }
 
 void AnnotationCanvas::applyCrop(QRect cropRect)
 {
-    cropRect = cropRect.intersected(image_.rect());
-    if (cropRect.width() < 5 || cropRect.height() < 5) return;
+    auto dpr = image_.devicePixelRatio();
+    QRect physicalCrop(qRound(cropRect.x() * dpr),
+                       qRound(cropRect.y() * dpr),
+                       qRound(cropRect.width() * dpr),
+                       qRound(cropRect.height() * dpr));
+    physicalCrop = physicalCrop.intersected(image_.rect());
+    if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
-    image_ = image_.copy(cropRect);
+    image_ = image_.copy(physicalCrop);
     annotationCache_ = {};
     cacheValid_ = false;
     annotations_.clear();
@@ -143,14 +150,16 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
     if (scrollArea) {
         auto vp = scrollArea->viewport()->size();
-        double fit = qMin(static_cast<double>(vp.width()) / image_.width(),
-                           static_cast<double>(vp.height()) / image_.height());
+        auto logicalSize = image_.size() / image_.devicePixelRatio();
+        double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
+                           static_cast<double>(vp.height()) / logicalSize.height());
         if (fit > 1.0) fit = 1.0;
         zoomFactor_ = fit;
     }
 
-    setMinimumSize(image_.size());
-    resize(image_.size());
+    auto logicalSize = image_.size() / image_.devicePixelRatio();
+    setMinimumSize(logicalSize);
+    resize(logicalSize);
     updateWindowTitle();
     update();
     emit imageEdited(image_);
@@ -172,9 +181,9 @@ void AnnotationCanvas::zoomAt(double factor, QPoint center)
 {
     const auto oldCenter = toImage(center);
     zoomFactor_ = std::max(0.1, std::min(5.0, factor));
-    auto imgSize = image_.size();
-    QSize newSize(static_cast<int>(imgSize.width() * zoomFactor_),
-                  static_cast<int>(imgSize.height() * zoomFactor_));
+    auto logicalSize = image_.size() / image_.devicePixelRatio();
+    QSize newSize(static_cast<int>(logicalSize.width() * zoomFactor_),
+                  static_cast<int>(logicalSize.height() * zoomFactor_));
     setMinimumSize(newSize);
     resize(newSize);
     const auto newWidgetCenter = QPoint(static_cast<int>(oldCenter.x() * zoomFactor_),
@@ -290,8 +299,9 @@ void AnnotationCanvas::updateTextBounds(int index)
     QFontMetrics fm(font);
     const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, a.text);
     QRect newBounds(a.bounds.topLeft(), QSize(qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20)));
-    if (newBounds.right() > image_.width()) {
-        newBounds.moveRight(image_.width() - 4);
+    auto logicalW = image_.width() / image_.devicePixelRatio();
+    if (newBounds.right() > logicalW) {
+        newBounds.moveRight(logicalW - 4);
     }
     a.bounds = newBounds;
 }
@@ -447,7 +457,8 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
     if (pickingColor_) {
         pickingColor_ = false;
         setCursor(Qt::ArrowCursor);
-        if (image_.rect().contains(pos)) {
+        QRect logicalImageRect(QPoint(0, 0), image_.size() / image_.devicePixelRatio());
+        if (logicalImageRect.contains(pos)) {
             QImage composited = image_.copy();
             QPainter p(&composited);
             drawAnnotations(&p, image_, false);
@@ -535,8 +546,9 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
         QFont font("Microsoft YaHei UI", fontSize_);
         QFontMetrics fm(font);
         QRect bounds(pos.x(), pos.y(), 28, fm.height() + 8);
-        if (bounds.right() > image_.width()) {
-            bounds.moveRight(image_.width() - 4);
+        auto logicalW = image_.width() / image_.devicePixelRatio();
+        if (bounds.right() > logicalW) {
+            bounds.moveRight(logicalW - 4);
         }
         pushUndo();
         redoStack_.clear();
@@ -839,10 +851,11 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
             auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
             if (scrollArea && !image_.isNull()) {
                 auto vp = scrollArea->viewport()->size();
-                double fit = qMin(static_cast<double>(vp.width()) / image_.width(),
-                                   static_cast<double>(vp.height()) / image_.height());
-                int newW = static_cast<int>(image_.width() * fit);
-                int newH = static_cast<int>(image_.height() * fit);
+                auto logicalSize = image_.size() / image_.devicePixelRatio();
+                double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
+                                   static_cast<double>(vp.height()) / logicalSize.height());
+                int newW = static_cast<int>(logicalSize.width() * fit);
+                int newH = static_cast<int>(logicalSize.height() * fit);
                 if (newW > 0 && newH > 0) {
                     QSize newSize(newW, newH);
                     setMinimumSize(newSize);
@@ -1043,10 +1056,11 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
         if (scrollArea && !image_.isNull()) {
             auto vp = scrollArea->viewport()->size();
-            double fit = qMin(static_cast<double>(vp.width()) / image_.width(),
-                               static_cast<double>(vp.height()) / image_.height());
-            int newW = static_cast<int>(image_.width() * fit);
-            int newH = static_cast<int>(image_.height() * fit);
+            auto logicalSize = image_.size() / image_.devicePixelRatio();
+            double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
+                               static_cast<double>(vp.height()) / logicalSize.height());
+            int newW = static_cast<int>(logicalSize.width() * fit);
+            int newH = static_cast<int>(logicalSize.height() * fit);
             if (newW > 0 && newH > 0) {
                 QSize newSize(newW, newH);
                 setMinimumSize(newSize);
@@ -1083,8 +1097,11 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         painter.scale(zoomFactor_, zoomFactor_);
         if (image_.hasAlphaChannel()) {
             int tile = 8;
-            for (int y = 0; y < image_.height(); y += tile) {
-                for (int x = 0; x < image_.width(); x += tile) {
+            auto dpr = image_.devicePixelRatio();
+            auto logicalH = image_.height() / dpr;
+            auto logicalW = image_.width() / dpr;
+            for (int y = 0; y < logicalH; y += tile) {
+                for (int x = 0; x < logicalW; x += tile) {
                     bool light = ((x / tile) + (y / tile)) % 2 == 0;
                     painter.fillRect(x, y, tile, tile, light ? QColor("#cccccc") : QColor("#888888"));
                 }
