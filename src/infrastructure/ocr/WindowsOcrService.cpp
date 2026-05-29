@@ -120,6 +120,23 @@ void sharpenImage(QImage& img)
         return result.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
+#if defined(SNAPPASTE_HAS_WINRT_OCR)
+struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByteAccess : ::IUnknown {
+    virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
+};
+
+winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring& tag)
+{
+    using namespace winrt::Windows::Globalization;
+    auto factory = winrt::get_activation_factory<Language, ILanguageFactory>();
+    auto abiPtr = reinterpret_cast<winrt::impl::abi<ILanguageFactory>::type*>(
+        winrt::get_abi(factory));
+    Language lang{ nullptr };
+    winrt::hstring hstr(tag);
+    winrt::check_hresult(abiPtr->CreateLanguage(
+        winrt::get_abi(hstr), winrt::put_abi(lang)));
+    return lang;
+}
 #endif
 
 } // namespace
