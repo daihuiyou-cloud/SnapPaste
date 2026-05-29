@@ -1,5 +1,6 @@
 #include "infrastructure/ocr/WindowsOcrService.h"
 
+#include <atomic>
 #include <climits>
 #include <cstring>
 
@@ -66,78 +67,59 @@ void sharpenImage(QImage& img)
     }
 }
 
-// Pre-process image for better OCR accuracy:
-//  - Grayscale + sharpen to define text edges
-//  - Otsu binarization for clean text/background separation
-//  - Aggressive upscale to ensure readable text size
-QImage preprocessForOcr(const QImage& src)
-{
-    if (src.isNull()) return {};
+    // Pre-process image for better OCR accuracy:
+    //  - Grayscale + sharpen to define text edges
+    //  - Otsu binarization for clean text/background separation
+    //  - Aggressive upscale to ensure readable text size
+    QImage preprocessForOcr(const QImage& src)
+    {
+        if (src.isNull()) return {};
 
-    // Step 1: grayscale
-    QImage gray = src.convertToFormat(QImage::Format_Grayscale8);
+        // Step 1: grayscale
+        QImage gray = src.convertToFormat(QImage::Format_Grayscale8);
 
-    // Step 2: sharpen to make text edges crisper
-    sharpenImage(gray);
+        // Step 2: sharpen to make text edges crisper
+        sharpenImage(gray);
 
-    // Step 3: Otsu binarization
-    std::vector<int> hist(256, 0);
-    for (int y = 0; y < gray.height(); ++y) {
-        const auto* line = gray.constScanLine(y);
-        for (int x = 0; x < gray.width(); ++x) {
-            hist[line[x]]++;
+        // Step 3: Otsu binarization
+        std::vector<int> hist(256, 0);
+        for (int y = 0; y < gray.height(); ++y) {
+            const auto* line = gray.constScanLine(y);
+            for (int x = 0; x < gray.width(); ++x) {
+                hist[line[x]]++;
+            }
         }
-    }
 
-    int total = gray.width() * gray.height();
-    int threshold = otsuThreshold(hist, total);
+        int total = gray.width() * gray.height();
+        int threshold = otsuThreshold(hist, total);
 
-    // Determine if text is light-on-dark or dark-on-light
-    // Count pixels below threshold (potential text if dark-on-light)
-    int darkPixels = 0;
-    for (int i = 0; i < threshold; ++i) darkPixels += hist[i];
-    bool inverted = (darkPixels > total / 2);
+        // Determine if text is light-on-dark or dark-on-light
+        // Count pixels below threshold (potential text if dark-on-light)
+        int darkPixels = 0;
+        for (int i = 0; i < threshold; ++i) darkPixels += hist[i];
+        bool inverted = (darkPixels > total / 2);
 
-    for (int y = 0; y < gray.height(); ++y) {
-        auto* line = gray.scanLine(y);
-        for (int x = 0; x < gray.width(); ++x) {
-            line[x] = (line[x] > threshold) == inverted ? 0 : 255;
+        for (int y = 0; y < gray.height(); ++y) {
+            auto* line = gray.scanLine(y);
+            for (int x = 0; x < gray.width(); ++x) {
+                line[x] = (line[x] > threshold) == inverted ? 0 : 255;
+            }
         }
+
+        // Step 4: aggressive upscale — target min dimension 200px
+        double minDim = qMin(gray.width(), gray.height());
+        QImage result = gray;
+        if (minDim < 200) {
+            double factor = qMin(4.0, 200.0 / minDim);
+            result = gray.scaled(static_cast<int>(gray.width() * factor),
+                                 static_cast<int>(gray.height() * factor),
+                                 Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+
+        // Convert back to ARGB32_Premultiplied for WinRT bitmap
+        return result.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
-    // Step 4: aggressive upscale — target min dimension 200px
-    double minDim = qMin(gray.width(), gray.height());
-    QImage result = gray;
-    if (minDim < 200) {
-        double factor = qMin(4.0, 200.0 / minDim);
-        result = gray.scaled(static_cast<int>(gray.width() * factor),
-                             static_cast<int>(gray.height() * factor),
-                             Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-
-    // Convert back to ARGB32_Premultiplied for WinRT bitmap
-    return result.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-}
-
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-struct __declspec(uuid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")) IMemoryBufferByteAccess : ::IUnknown {
-    virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
-};
-
-// Workaround: C++/WinRT Windows.Globalization Language constructor
-// is declared but not inline in SDK 10.0.19041 cppwinrt headers.
-winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring& tag)
-{
-    using namespace winrt::Windows::Globalization;
-    auto factory = winrt::get_activation_factory<Language, ILanguageFactory>();
-    auto abiPtr = reinterpret_cast<winrt::impl::abi<ILanguageFactory>::type*>(
-        winrt::get_abi(factory));
-    Language lang{ nullptr };
-    winrt::hstring hstr(tag);
-    winrt::check_hresult(abiPtr->CreateLanguage(
-        winrt::get_abi(hstr), winrt::put_abi(lang)));
-    return lang;
-}
 #endif
 
 } // namespace
@@ -163,6 +145,11 @@ WindowsOcrService::~WindowsOcrService()
 #endif
 }
 
+void WindowsOcrService::cancel()
+{
+    cancelled_ = true;
+}
+
 void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 {
     QMutexLocker lock(&mutex_);
@@ -171,12 +158,15 @@ void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 
 OcrResult WindowsOcrService::recognizeText(const QImage& source)
 {
+    cancelled_ = false;
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     if (source.isNull()) {
         return {false, {}, "No image is available for OCR.", {}, {}};
     }
 
     try {
+        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
+
         QString lang;
         {
             QMutexLocker lock(&mutex_);
@@ -193,6 +183,8 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
         if (engine == nullptr) {
             return {false, {}, "OCR is not available for the current Windows language profile.", {}, {}};
         }
+
+        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
 
         const auto processed = preprocessForOcr(source);
         const double scaleX = static_cast<double>(source.width()) / processed.width();
@@ -225,6 +217,7 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             }
         }
 
+        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
         const auto result = engine.RecognizeAsync(bitmap).get();
         QStringList lines;
         QVector<OcrBlockInfo> blocks;

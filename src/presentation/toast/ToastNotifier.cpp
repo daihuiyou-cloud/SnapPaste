@@ -97,6 +97,7 @@ void ToastNotifier::showNext()
     const auto startPos = toast_->pos() + QPoint(0, 20);
     toast_->move(startPos);
 
+    delete slideAnimation_;
     slideAnimation_ = new QPropertyAnimation(toast_, "pos", this);
     slideAnimation_->setDuration(kToastSlideMs);
     slideAnimation_->setStartValue(startPos);

@@ -49,7 +49,13 @@ protected:
         setText(recording_ ? "Press shortcut..." : hotkey_.toDisplayString());
         if (recording_) {
             timer_.start();
-            grabKeyboard();
+            if (!grabKeyboard()) {
+                recording_ = false;
+                timer_.stop();
+                setText(hotkey_.toDisplayString());
+                updateStyle();
+                return;
+            }
             setFocus();
         } else {
             timer_.stop();

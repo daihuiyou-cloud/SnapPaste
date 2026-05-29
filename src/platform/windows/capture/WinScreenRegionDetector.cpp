@@ -5,6 +5,7 @@
 #include <objbase.h>
 #include <dwmapi.h>
 #include <UIAutomationClient.h>
+#include <wrl/client.h>
 #endif
 
 #include <QGuiApplication>
@@ -12,7 +13,6 @@
 #include <QtGlobal>
 
 #include <algorithm>
-#include <atomic>
 
 namespace snappaste {
 
@@ -173,40 +173,34 @@ void buildChildWindowCache(HWND parent, QVector<QRect>& outRects)
 
 void buildUiAutomationCache(HWND hwnd, QVector<QRect>& outRects)
 {
-    IUIAutomation* automation = nullptr;
+    using Microsoft::WRL::ComPtr;
+    ComPtr<IUIAutomation> automation;
     if (FAILED(CoCreateInstance(CLSID_CUIAutomation, nullptr, CLSCTX_INPROC_SERVER,
-                                IID_PPV_ARGS(&automation))) || automation == nullptr) {
+                                IID_PPV_ARGS(automation.GetAddressOf())))) {
         return;
     }
 
-    IUIAutomationElement* root = nullptr;
-    if (SUCCEEDED(automation->ElementFromHandle(hwnd, &root)) && root != nullptr) {
-        IUIAutomationElementArray* descendants = nullptr;
-        IUIAutomationCondition* condition = nullptr;
-        if (SUCCEEDED(automation->CreateTrueCondition(&condition)) && condition != nullptr
-            && SUCCEEDED(root->FindAll(TreeScope_Descendants, condition, &descendants)) && descendants != nullptr) {
-            int length = 0;
-            descendants->get_Length(&length);
-            for (int i = 0; i < length && i < 250; ++i) {
-                IUIAutomationElement* element = nullptr;
-                if (FAILED(descendants->GetElement(i, &element)) || element == nullptr) {
-                    continue;
+    ComPtr<IUIAutomationElement> root;
+    if (SUCCEEDED(automation->ElementFromHandle(hwnd, root.GetAddressOf()))) {
+        ComPtr<IUIAutomationCondition> condition;
+        if (SUCCEEDED(automation->CreateTrueCondition(condition.GetAddressOf()))) {
+            ComPtr<IUIAutomationElementArray> descendants;
+            if (SUCCEEDED(root->FindAll(TreeScope_Descendants, condition.Get(), descendants.GetAddressOf()))) {
+                int length = 0;
+                descendants->get_Length(&length);
+                for (int i = 0; i < length && i < 250; ++i) {
+                    ComPtr<IUIAutomationElement> element;
+                    if (FAILED(descendants->GetElement(i, element.GetAddressOf()))) {
+                        continue;
+                    }
+                    RECT rect{};
+                    if (SUCCEEDED(element->get_CurrentBoundingRectangle(&rect))) {
+                        outRects.push_back(rectFromWinRect(rect));
+                    }
                 }
-                RECT rect{};
-                if (SUCCEEDED(element->get_CurrentBoundingRectangle(&rect))) {
-                    outRects.push_back(rectFromWinRect(rect));
-                }
-                element->Release();
             }
-            descendants->Release();
         }
-        if (condition != nullptr) {
-            condition->Release();
-        }
-        root->Release();
     }
-
-    automation->Release();
 }
 #endif
 
@@ -214,25 +208,17 @@ void buildUiAutomationCache(HWND hwnd, QVector<QRect>& outRects)
 
 namespace detail {
 
-namespace {
-std::atomic<int> s_comRefCount{0};
-}
-
 ComInitializer::ComInitializer()
 {
 #ifdef Q_OS_WIN
-    if (s_comRefCount.fetch_add(1) == 0) {
-        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    }
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 #endif
 }
 
 ComInitializer::~ComInitializer()
 {
 #ifdef Q_OS_WIN
-    if (s_comRefCount.fetch_sub(1) == 1) {
-        CoUninitialize();
-    }
+    CoUninitialize();
 #endif
 }
 

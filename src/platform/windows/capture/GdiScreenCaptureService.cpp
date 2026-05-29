@@ -38,6 +38,12 @@ Result<QImage> captureRectWithGdi(const QRect& region)
     }
 
     auto* oldBitmap = SelectObject(memoryDc, bitmap);
+    if (oldBitmap == nullptr || oldBitmap == HGDI_ERROR) {
+        DeleteObject(bitmap);
+        DeleteDC(memoryDc);
+        ReleaseDC(nullptr, screenDc);
+        return Result<QImage>::failure("Failed to select bitmap into capture DC.");
+    }
     const auto copied = BitBlt(memoryDc,
                                0,
                                0,

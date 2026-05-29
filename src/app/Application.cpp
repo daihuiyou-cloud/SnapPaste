@@ -268,6 +268,9 @@ void Application::ocrRegion(const QRect& region)
             showStatus("Failed to capture image for OCR.");
             return;
         }
+        if (ocrService_) {
+            ocrService_->cancel();
+        }
         QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus("OCR processing...");
@@ -283,10 +286,11 @@ void Application::ocrRegion(const QRect& region)
                 }
 
                 auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
-#pragma warning(push)
-#pragma warning(disable: 4573)
+                guard->ocrWindow_ = win;
+                QObject::connect(win, &QObject::destroyed, guard.data(), [guard] {
+                    if (guard) guard->ocrWindow_.clear();
+                });
                 QObject::connect(win, &OcrResultWindow::pasteRequested, guard.data(), [guard] { if (guard) guard->pasteFromClipboard(); });
-#pragma warning(pop)
                 guard->showStatus(
                     QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);

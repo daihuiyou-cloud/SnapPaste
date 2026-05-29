@@ -13,12 +13,15 @@
 
 #include <QApplication>
 #include <QImage>
+#include <QPointer>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 
 namespace snappaste {
+
+class OcrResultWindow;
 
 class Application final : public QObject {
     Q_OBJECT
@@ -73,6 +76,7 @@ private:
     std::optional<QRect> lastCaptureRegion_;
     int nextPinSlot_ = 0;
     std::unique_ptr<IOcrService> ocrService_;
+    QPointer<OcrResultWindow> ocrWindow_;
 };
 
 } // namespace snappaste

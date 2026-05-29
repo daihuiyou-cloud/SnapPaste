@@ -8,8 +8,10 @@
 #include <QVector>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstring>
+#include <thread>
 
 #ifdef Q_OS_WIN
 #include <d3d11.h>
@@ -354,7 +356,16 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
                 ComPtr<ID3D11DeviceContext> context;
                 auto deviceResult = createD3dDevice(context);
                 if (deviceResult.isOk()) {
-                    return captureSegmentWithDxgi(segment, *deviceResult.value().Get(), *context.Get());
+                    constexpr int kMaxDxgiRetries = 3;
+                    for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
+                        auto result = captureSegmentWithDxgi(segment, *deviceResult.value().Get(), *context.Get());
+                        if (result.isOk()) {
+                            return result;
+                        }
+                        if (attempt < kMaxDxgiRetries - 1) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
+                        }
+                    }
                 }
                 return Result<QImage>::failure(deviceResult.error());
             }();
@@ -382,7 +393,16 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         ComPtr<ID3D11DeviceContext> context;
         auto deviceResult = createD3dDevice(context);
         if (deviceResult.isOk()) {
-            return captureSegmentWithDxgi(segments.first(), *deviceResult.value().Get(), *context.Get());
+            constexpr int kMaxDxgiRetries = 3;
+            for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
+                auto result = captureSegmentWithDxgi(segments.first(), *deviceResult.value().Get(), *context.Get());
+                if (result.isOk()) {
+                    return result;
+                }
+                if (attempt < kMaxDxgiRetries - 1) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
+                }
+            }
         }
         return Result<QImage>::failure(deviceResult.error());
     }();

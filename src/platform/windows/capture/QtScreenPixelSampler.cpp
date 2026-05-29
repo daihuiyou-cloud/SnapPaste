@@ -11,6 +11,7 @@ namespace snappaste {
 
 void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
 {
+    assertMainThread();
     bounds_ = desktopBounds;
     snapshot_ = {};
     snapshotOrigin_ = {};
@@ -18,6 +19,7 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
         return;
     }
 
+    screenCache_.clear();
     QRect physicalBounds;
     for (auto* screen : QGuiApplication::screens()) {
         if (screen == nullptr) continue;
@@ -26,6 +28,8 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
         if (!intersection.isValid()) continue;
 
         auto dpr = screen->devicePixelRatio();
+        screenCache_.push_back({screen->geometry(), dpr});
+
         QRect physSeg(
             static_cast<int>(std::floor(intersection.x() * dpr)),
             static_cast<int>(std::floor(intersection.y() * dpr)),
@@ -69,20 +73,22 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
 
 QPoint QtScreenPixelSampler::physicalFromLogical(const QPoint& logicalPos) const
 {
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen == nullptr) continue;
-        if (screen->geometry().contains(logicalPos)) {
-            auto dpr = screen->devicePixelRatio();
+    for (const auto& info : screenCache_) {
+        if (info.geometry.contains(logicalPos)) {
             return QPoint(
-                static_cast<int>(std::floor(logicalPos.x() * dpr)),
-                static_cast<int>(std::floor(logicalPos.y() * dpr)));
+                static_cast<int>(std::floor(logicalPos.x() * info.dpr)),
+                static_cast<int>(std::floor(logicalPos.y() * info.dpr)));
         }
     }
-    auto* primary = QGuiApplication::primaryScreen();
-    auto dpr = primary ? primary->devicePixelRatio() : 1.0;
+    if (!screenCache_.isEmpty()) {
+        const auto& fallback = screenCache_.first();
+        return QPoint(
+            static_cast<int>(std::floor(logicalPos.x() * fallback.dpr)),
+            static_cast<int>(std::floor(logicalPos.y() * fallback.dpr)));
+    }
     return QPoint(
-        static_cast<int>(std::floor(logicalPos.x() * dpr)),
-        static_cast<int>(std::floor(logicalPos.y() * dpr)));
+        static_cast<int>(std::floor(logicalPos.x())),
+        static_cast<int>(std::floor(logicalPos.y())));
 }
 
 std::optional<QColor> QtScreenPixelSampler::sample(const QPoint& globalPosition) const

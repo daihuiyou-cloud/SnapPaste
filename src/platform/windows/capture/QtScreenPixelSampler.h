@@ -4,7 +4,11 @@
 
 #include <QImage>
 #include <QPoint>
+#include <QRect>
 #include <QScreen>
+#include <QThread>
+#include <QVector>
+#include <QtGlobal>
 
 namespace snappaste {
 
@@ -16,6 +20,19 @@ public:
 
 private:
     QPoint physicalFromLogical(const QPoint& logicalPos) const;
+
+    void assertMainThread() const
+    {
+        Q_ASSERT_X(QThread::currentThread() == qApp->thread(),
+                   "QtScreenPixelSampler",
+                   "Must be called from the main thread");
+    }
+
+    struct ScreenInfo {
+        QRect geometry;
+        qreal dpr = 1.0;
+    };
+    QVector<ScreenInfo> screenCache_;
 
     QRect bounds_;
     QImage snapshot_;
