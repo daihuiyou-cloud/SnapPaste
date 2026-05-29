@@ -23,7 +23,7 @@ TrayController::TrayController(QObject* parent)
     auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), tr("Quit"));
 
     trayIcon_.setContextMenu(menu_.get());
-    trayIcon_.setToolTip(QStringLiteral("SnapPaste"));
+    trayIcon_.setToolTip(tr("SnapPaste"));
     trayIcon_.setIcon(IconProvider::icon(IconName::App));
 
     connect(captureAction, &QAction::triggered, this, &TrayController::captureRequested);

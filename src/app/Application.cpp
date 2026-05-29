@@ -386,22 +386,22 @@ void Application::registerHotkey()
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Capture, settings.captureHotkey)) {
         const auto message = tr("Failed to register capture hotkey: %1").arg(settings.captureHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
+        trayController_.showMessage(tr("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Paste, settings.pasteHotkey)) {
         const auto message = tr("Failed to register paste hotkey: %1").arg(settings.pasteHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
+        trayController_.showMessage(tr("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
         const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
+        trayController_.showMessage(tr("SnapPaste"), message);
     }
-    if (!context_.hotkeyService().registerHotkey(HotkeyAction::RepeatCapture, settings.repeatCaptureHotkey)) {
-        const auto message = tr("Failed to register repeat-capture hotkey: %1").arg(settings.repeatCaptureHotkey.toDisplayString());
+    if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
+        const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
+        trayController_.showMessage(tr("SnapPaste"), message);
     }
 }
 

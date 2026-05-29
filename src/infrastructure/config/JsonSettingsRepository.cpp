@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "infrastructure/config/JsonSettingsRepository.h"
 
 #include "infrastructure/filesystem/AppPaths.h"
@@ -66,12 +67,12 @@ Result<AppSettings> JsonSettingsRepository::load()
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
-        return Result<AppSettings>::failure("Failed to open settings file.");
+        return Result<AppSettings>::failure(QCoreApplication::translate("AppErrors", "Failed to open settings file."));
     }
 
     const auto document = QJsonDocument::fromJson(file.readAll());
     if (!document.isObject()) {
-        return Result<AppSettings>::failure("Settings file is invalid.");
+        return Result<AppSettings>::failure(QCoreApplication::translate("AppErrors", "Settings file is invalid."));
     }
 
     const auto object = document.object();
@@ -132,14 +133,14 @@ Result<void> JsonSettingsRepository::save(const AppSettings& settings)
 
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        return Result<void>::failure("Failed to write settings file.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Failed to write settings file."));
     }
     const auto bytes = QJsonDocument(object).toJson(QJsonDocument::Indented);
     if (file.write(bytes) != bytes.size()) {
-        return Result<void>::failure("Failed to write settings file: " + file.errorString());
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Failed to write settings file: ") + file.errorString());
     }
     if (!file.commit()) {
-        return Result<void>::failure("Failed to atomically save settings file: " + file.errorString());
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Failed to atomically save settings file: ") + file.errorString());
     }
     return Result<void>::success();
 }

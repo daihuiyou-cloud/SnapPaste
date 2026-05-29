@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "app/AppStartup.h"
 
 #include "platform/windows/darkmode/DarkModeDetector.h"
@@ -12,7 +13,7 @@ Result<void> AppStartup::applyTheme(QApplication& application,
 {
     QFile file(themePath(settings, darkModeDetector));
     if (!file.open(QIODevice::ReadOnly)) {
-        return Result<void>::failure("Failed to load theme resource.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Failed to load theme resource."));
     }
 
     application.setStyleSheet(QString::fromUtf8(file.readAll()));

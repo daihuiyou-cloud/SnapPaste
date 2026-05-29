@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "infrastructure/persistence/SqliteConnection.h"
 
 #include <QSqlQuery>
@@ -33,7 +34,7 @@ Result<QSqlDatabase> SqliteConnection::database()
 
     if (!opened_) {
         if (!db.open()) {
-            return Result<QSqlDatabase>::failure("Failed to open SQLite database.");
+            return Result<QSqlDatabase>::failure(QCoreApplication::translate("AppErrors", "Failed to open SQLite database."));
         }
 
         QSqlQuery query(db);

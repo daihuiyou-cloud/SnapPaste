@@ -1,4 +1,4 @@
-#include "infrastructure/clipboard/ClipboardImageProvider.h"
+﻿#include "infrastructure/clipboard/ClipboardImageProvider.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -16,12 +16,12 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
 {
     const auto* clipboard = QApplication::clipboard();
     if (clipboard == nullptr) {
-        return Result<QImage>::failure("Cannot access clipboard.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Cannot access clipboard."));
     }
 
     const auto* mimeData = clipboard->mimeData();
     if (mimeData == nullptr) {
-        return Result<QImage>::failure("Nothing on clipboard \u2014 copy an image or text first, then press Paste.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Nothing on clipboard \u2014 copy an image or text first, then press Paste."));
     }
 
     const auto image = clipboard->image();
@@ -47,13 +47,13 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
         return imageFromText(mimeData->text());
     }
 
-    return Result<QImage>::failure("Clipboard content is not supported. Try copying an image or text first.");
+    return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Clipboard content is not supported. Try copying an image or text first."));
 }
 
 Result<QImage> ClipboardImageProvider::imageFromHtml(const QString& html)
 {
     if (html.trimmed().isEmpty()) {
-        return Result<QImage>::failure("Clipboard HTML is empty.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Clipboard HTML is empty."));
     }
 
     QTextDocument document;
@@ -74,7 +74,7 @@ Result<QImage> ClipboardImageProvider::imageFromHtml(const QString& html)
 Result<QImage> ClipboardImageProvider::imageFromText(const QString& text)
 {
     if (text.trimmed().isEmpty()) {
-        return Result<QImage>::failure("Clipboard text is empty.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Clipboard text is empty."));
     }
 
     QFont font;
@@ -103,7 +103,7 @@ Result<QImage> ClipboardImageProvider::colorImageFromText(const QString& text)
 {
     QColor color(text);
     if (!color.isValid()) {
-        return Result<QImage>::failure("Clipboard text is not a color.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Clipboard text is not a color."));
     }
 
     QImage output(260, 180, QImage::Format_ARGB32_Premultiplied);

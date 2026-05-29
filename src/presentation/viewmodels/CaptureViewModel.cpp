@@ -132,7 +132,7 @@ void CaptureViewModel::saveCurrentImage()
 void CaptureViewModel::copyCurrentImageToClipboard()
 {
     if (currentImage_.isNull()) {
-        emit errorOccurred("No image is available to copy.");
+        emit errorOccurred(tr("No image is available to copy."));
         return;
     }
 

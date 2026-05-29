@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "domain/settings/SettingsService.h"
 
 namespace snappaste {
@@ -15,10 +16,10 @@ Result<AppSettings> SettingsService::load()
 Result<void> SettingsService::save(const AppSettings& settings)
 {
     if (settings.saveDirectory.trimmed().isEmpty()) {
-        return Result<void>::failure("Save directory cannot be empty.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Save directory cannot be empty."));
     }
     if (settings.imageFormat != "png" && settings.imageFormat != "jpg") {
-        return Result<void>::failure("Unsupported image format.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Unsupported image format."));
     }
 
     return repository_.save(settings);

@@ -281,7 +281,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
         emit saveRequested(renderedImage());
     } else if (action == saveAsAction) {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
-            "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+            tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
         if (!path.isEmpty()) {
             renderedImage().save(path);
         }
@@ -388,7 +388,7 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             if (event->modifiers().testFlag(Qt::ShiftModifier)) {
                 auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
-                    "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+                    tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
                 if (!path.isEmpty()) {
                     renderedImage().save(path);
                 }

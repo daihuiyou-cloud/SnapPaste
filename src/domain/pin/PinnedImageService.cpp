@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "domain/pin/PinnedImageService.h"
 #include "domain/pin/PinnedItem.h"
 
@@ -17,7 +18,7 @@ PinnedImageService::PinnedImageService(IClipboardImageProvider& clipboardProvide
 Result<PinnedItem> PinnedImageService::createFromImage(QImage image, PinSource source)
 {
     if (image.isNull()) {
-        return Result<PinnedItem>::failure("Cannot pin an empty image.");
+        return Result<PinnedItem>::failure(QCoreApplication::translate("AppErrors", "Cannot pin an empty image."));
     }
 
     PinnedItem item;
@@ -34,7 +35,7 @@ Result<PinnedItem> PinnedImageService::createFromFile(const QString& filePath)
 {
     QImage fileImage(filePath);
     if (fileImage.isNull()) {
-        return Result<PinnedItem>::failure("Failed to load image file.");
+        return Result<PinnedItem>::failure(QCoreApplication::translate("AppErrors", "Failed to load image file."));
     }
 
     return createFromImage(std::move(fileImage), PinSource::File);
@@ -58,7 +59,7 @@ Result<QVector<PinnedItem>> PinnedImageService::restorePinnedItems()
 Result<void> PinnedImageService::updateState(qint64 id, const PinnedImageState& state)
 {
     if (id <= 0) {
-        return Result<void>::failure("Invalid pinned item id.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Invalid pinned item id."));
     }
 
     return repository_.updateState(id, normalizedState(state));
@@ -72,7 +73,7 @@ Result<void> PinnedImageService::setAllVisible(bool visible)
 Result<void> PinnedImageService::close(qint64 id)
 {
     if (id <= 0) {
-        return Result<void>::failure("Invalid pinned item id.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Invalid pinned item id."));
     }
 
     return repository_.close(id);

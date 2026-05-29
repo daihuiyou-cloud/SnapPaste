@@ -2,6 +2,243 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh-CN">
 <context>
+    <name>AppErrors</name>
+    <message>
+        <location filename="../../src/app/AppStartup.cpp" line="16"/>
+        <source>Failed to load theme resource.</source>
+        <translation>加载主题资源失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="22"/>
+        <source>Selection is empty. Please select a region to capture.</source>
+        <translation>选区为空，请选择要截图的区域</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="25"/>
+        <source>Selection too small. Please select a larger area.</source>
+        <translation>选区太小，请选择更大的区域</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="54"/>
+        <source>No image data to save. Try capturing again.</source>
+        <translation>没有要保存的图像数据，请重新截图</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/history/HistoryService.cpp" line="23"/>
+        <source>Invalid capture id.</source>
+        <translation>无效的截图 ID</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="21"/>
+        <source>Cannot pin an empty image.</source>
+        <translation>无法贴图空图像</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="38"/>
+        <source>Failed to load image file.</source>
+        <translation>加载图片文件失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="62"/>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="76"/>
+        <source>Invalid pinned item id.</source>
+        <translation>无效的贴图项 ID</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/settings/SettingsService.cpp" line="19"/>
+        <source>Save directory cannot be empty.</source>
+        <translation>保存目录不能为空</translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/settings/SettingsService.cpp" line="22"/>
+        <source>Unsupported image format.</source>
+        <translation>不支持的图片格式</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="19"/>
+        <source>Cannot access clipboard.</source>
+        <translation>无法访问剪贴板</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="24"/>
+        <source>Nothing on clipboard — copy an image or text first, then press Paste.</source>
+        <translation>剪贴板为空，请先复制图片或文字，再按粘贴</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="50"/>
+        <source>Clipboard content is not supported. Try copying an image or text first.</source>
+        <translation>不支持的剪贴板内容，请先复制图片或文字</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="56"/>
+        <source>Clipboard HTML is empty.</source>
+        <translation>剪贴板 HTML 为空</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="77"/>
+        <source>Clipboard text is empty.</source>
+        <translation>剪贴板文本为空</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="106"/>
+        <source>Clipboard text is not a color.</source>
+        <translation>剪贴板文本不是颜色值</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="70"/>
+        <source>Failed to open settings file.</source>
+        <translation>打开设置文件失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="75"/>
+        <source>Settings file is invalid.</source>
+        <translation>设置文件无效</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="136"/>
+        <source>Failed to write settings file.</source>
+        <translation>写入设置文件失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="140"/>
+        <source>Failed to write settings file: </source>
+        <translation>写入设置文件失败：</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="143"/>
+        <source>Failed to atomically save settings file: </source>
+        <translation>自动保存设置文件失败：</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="19"/>
+        <source>Image is empty.</source>
+        <translation>图像为空</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="25"/>
+        <source>Failed to create capture directory.</source>
+        <translation>创建截图目录失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="33"/>
+        <source>Failed to save capture image.</source>
+        <translation>保存截图图像失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/persistence/SqliteConnection.cpp" line="37"/>
+        <source>Failed to open SQLite database.</source>
+        <translation>打开数据库失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="50"/>
+        <source>Failed to create DXGI factory.</source>
+        <translation>创建 DXGI 工厂失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="97"/>
+        <source>No matching DXGI output was found.</source>
+        <translation>未找到匹配的 DXGI 输出</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="212"/>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="343"/>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="19"/>
+        <source>Capture region is invalid.</source>
+        <translation>截图区域无效</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="235"/>
+        <source>Capture region is outside the selected output.</source>
+        <translation>截图区域超出所选输出</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="241"/>
+        <source>DXGI desktop duplication is not available.</source>
+        <translation>DXGI 桌面复制不可用</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="248"/>
+        <source>Failed to acquire a DXGI desktop frame.</source>
+        <translation>获取 DXGI 桌面帧失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="256"/>
+        <source>DXGI desktop frame is not a D3D11 texture.</source>
+        <translation>DXGI 桌面帧不是 D3D11 纹理</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="278"/>
+        <source>Failed to allocate DXGI readback texture.</source>
+        <translation>分配 DXGI 回读纹理失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="295"/>
+        <source>Failed to map DXGI readback texture.</source>
+        <translation>映射 DXGI 回读纹理失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="315"/>
+        <source>DXGI returned a black frame.</source>
+        <translation>DXGI 返回了黑色帧</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="329"/>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="117"/>
+        <source>No primary screen is available.</source>
+        <translation>无可用主屏幕</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="24"/>
+        <source>Failed to access the screen device context.</source>
+        <translation>访问屏幕设备上下文失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="30"/>
+        <source>Failed to create a capture device context.</source>
+        <translation>创建截图设备上下文失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="37"/>
+        <source>Failed to allocate a capture bitmap.</source>
+        <translation>分配截图位图失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="45"/>
+        <source>Failed to select bitmap into capture DC.</source>
+        <translation>选择位图到截图 DC 失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="62"/>
+        <source>Failed to copy the selected screen region.</source>
+        <translation>复制所选屏幕区域失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="87"/>
+        <source>Failed to read the captured screen pixels.</source>
+        <translation>读取截图像素失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="122"/>
+        <source>Failed to capture primary screen.</source>
+        <translation>截取主屏幕失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="166"/>
+        <source>Capture region does not intersect any screen.</source>
+        <translation>截图区域未与任何屏幕相交</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="182"/>
+        <source>No screen is available for capture.</source>
+        <translation>无可用屏幕进行截图</translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="187"/>
+        <source>Failed to capture selected region.</source>
+        <translation>截取所选区域失败</translation>
+    </message>
+</context>
+<context>
     <name>EditorWindow</name>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="257"/>
@@ -544,6 +781,11 @@
         <translation>另存为</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1162"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
+        <translation>PNG 图片 (*.png);;JPEG 图片 (*.jpg *.jpeg)</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1194"/>
         <source>Are you sure you want to clear all annotations?</source>
         <translation>确定要清除所有标注吗？</translation>
@@ -627,19 +869,23 @@
         <translation>注册截图快捷键失败：%1</translation>
     </message>
     <message>
+        <location filename="../../src/app/Application.cpp" line="389"/>
+        <location filename="../../src/app/Application.cpp" line="394"/>
+        <location filename="../../src/app/Application.cpp" line="399"/>
+        <location filename="../../src/app/Application.cpp" line="404"/>
+        <source>SnapPaste</source>
+        <translation>SnapPaste</translation>
+    </message>
+    <message>
         <location filename="../../src/app/Application.cpp" line="392"/>
         <source>Failed to register paste hotkey: %1</source>
         <translation>注册贴图快捷键失败：%1</translation>
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="397"/>
+        <location filename="../../src/app/Application.cpp" line="402"/>
         <source>Failed to register hide-pins hotkey: %1</source>
         <translation>注册隐藏贴图快捷键失败：%1</translation>
-    </message>
-    <message>
-        <location filename="../../src/app/Application.cpp" line="402"/>
-        <source>Failed to register repeat-capture hotkey: %1</source>
-        <translation>注册重复截图快捷键失败：%1</translation>
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="454"/>
@@ -716,6 +962,27 @@
     </message>
 </context>
 <context>
+    <name>snappaste::CaptureOverlay</name>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="488"/>
+        <source>Tab / Arrow keys to cycle  ·  Enter to capture</source>
+        <translation>Tab/方向键切换  ·  Enter 确认截图</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="495"/>
+        <source>Drag to select area  ·  Double-click to capture full screen</source>
+        <translation>拖动选择区域  ·  双击截取全屏</translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::CaptureViewModel</name>
+    <message>
+        <location filename="../../src/presentation/viewmodels/CaptureViewModel.cpp" line="135"/>
+        <source>No image is available to copy.</source>
+        <translation>没有可复制的图像</translation>
+    </message>
+</context>
+<context>
     <name>snappaste::EditorWindow</name>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="91"/>
@@ -757,8 +1024,15 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="136"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="141"/>
         <source>Export</source>
         <translation>导出</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="142"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="869"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
+        <translation>PNG 图片 (*.png);;JPEG 图片 (*.jpg *.jpeg)</translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="146"/>
@@ -815,6 +1089,61 @@
         <translation>图片：%1 x %2 像素</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="221"/>
+        <source>Rect</source>
+        <translation>矩形</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="221"/>
+        <source>Ellipse</source>
+        <translation>椭圆</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="222"/>
+        <source>Line</source>
+        <translation>直线</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="223"/>
+        <source>Pen</source>
+        <translation>画笔</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="223"/>
+        <source>Text</source>
+        <translation>文字</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="224"/>
+        <source>Highlight</source>
+        <translation>高亮</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="224"/>
+        <source>Numbered</source>
+        <translation>序号</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="225"/>
+        <source>Mosaic</source>
+        <translation>马赛克</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="225"/>
+        <source>Eraser</source>
+        <translation>橡皮擦</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="226"/>
+        <source>Select</source>
+        <translation>选择</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="226"/>
+        <source>Crop</source>
+        <translation>裁剪</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="239"/>
         <source>Undo (%1)</source>
         <translation>撤销 (%1)</translation>
@@ -860,6 +1189,7 @@
         <translation>不透明度</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="222"/>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="630"/>
         <source>Arrow</source>
         <translation>箭头</translation>
@@ -878,6 +1208,16 @@
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="637"/>
         <source>Square</source>
         <translation>方形</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="656"/>
+        <source>Radius</source>
+        <translation>圆角半径</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="658"/>
+        <source>Off</source>
+        <translation>关闭</translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="666"/>
@@ -923,6 +1263,15 @@
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="868"/>
         <source>Save As</source>
         <translation>另存为</translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::HistoryViewModel</name>
+    <message>
+        <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="13"/>
+        <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="31"/>
+        <source>Capture History</source>
+        <translation>截图历史</translation>
     </message>
 </context>
 <context>
@@ -1228,6 +1577,12 @@
         <translation>另存为</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="284"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="391"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
+        <translation>PNG 图片 (*.png);;JPEG 图片 (*.jpg *.jpeg)</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="295"/>
         <source>Copied %1</source>
         <translation>已复制 %1</translation>
@@ -1473,6 +1828,11 @@
         <location filename="../../src/presentation/tray/TrayController.cpp" line="23"/>
         <source>Quit</source>
         <translation>退出</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/tray/TrayController.cpp" line="26"/>
+        <source>SnapPaste</source>
+        <translation>SnapPaste</translation>
     </message>
     <message>
         <location filename="../../src/presentation/tray/TrayController.cpp" line="36"/>

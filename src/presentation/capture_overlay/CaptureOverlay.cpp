@@ -485,14 +485,14 @@ void CaptureOverlay::drawOverlayState(QPainter& painter)
         painter.setPen(QColor(255, 255, 255, 80));
         painter.setFont(QFont("Microsoft YaHei UI", 11));
         painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
-            "Tab / Arrow keys to cycle  ·  Enter to capture");
+            tr("Tab / Arrow keys to cycle  ·  Enter to capture"));
     } else {
         if (state_ == State::Idle) {
             drawMagnifier(painter);
             painter.setPen(QColor(255, 255, 255, 80));
             painter.setFont(QFont("Microsoft YaHei UI", 11));
             painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
-                "Drag to select area  ·  Double-click to capture full screen");
+                tr("Drag to select area  ·  Double-click to capture full screen"));
         }
     }
 }

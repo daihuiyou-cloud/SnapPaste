@@ -2,6 +2,243 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en">
 <context>
+    <name>AppErrors</name>
+    <message>
+        <location filename="../../src/app/AppStartup.cpp" line="16"/>
+        <source>Failed to load theme resource.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="22"/>
+        <source>Selection is empty. Please select a region to capture.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="25"/>
+        <source>Selection too small. Please select a larger area.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/capture/CaptureWorkflow.cpp" line="54"/>
+        <source>No image data to save. Try capturing again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/history/HistoryService.cpp" line="23"/>
+        <source>Invalid capture id.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="21"/>
+        <source>Cannot pin an empty image.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="38"/>
+        <source>Failed to load image file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="62"/>
+        <location filename="../../src/domain/pin/PinnedImageService.cpp" line="76"/>
+        <source>Invalid pinned item id.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/settings/SettingsService.cpp" line="19"/>
+        <source>Save directory cannot be empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/domain/settings/SettingsService.cpp" line="22"/>
+        <source>Unsupported image format.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="19"/>
+        <source>Cannot access clipboard.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="24"/>
+        <source>Nothing on clipboard — copy an image or text first, then press Paste.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="50"/>
+        <source>Clipboard content is not supported. Try copying an image or text first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="56"/>
+        <source>Clipboard HTML is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="77"/>
+        <source>Clipboard text is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/clipboard/ClipboardImageProvider.cpp" line="106"/>
+        <source>Clipboard text is not a color.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="70"/>
+        <source>Failed to open settings file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="75"/>
+        <source>Settings file is invalid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="136"/>
+        <source>Failed to write settings file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="140"/>
+        <source>Failed to write settings file: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/config/JsonSettingsRepository.cpp" line="143"/>
+        <source>Failed to atomically save settings file: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="19"/>
+        <source>Image is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="25"/>
+        <source>Failed to create capture directory.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/image/LocalImageStorage.cpp" line="33"/>
+        <source>Failed to save capture image.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/infrastructure/persistence/SqliteConnection.cpp" line="37"/>
+        <source>Failed to open SQLite database.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="50"/>
+        <source>Failed to create DXGI factory.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="97"/>
+        <source>No matching DXGI output was found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="212"/>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="343"/>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="19"/>
+        <source>Capture region is invalid.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="235"/>
+        <source>Capture region is outside the selected output.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="241"/>
+        <source>DXGI desktop duplication is not available.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="248"/>
+        <source>Failed to acquire a DXGI desktop frame.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="256"/>
+        <source>DXGI desktop frame is not a D3D11 texture.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="278"/>
+        <source>Failed to allocate DXGI readback texture.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="295"/>
+        <source>Failed to map DXGI readback texture.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="315"/>
+        <source>DXGI returned a black frame.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/DxgiScreenCaptureService.cpp" line="329"/>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="117"/>
+        <source>No primary screen is available.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="24"/>
+        <source>Failed to access the screen device context.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="30"/>
+        <source>Failed to create a capture device context.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="37"/>
+        <source>Failed to allocate a capture bitmap.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="45"/>
+        <source>Failed to select bitmap into capture DC.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="62"/>
+        <source>Failed to copy the selected screen region.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="87"/>
+        <source>Failed to read the captured screen pixels.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="122"/>
+        <source>Failed to capture primary screen.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="166"/>
+        <source>Capture region does not intersect any screen.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="182"/>
+        <source>No screen is available for capture.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/platform/windows/capture/GdiScreenCaptureService.cpp" line="187"/>
+        <source>Failed to capture selected region.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>EditorWindow</name>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="257"/>
@@ -544,6 +781,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1162"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1194"/>
         <source>Are you sure you want to clear all annotations?</source>
         <translation type="unfinished"></translation>
@@ -627,18 +869,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/app/Application.cpp" line="389"/>
+        <location filename="../../src/app/Application.cpp" line="394"/>
+        <location filename="../../src/app/Application.cpp" line="399"/>
+        <location filename="../../src/app/Application.cpp" line="404"/>
+        <source>SnapPaste</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/app/Application.cpp" line="392"/>
         <source>Failed to register paste hotkey: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="397"/>
-        <source>Failed to register hide-pins hotkey: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../../src/app/Application.cpp" line="402"/>
-        <source>Failed to register repeat-capture hotkey: %1</source>
+        <source>Failed to register hide-pins hotkey: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -716,6 +962,27 @@
     </message>
 </context>
 <context>
+    <name>snappaste::CaptureOverlay</name>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="488"/>
+        <source>Tab / Arrow keys to cycle  ·  Enter to capture</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="495"/>
+        <source>Drag to select area  ·  Double-click to capture full screen</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::CaptureViewModel</name>
+    <message>
+        <location filename="../../src/presentation/viewmodels/CaptureViewModel.cpp" line="135"/>
+        <source>No image is available to copy.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>snappaste::EditorWindow</name>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="91"/>
@@ -757,7 +1024,14 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="136"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="141"/>
         <source>Export</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="142"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="869"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -815,6 +1089,61 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="221"/>
+        <source>Rect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="221"/>
+        <source>Ellipse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="222"/>
+        <source>Line</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="223"/>
+        <source>Pen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="223"/>
+        <source>Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="224"/>
+        <source>Highlight</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="224"/>
+        <source>Numbered</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="225"/>
+        <source>Mosaic</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="225"/>
+        <source>Eraser</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="226"/>
+        <source>Select</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="226"/>
+        <source>Crop</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="239"/>
         <source>Undo (%1)</source>
         <translation type="unfinished"></translation>
@@ -860,6 +1189,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="222"/>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="630"/>
         <source>Arrow</source>
         <translation type="unfinished"></translation>
@@ -877,6 +1207,16 @@
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="637"/>
         <source>Square</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="656"/>
+        <source>Radius</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="658"/>
+        <source>Off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -922,6 +1262,15 @@
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="868"/>
         <source>Save As</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::HistoryViewModel</name>
+    <message>
+        <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="13"/>
+        <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="31"/>
+        <source>Capture History</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1228,6 +1577,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="284"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="391"/>
+        <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="295"/>
         <source>Copied %1</source>
         <translation type="unfinished"></translation>
@@ -1472,6 +1827,11 @@
     <message>
         <location filename="../../src/presentation/tray/TrayController.cpp" line="23"/>
         <source>Quit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/tray/TrayController.cpp" line="26"/>
+        <source>SnapPaste</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

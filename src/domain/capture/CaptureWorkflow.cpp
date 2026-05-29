@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "domain/capture/CaptureWorkflow.h"
 
 #include "shared/utils/TimeProvider.h"
@@ -18,10 +19,10 @@ CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
 Result<void> CaptureWorkflow::validateRegion(const QRect& region)
 {
     if (!region.isValid()) {
-        return Result<void>::failure("Selection is empty. Please select a region to capture.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Selection is empty. Please select a region to capture."));
     }
     if (region.width() < 8 || region.height() < 8) {
-        return Result<void>::failure("Selection too small. Please select a larger area.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Selection too small. Please select a larger area."));
     }
     return Result<void>::success();
 }
@@ -50,7 +51,7 @@ Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, co
 {
     QMutexLocker lock(&mutex_);
     if (image.isNull()) {
-        return Result<CaptureRecord>::failure("No image data to save. Try capturing again.");
+        return Result<CaptureRecord>::failure(QCoreApplication::translate("AppErrors", "No image data to save. Try capturing again."));
     }
 
     const auto settingsResult = settingsRepository_.load();

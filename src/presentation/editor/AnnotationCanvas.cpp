@@ -1159,7 +1159,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         QApplication::clipboard()->setImage(renderedImage());
     } else if (action == saveAs) {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
-            "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+            tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
         if (!path.isEmpty()) {
             renderedImage().save(path);
         }

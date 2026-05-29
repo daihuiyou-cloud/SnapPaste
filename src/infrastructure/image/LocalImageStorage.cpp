@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "infrastructure/image/LocalImageStorage.h"
 
 #include "infrastructure/filesystem/AppPaths.h"
@@ -15,13 +16,13 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
                                                    const QString& format)
 {
     if (image.isNull()) {
-        return Result<StoredImage>::failure("Image is empty.");
+        return Result<StoredImage>::failure(QCoreApplication::translate("AppErrors", "Image is empty."));
     }
 
     const auto normalizedFormat = format.toLower() == "jpg" ? QString("jpg") : QString("png");
     const auto baseName = nextBaseName();
     if (!AppPaths::ensureDirectory(directory)) {
-        return Result<StoredImage>::failure("Failed to create capture directory.");
+        return Result<StoredImage>::failure(QCoreApplication::translate("AppErrors", "Failed to create capture directory."));
     }
 
     const auto capturePath = QDir(directory).filePath(baseName + "." + normalizedFormat);
@@ -29,7 +30,7 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
 
     if (!image.save(capturePath, normalizedFormat.toUpper().toUtf8().constData())) {
         QFile::remove(capturePath);
-        return Result<StoredImage>::failure("Failed to save capture image.");
+        return Result<StoredImage>::failure(QCoreApplication::translate("AppErrors", "Failed to save capture image."));
     }
 
     const auto thumb = image.scaled(320, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);

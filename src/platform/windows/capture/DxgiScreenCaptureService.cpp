@@ -1,4 +1,4 @@
-#include "platform/windows/capture/DxgiScreenCaptureService.h"
+﻿#include "platform/windows/capture/DxgiScreenCaptureService.h"
 
 #include "shared/screen/ScreenSegmentUtil.h"
 
@@ -47,7 +47,7 @@ Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physica
     ComPtr<IDXGIFactory1> factory;
     auto hr = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(factory.GetAddressOf()));
     if (FAILED(hr)) {
-        return Result<OutputMatch>::failure("Failed to create DXGI factory.");
+        return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "Failed to create DXGI factory."));
     }
 
     OutputMatch fallback;
@@ -94,7 +94,7 @@ Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physica
         return Result<OutputMatch>::success(std::move(fallback));
     }
 
-    return Result<OutputMatch>::failure("No matching DXGI output was found.");
+    return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "No matching DXGI output was found."));
 }
 
 Result<ComPtr<ID3D11Device>> createD3dDevice(ComPtr<ID3D11DeviceContext>& context)
@@ -209,7 +209,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
 {
     const auto& region = segment.logicalRegion;
     if (!region.isValid() || region.width() < 1 || region.height() < 1) {
-        return Result<QImage>::failure("Capture region is invalid.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region is invalid."));
     }
 
     const auto approximateScale = std::max<qreal>(segment.devicePixelRatio, 1.0);
@@ -232,20 +232,20 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
                                                        QPoint(output.desc.DesktopCoordinates.right - 1,
                                                               output.desc.DesktopCoordinates.bottom - 1)));
     if (!physicalRegion.isValid()) {
-        return Result<QImage>::failure("Capture region is outside the selected output.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region is outside the selected output."));
     }
 
     ComPtr<IDXGIOutputDuplication> duplication;
     auto hr = output.output->DuplicateOutput(&device, duplication.GetAddressOf());
     if (FAILED(hr)) {
-        return Result<QImage>::failure("DXGI desktop duplication is not available.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI desktop duplication is not available."));
     }
 
     DXGI_OUTDUPL_FRAME_INFO frameInfo{};
     ComPtr<IDXGIResource> desktopResource;
     hr = duplication->AcquireNextFrame(100, &frameInfo, desktopResource.GetAddressOf());
     if (FAILED(hr)) {
-        return Result<QImage>::failure("Failed to acquire a DXGI desktop frame.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to acquire a DXGI desktop frame."));
     }
 
     ScopedFrameRelease frameGuard(duplication.Get());
@@ -253,7 +253,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
     ComPtr<ID3D11Texture2D> desktopTexture;
     hr = desktopResource.As(&desktopTexture);
     if (FAILED(hr)) {
-        return Result<QImage>::failure("DXGI desktop frame is not a D3D11 texture.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI desktop frame is not a D3D11 texture."));
     }
 
     const auto width = physicalRegion.width();
@@ -275,7 +275,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
     ComPtr<ID3D11Texture2D> stagingTexture;
     hr = device.CreateTexture2D(&stagingDesc, nullptr, stagingTexture.GetAddressOf());
     if (FAILED(hr)) {
-        return Result<QImage>::failure("Failed to allocate DXGI readback texture.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to allocate DXGI readback texture."));
     }
 
     const D3D11_BOX sourceBox{
@@ -292,7 +292,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
     D3D11_MAPPED_SUBRESOURCE mapped{};
     hr = context.Map(stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
     if (FAILED(hr)) {
-        return Result<QImage>::failure("Failed to map DXGI readback texture.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to map DXGI readback texture."));
     }
 
     auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
@@ -312,7 +312,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
             }
         }
         if (allBlack) {
-            return Result<QImage>::failure("DXGI returned a black frame.");
+            return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI returned a black frame."));
         }
     }
 
@@ -326,7 +326,7 @@ Result<QImage> DxgiScreenCaptureService::capturePrimaryScreen()
 {
     auto* screen = QGuiApplication::primaryScreen();
     if (screen == nullptr) {
-        return Result<QImage>::failure("No primary screen is available.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "No primary screen is available."));
     }
 
     return captureRegion(screen->geometry());
@@ -340,7 +340,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region)
 Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
 {
     if (!region.isValid() || region.width() < 1 || region.height() < 1) {
-        return Result<QImage>::failure("Capture region is invalid.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region is invalid."));
     }
 
     if (segments.isEmpty()) {

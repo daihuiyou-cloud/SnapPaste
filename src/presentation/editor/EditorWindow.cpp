@@ -138,8 +138,8 @@ void EditorWindow::setupActions()
     connect(saveAsAction, &QAction::triggered, this, [this] {
         QSettings settings;
         auto dir = settings.value("editor/lastSaveDir").toString();
-        auto path = QFileDialog::getSaveFileName(this, "Export", dir,
-            "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+        auto path = QFileDialog::getSaveFileName(this, tr("Export"), dir,
+            tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
         if (!path.isEmpty()) {
             if (canvas_->renderedImage().save(path)) {
                 QSettings().setValue("editor/lastSaveDir", QFileInfo(path).absolutePath());
@@ -218,12 +218,12 @@ void EditorWindow::refreshPanelUi()
             recentToolBtns_[i]->setIcon(iconForTool(recent[i]));
             recentToolBtns_[i]->setToolTip([&]{
                 switch (recent[i]) {
-                    case AnnotationTool::Rectangle: return "Rect"; case AnnotationTool::Ellipse: return "Ellipse";
-                    case AnnotationTool::Arrow: return "Arrow"; case AnnotationTool::Line: return "Line";
-                    case AnnotationTool::Pen: return "Pen"; case AnnotationTool::Text: return "Text";
-                    case AnnotationTool::Highlight: return "Highlight"; case AnnotationTool::Numbered: return "Numbered";
-                    case AnnotationTool::Mosaic: return "Mosaic"; case AnnotationTool::Eraser: return "Eraser";
-                    case AnnotationTool::Select: return "Select"; case AnnotationTool::Crop: return "Crop";
+                    case AnnotationTool::Rectangle: return tr("Rect"); case AnnotationTool::Ellipse: return tr("Ellipse");
+                    case AnnotationTool::Arrow: return tr("Arrow"); case AnnotationTool::Line: return tr("Line");
+                    case AnnotationTool::Pen: return tr("Pen"); case AnnotationTool::Text: return tr("Text");
+                    case AnnotationTool::Highlight: return tr("Highlight"); case AnnotationTool::Numbered: return tr("Numbered");
+                    case AnnotationTool::Mosaic: return tr("Mosaic"); case AnnotationTool::Eraser: return tr("Eraser");
+                    case AnnotationTool::Select: return tr("Select"); case AnnotationTool::Crop: return tr("Crop");
                     default: return "";
                 }
             }());
@@ -653,9 +653,9 @@ void EditorWindow::createToolPanel()
     }
     layout->addLayout(arrowRow);
 
-    addSliderRow("Radius", 0, 40, 0,
+    addSliderRow(tr("Radius"), 0, 40, 0,
         [this](int v) { canvas_->setCornerRadius(v); },
-        [](int v) { return v > 0 ? QString("%1px").arg(v) : "Off"; });
+        [](int v) { return v > 0 ? QString("%1px").arg(v) : tr("Off"); });
 
     layout->addSpacing(4);
 
@@ -866,7 +866,7 @@ void EditorWindow::createToolPanel()
     });
     connect(actionButtons[5], &QToolButton::clicked, this, [this] {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
-            "PNG (*.png);;JPEG (*.jpg *.jpeg)");
+            tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
         if (!path.isEmpty()) {
             if (canvas_->renderedImage().save(path)) {
                 statusBar()->showMessage(tr("Saved to %1").arg(path), 5000);

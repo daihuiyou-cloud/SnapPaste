@@ -10,7 +10,7 @@ HistoryViewModel::HistoryViewModel(HistoryService& service, QObject* parent)
     : QObject(parent)
     , service_(service)
 {
-    model_.setHorizontalHeaderLabels({"Capture History"});
+    model_.setHorizontalHeaderLabels({tr("Capture History")});
 }
 
 QStandardItemModel* HistoryViewModel::model() noexcept
@@ -28,7 +28,7 @@ void HistoryViewModel::refresh()
 
     records_ = result.value();
     model_.clear();
-    model_.setHorizontalHeaderLabels({"Capture History"});
+    model_.setHorizontalHeaderLabels({tr("Capture History")});
 
     for (const auto& record : records_) {
         const QFileInfo file(record.filePath);

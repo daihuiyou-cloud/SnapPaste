@@ -1,3 +1,4 @@
+﻿#include <QCoreApplication>
 #include "domain/history/HistoryService.h"
 
 namespace snappaste {
@@ -19,7 +20,7 @@ Result<QVector<CaptureRecord>> HistoryService::recentCaptures(int limit)
 Result<void> HistoryService::deleteCapture(qint64 id)
 {
     if (id <= 0) {
-        return Result<void>::failure("Invalid capture id.");
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Invalid capture id."));
     }
 
     return repository_.markDeleted(id);

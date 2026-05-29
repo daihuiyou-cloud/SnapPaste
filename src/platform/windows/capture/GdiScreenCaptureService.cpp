@@ -1,4 +1,4 @@
-#include "platform/windows/capture/GdiScreenCaptureService.h"
+﻿#include "platform/windows/capture/GdiScreenCaptureService.h"
 
 #include <QGuiApplication>
 #include <QPixmap>
@@ -16,25 +16,25 @@ namespace {
 Result<QImage> captureRectWithGdi(const QRect& region)
 {
     if (!region.isValid() || region.width() < 1 || region.height() < 1) {
-        return Result<QImage>::failure("Capture region is invalid.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region is invalid."));
     }
 
     HDC screenDc = GetDC(nullptr);
     if (screenDc == nullptr) {
-        return Result<QImage>::failure("Failed to access the screen device context.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to access the screen device context."));
     }
 
     HDC memoryDc = CreateCompatibleDC(screenDc);
     if (memoryDc == nullptr) {
         ReleaseDC(nullptr, screenDc);
-        return Result<QImage>::failure("Failed to create a capture device context.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to create a capture device context."));
     }
 
     HBITMAP bitmap = CreateCompatibleBitmap(screenDc, region.width(), region.height());
     if (bitmap == nullptr) {
         DeleteDC(memoryDc);
         ReleaseDC(nullptr, screenDc);
-        return Result<QImage>::failure("Failed to allocate a capture bitmap.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to allocate a capture bitmap."));
     }
 
     auto* oldBitmap = SelectObject(memoryDc, bitmap);
@@ -42,7 +42,7 @@ Result<QImage> captureRectWithGdi(const QRect& region)
         DeleteObject(bitmap);
         DeleteDC(memoryDc);
         ReleaseDC(nullptr, screenDc);
-        return Result<QImage>::failure("Failed to select bitmap into capture DC.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to select bitmap into capture DC."));
     }
     const auto copied = BitBlt(memoryDc,
                                0,
@@ -59,7 +59,7 @@ Result<QImage> captureRectWithGdi(const QRect& region)
         DeleteObject(bitmap);
         DeleteDC(memoryDc);
         ReleaseDC(nullptr, screenDc);
-        return Result<QImage>::failure("Failed to copy the selected screen region.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to copy the selected screen region."));
     }
 
     QImage image(region.width(), region.height(), QImage::Format_RGB32);
@@ -84,7 +84,7 @@ Result<QImage> captureRectWithGdi(const QRect& region)
     ReleaseDC(nullptr, screenDc);
 
     if (lines == 0) {
-        return Result<QImage>::failure("Failed to read the captured screen pixels.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to read the captured screen pixels."));
     }
 
     return Result<QImage>::success(std::move(image));
@@ -114,12 +114,12 @@ Result<QImage> GdiScreenCaptureService::capturePrimaryScreen()
 #else
     auto* screen = QGuiApplication::primaryScreen();
     if (screen == nullptr) {
-        return Result<QImage>::failure("No primary screen is available.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "No primary screen is available."));
     }
 
     const auto pixmap = screen->grabWindow(0);
     if (pixmap.isNull()) {
-        return Result<QImage>::failure("Failed to capture primary screen.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to capture primary screen."));
     }
 
     return Result<QImage>::success(pixmap.toImage());
@@ -163,7 +163,7 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
     }
 
     if (physicalRegion.isNull()) {
-        return Result<QImage>::failure("Capture region does not intersect any screen.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region does not intersect any screen."));
     }
 
     auto result = captureRectWithGdi(physicalRegion);
@@ -179,12 +179,12 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
         screen = QGuiApplication::primaryScreen();
     }
     if (screen == nullptr) {
-        return Result<QImage>::failure("No screen is available for capture.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "No screen is available for capture."));
     }
 
     const auto pixmap = screen->grabWindow(0, region.x(), region.y(), region.width(), region.height());
     if (pixmap.isNull()) {
-        return Result<QImage>::failure("Failed to capture selected region.");
+        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to capture selected region."));
     }
 
     return Result<QImage>::success(pixmap.toImage());
