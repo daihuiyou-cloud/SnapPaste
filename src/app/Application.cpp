@@ -287,10 +287,13 @@ void Application::ocrRegion(const QRect& region)
 
                 auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
                 guard->ocrWindow_ = win;
+#pragma warning(push)
+#pragma warning(disable: 4573)
                 QObject::connect(win, &QObject::destroyed, guard.data(), [guard] {
                     if (guard) guard->ocrWindow_.clear();
                 });
                 QObject::connect(win, &OcrResultWindow::pasteRequested, guard.data(), [guard] { if (guard) guard->pasteFromClipboard(); });
+#pragma warning(pop)
                 guard->showStatus(
                     QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);
