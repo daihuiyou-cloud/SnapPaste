@@ -1090,6 +1090,11 @@
         <translation>深色</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="155"/>
+        <source>Auto (System Default)</source>
+        <translation>自动（系统默认）</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="199"/>
         <source>Save directory</source>
         <translation>保存目录</translation>
