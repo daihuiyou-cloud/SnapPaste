@@ -3,15 +3,45 @@
 #include "presentation/toast/ToastNotifier.h"
 
 #include <QApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLibraryInfo>
 #include <QSharedMemory>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QTranslator>
 
+static QString readSavedLanguage()
+{
+    const auto overridePath = qEnvironmentVariable("SNAPPASTE_DATA_DIR");
+    const auto dataDir = overridePath.isEmpty()
+        ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+        : overridePath;
+    const auto path = QDir(dataDir).filePath("settings.json");
+
+    QFile file(path);
+    if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    const auto doc = QJsonDocument::fromJson(file.readAll());
+    if (!doc.isObject()) {
+        return {};
+    }
+
+    return doc.object().value("language").toString();
+}
+
 static void installTranslators()
 {
+    const auto langTag = readSavedLanguage();
+
     auto* translator = new QTranslator(QCoreApplication::instance());
-    if (translator->load(QLocale(), QLatin1String("snappaste"), QLatin1String("_"),
+    QLocale locale = langTag.isEmpty() ? QLocale() : QLocale(langTag);
+    if (translator->load(locale, QLatin1String("snappaste"), QLatin1String("_"),
                          QLatin1String(":/translations"))) {
         QCoreApplication::installTranslator(translator);
     }

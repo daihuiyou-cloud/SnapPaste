@@ -287,7 +287,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../../src/app/main.cpp" line="34"/>
+        <location filename="../../src/app/main.cpp" line="64"/>
         <source>Program already running</source>
         <translation type="unfinished">Program already running</translation>
     </message>
@@ -328,122 +328,122 @@
 <context>
     <name>SettingsWidget</name>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="153"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="165"/>
         <source>Auto (System Default)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="154"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="166"/>
         <source>English</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="155"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="167"/>
         <source>Chinese (Simplified)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="156"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="168"/>
         <source>Chinese (Traditional)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="157"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="169"/>
         <source>Japanese</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="158"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="170"/>
         <source>Korean</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="159"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="171"/>
         <source>French</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="160"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="172"/>
         <source>German</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="161"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="173"/>
         <source>Spanish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="162"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="174"/>
         <source>Italian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="163"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="175"/>
         <source>Portuguese (Brazil)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="164"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="176"/>
         <source>Russian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="165"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="177"/>
         <source>Arabic</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="166"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="178"/>
         <source>Dutch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="167"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="179"/>
         <source>Polish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="168"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="180"/>
         <source>Swedish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="169"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="181"/>
         <source>Turkish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="170"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="182"/>
         <source>Czech</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="171"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="183"/>
         <source>Danish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="172"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="184"/>
         <source>Finnish</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="173"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="185"/>
         <source>Greek</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="174"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="186"/>
         <source>Hungarian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="175"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="187"/>
         <source>Norwegian</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="176"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="188"/>
         <source>Thai</source>
         <translation type="unfinished"></translation>
     </message>
@@ -830,7 +830,7 @@
 <context>
     <name>snappaste::HotkeyInput</name>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="49"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="50"/>
         <source>Press shortcut...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1054,143 +1054,153 @@
 <context>
     <name>snappaste::SettingsWidget</name>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="137"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="139"/>
         <source>Auto-save on capture</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="143"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="145"/>
         <source>Browse</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="145"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="147"/>
         <source>Save Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="146"/>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="255"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="148"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="269"/>
         <source>Restore Defaults</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="149"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="151"/>
         <source>System</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="149"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="151"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="149"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="151"/>
         <source>Dark</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="187"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="155"/>
+        <source>Auto (System Default)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="199"/>
         <source>Save directory</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="188"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="200"/>
         <source>Image format</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="189"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="201"/>
         <source>Theme</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="190"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="202"/>
+        <source>Language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="203"/>
         <source>OCR language</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="192"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="205"/>
         <source>Capture hotkey</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="193"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="206"/>
         <source>Paste hotkey</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="194"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="207"/>
         <source>Hide pins hotkey</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="195"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="208"/>
         <source>Repeat capture hotkey</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="208"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="221"/>
         <source>Choose capture directory</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="215"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="228"/>
         <source>Validation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="215"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="228"/>
         <source>Save directory cannot be empty.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="226"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="239"/>
         <source>Capture</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="226"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="239"/>
         <source>Paste</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="226"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="239"/>
         <source>Hide Pins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="226"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="239"/>
         <source>Repeat Capture</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="234"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="247"/>
         <source>Hotkey Conflict</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="235"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="248"/>
         <source>&quot;%1&quot; and &quot;%2&quot; have the same shortcut.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="256"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="270"/>
         <source>Reset all settings to their default values?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="277"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="293"/>
         <source>Saved [OK]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="284"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="300"/>
         <source>Settings saved successfully</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="288"/>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="304"/>
         <source>Error: </source>
         <translation type="unfinished"></translation>
     </message>

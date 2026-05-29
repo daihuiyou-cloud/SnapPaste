@@ -26,6 +26,7 @@ private:
     QComboBox* imageFormatCombo_ = nullptr;
     QComboBox* themeCombo_ = nullptr;
     QComboBox* ocrLanguageCombo_ = nullptr;
+    QComboBox* uiLanguageCombo_ = nullptr;
     QCheckBox* autoSaveCheckbox_ = nullptr;
     HotkeyInput* captureHotkeyInput_ = nullptr;
     HotkeyInput* pasteHotkeyInput_ = nullptr;

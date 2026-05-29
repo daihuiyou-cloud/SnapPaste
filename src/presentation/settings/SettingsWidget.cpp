@@ -135,6 +135,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     , imageFormatCombo_(new QComboBox(this))
     , themeCombo_(new QComboBox(this))
     , ocrLanguageCombo_(new QComboBox(this))
+    , uiLanguageCombo_(new QComboBox(this))
     , autoSaveCheckbox_(new QCheckBox(tr("Auto-save on capture"), this))
     , captureHotkeyInput_(new HotkeyInput(this))
     , pasteHotkeyInput_(new HotkeyInput(this))
@@ -148,6 +149,16 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
 
     imageFormatCombo_->addItems({"png", "jpg"});
     themeCombo_->addItems({tr("System"), tr("Light"), tr("Dark")});
+
+    struct UiLangEntry { QString label; QString tag; };
+    const UiLangEntry kUiLanguages[] = {
+        {tr("Auto (System Default)"), QStringLiteral("")},
+        {QStringLiteral("English"),   QStringLiteral("en")},
+        {QStringLiteral("\xe4\xb8\xad\xe6\x96\x87\xef\xbc\x88\xe7\xae\x80\xe4\xbd\x93\xef\xbc\x89"), QStringLiteral("zh_CN")},
+    };
+    for (const auto& lang : kUiLanguages) {
+        uiLanguageCombo_->addItem(lang.label, lang.tag);
+    }
 
     struct LangEntry { const char* label; const char* tag; };
     const LangEntry kLanguages[] = {
@@ -188,6 +199,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     form->addRow(tr("Save directory"), pathLayout);
     form->addRow(tr("Image format"), imageFormatCombo_);
     form->addRow(tr("Theme"), themeCombo_);
+    form->addRow(tr("Language"), uiLanguageCombo_);
     form->addRow(tr("OCR language"), ocrLanguageCombo_);
     form->addRow("", autoSaveCheckbox_);
     form->addRow(tr("Capture hotkey"), captureHotkeyInput_);
@@ -248,6 +260,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         settings.pasteHotkey = hotkeys[1];
         settings.hidePinsHotkey = hotkeys[2];
         settings.ocrLanguage = ocrLanguageCombo_->currentData().toString();
+        settings.language = uiLanguageCombo_->currentData().toString();
         settings.autoSaveOnCapture = autoSaveCheckbox_->isChecked();
         settings.repeatCaptureHotkey = hotkeys[3];
         viewModel_.save(settings);
@@ -267,6 +280,8 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                 themeCombo_->setCurrentIndex(themeIndex(settings.themeMode));
                 int langIdx = ocrLanguageCombo_->findData(settings.ocrLanguage);
                 if (langIdx >= 0) ocrLanguageCombo_->setCurrentIndex(langIdx);
+                int uiLangIdx = uiLanguageCombo_->findData(settings.language);
+                if (uiLangIdx >= 0) uiLanguageCombo_->setCurrentIndex(uiLangIdx);
                 autoSaveCheckbox_->setChecked(settings.autoSaveOnCapture);
                 captureHotkeyInput_->setHotkey(settings.captureHotkey);
                 pasteHotkeyInput_->setHotkey(settings.pasteHotkey);

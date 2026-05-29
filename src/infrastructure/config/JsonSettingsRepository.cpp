@@ -81,6 +81,7 @@ Result<AppSettings> JsonSettingsRepository::load()
     settings.imageFormat = object.value("imageFormat").toString(settings.imageFormat).toLower();
     settings.themeMode = themeFromString(object.value("themeMode").toString("system"));
     settings.ocrLanguage = object.value("ocrLanguage").toString();
+    settings.language = object.value("language").toString();
     settings.autoSaveOnCapture = object.value("autoSaveOnCapture").toBool(false);
 
     settings.captureHotkey = readHotkeyFromObject(object, "captureHotkey", settings.captureHotkey);
@@ -122,6 +123,7 @@ Result<void> JsonSettingsRepository::save(const AppSettings& settings)
     object["imageFormat"] = settings.imageFormat;
     object["themeMode"] = themeToString(settings.themeMode);
     object["ocrLanguage"] = settings.ocrLanguage;
+    object["language"] = settings.language;
     object["autoSaveOnCapture"] = settings.autoSaveOnCapture;
     object["captureHotkey"] = hotkeyToJson(settings.captureHotkey);
     object["pasteHotkey"] = hotkeyToJson(settings.pasteHotkey);

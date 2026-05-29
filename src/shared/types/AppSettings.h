@@ -20,6 +20,7 @@ struct AppSettings final {
     Hotkey pasteHotkey;
     Hotkey hidePinsHotkey;
     QString ocrLanguage;
+    QString language;
     bool autoSaveOnCapture = false;
     Hotkey repeatCaptureHotkey;
 };
