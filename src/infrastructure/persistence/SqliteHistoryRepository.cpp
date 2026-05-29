@@ -85,37 +85,23 @@ Result<void> SqliteHistoryRepository::markDeleted(qint64 id)
 
 Result<QSqlDatabase> SqliteHistoryRepository::readyDatabase()
 {
-    auto dbResult = connection_.database();
-    if (dbResult.isError()) {
-        return dbResult;
-    }
-
-    if (!migrated_) {
-        auto db = dbResult.value();
-        const auto migrateResult = migrator_.migrate(db);
-        if (migrateResult.isError()) {
-            return Result<QSqlDatabase>::failure(migrateResult.error());
-        }
-        migrated_ = true;
-    }
-
-    return dbResult;
+    return connection_.database();
 }
 
 CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
 {
     CaptureRecord record;
-    record.id = query.value(0).toLongLong();
-    record.filePath = query.value(1).toString();
-    record.thumbnailPath = query.value(2).toString();
-    record.width = query.value(3).toInt();
-    record.height = query.value(4).toInt();
-    record.devicePixelRatio = query.value(5).toDouble();
-    record.format = query.value(6).toString();
-    record.createdAt = QDateTime::fromString(query.value(7).toString(), Qt::ISODate);
+    record.id = query.value(ColId).toLongLong();
+    record.filePath = query.value(ColFilePath).toString();
+    record.thumbnailPath = query.value(ColThumbnailPath).toString();
+    record.width = query.value(ColWidth).toInt();
+    record.height = query.value(ColHeight).toInt();
+    record.devicePixelRatio = query.value(ColDevicePixelRatio).toDouble();
+    record.format = query.value(ColFormat).toString();
+    record.createdAt = QDateTime::fromString(query.value(ColCreatedAt).toString(), Qt::ISODate);
     record.createdAt.setTimeSpec(Qt::UTC);
-    record.sourceScreen = query.value(8).toString();
-    record.deleted = query.value(9).toBool();
+    record.sourceScreen = query.value(ColSourceScreen).toString();
+    record.deleted = query.value(ColDeleted).toBool();
     return record;
 }
 

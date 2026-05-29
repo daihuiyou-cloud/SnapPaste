@@ -34,7 +34,7 @@ int CaptureSelectionHistory::size() const noexcept
     return entries_.size();
 }
 
-QVector<QRect> CaptureSelectionHistory::entries() const
+QVector<QRect> CaptureSelectionHistory::entries() const noexcept
 {
     return entries_;
 }

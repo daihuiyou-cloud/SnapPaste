@@ -16,11 +16,7 @@ public:
 
     virtual Result<QImage> capturePrimaryScreen() = 0;
     virtual Result<QImage> captureRegion(const QRect& region) = 0;
-    virtual Result<QImage> captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
-    {
-        Q_UNUSED(segments)
-        return captureRegion(region);
-    }
+    virtual Result<QImage> captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments) = 0;
 };
 
 } // namespace snappaste

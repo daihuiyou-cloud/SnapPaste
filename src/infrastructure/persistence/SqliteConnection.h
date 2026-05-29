@@ -1,5 +1,6 @@
 #pragma once
 
+#include "infrastructure/persistence/SqliteMigrator.h"
 #include "shared/result/Result.h"
 
 #include <QSqlDatabase>
@@ -17,6 +18,7 @@ public:
 private:
     QString connectionName_;
     QString databasePath_;
+    SqliteMigrator migrator_;
     bool opened_ = false;
 };
 

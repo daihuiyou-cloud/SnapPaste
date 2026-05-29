@@ -40,6 +40,11 @@ Result<QSqlDatabase> SqliteConnection::database()
         query.exec("PRAGMA journal_mode = WAL");
         query.exec("PRAGMA busy_timeout = 3000");
 
+        auto migrateResult = migrator_.migrate(db);
+        if (migrateResult.isError()) {
+            return Result<QSqlDatabase>::failure(migrateResult.error());
+        }
+
         opened_ = true;
     }
 

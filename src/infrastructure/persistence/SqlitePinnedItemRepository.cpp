@@ -153,21 +153,7 @@ Result<void> SqlitePinnedItemRepository::close(qint64 id)
 
 Result<QSqlDatabase> SqlitePinnedItemRepository::readyDatabase()
 {
-    auto dbResult = connection_.database();
-    if (dbResult.isError()) {
-        return dbResult;
-    }
-
-    if (!migrated_) {
-        auto db = dbResult.value();
-        const auto migrateResult = migrator_.migrate(db);
-        if (migrateResult.isError()) {
-            return Result<QSqlDatabase>::failure(migrateResult.error());
-        }
-        migrated_ = true;
-    }
-
-    return dbResult;
+    return connection_.database();
 }
 
 QByteArray SqlitePinnedItemRepository::encodeImage(const QImage& image)
@@ -195,28 +181,28 @@ QImage SqlitePinnedItemRepository::decodeImage(const QByteArray& bytes)
 PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
 {
     PinnedItem item;
-    item.id = query.value(0).toLongLong();
-    item.image = decodeImage(query.value(1).toByteArray());
+    item.id = query.value(PColId).toLongLong();
+    item.image = decodeImage(query.value(PColImagePng).toByteArray());
     if (item.image.isNull()) {
         item.image = QImage(1, 1, QImage::Format_ARGB32);
         item.image.fill(Qt::transparent);
     }
-    item.source = static_cast<PinSource>(query.value(2).toInt());
-    item.state.position = QPoint(query.value(3).toInt(), query.value(4).toInt());
-    item.state.size = QSize(query.value(5).toInt(), query.value(6).toInt());
-    item.state.opacity = query.value(7).toDouble();
-    item.state.transform.scale = query.value(8).toDouble();
-    item.state.transform.rotationDegrees = query.value(9).toInt();
-    item.state.transform.flippedHorizontally = query.value(10).toBool();
-    item.state.transform.flippedVertically = query.value(11).toBool();
-    item.state.options.alwaysOnTop = query.value(12).toBool();
-    item.state.options.clickThrough = query.value(13).toBool();
-    item.state.options.visible = query.value(14).toBool();
-    item.state.devicePixelRatio = query.value(15).toDouble();
+    item.source = static_cast<PinSource>(query.value(PColSource).toInt());
+    item.state.position = QPoint(query.value(PColX).toInt(), query.value(PColY).toInt());
+    item.state.size = QSize(query.value(PColWidth).toInt(), query.value(PColHeight).toInt());
+    item.state.opacity = query.value(PColOpacity).toDouble();
+    item.state.transform.scale = query.value(PColScale).toDouble();
+    item.state.transform.rotationDegrees = query.value(PColRotation).toInt();
+    item.state.transform.flippedHorizontally = query.value(PColFlipH).toBool();
+    item.state.transform.flippedVertically = query.value(PColFlipV).toBool();
+    item.state.options.alwaysOnTop = query.value(PColAlwaysOnTop).toBool();
+    item.state.options.clickThrough = query.value(PColClickThrough).toBool();
+    item.state.options.visible = query.value(PColVisible).toBool();
+    item.state.devicePixelRatio = query.value(PColDevicePixelRatio).toDouble();
     item.image.setDevicePixelRatio(item.state.devicePixelRatio);
-    item.createdAt = QDateTime::fromString(query.value(16).toString(), Qt::ISODate);
+    item.createdAt = QDateTime::fromString(query.value(PColCreatedAt).toString(), Qt::ISODate);
     item.createdAt.setTimeSpec(Qt::UTC);
-    item.updatedAt = QDateTime::fromString(query.value(17).toString(), Qt::ISODate);
+    item.updatedAt = QDateTime::fromString(query.value(PColUpdatedAt).toString(), Qt::ISODate);
     item.updatedAt.setTimeSpec(Qt::UTC);
     return item;
 }

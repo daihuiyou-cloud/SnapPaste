@@ -2,7 +2,6 @@
 
 #include "domain/pin/IPinnedItemRepository.h"
 #include "infrastructure/persistence/SqliteConnection.h"
-#include "infrastructure/persistence/SqliteMigrator.h"
 
 namespace snappaste {
 
@@ -17,14 +16,33 @@ public:
     Result<void> close(qint64 id) override;
 
 private:
+    enum PinnedColumn {
+        PColId = 0,
+        PColImagePng,
+        PColSource,
+        PColX,
+        PColY,
+        PColWidth,
+        PColHeight,
+        PColOpacity,
+        PColScale,
+        PColRotation,
+        PColFlipH,
+        PColFlipV,
+        PColAlwaysOnTop,
+        PColClickThrough,
+        PColVisible,
+        PColDevicePixelRatio,
+        PColCreatedAt,
+        PColUpdatedAt,
+    };
+
     Result<QSqlDatabase> readyDatabase();
     static QByteArray encodeImage(const QImage& image);
     static QImage decodeImage(const QByteArray& bytes);
     static PinnedItem readItem(const QSqlQuery& query);
 
     SqliteConnection& connection_;
-    SqliteMigrator migrator_;
-    bool migrated_ = false;
 };
 
 } // namespace snappaste

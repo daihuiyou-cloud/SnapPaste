@@ -2,7 +2,6 @@
 
 #include "domain/history/IHistoryRepository.h"
 #include "infrastructure/persistence/SqliteConnection.h"
-#include "infrastructure/persistence/SqliteMigrator.h"
 
 namespace snappaste {
 
@@ -15,12 +14,23 @@ public:
     Result<void> markDeleted(qint64 id) override;
 
 private:
+    enum CaptureColumn {
+        ColId = 0,
+        ColFilePath,
+        ColThumbnailPath,
+        ColWidth,
+        ColHeight,
+        ColDevicePixelRatio,
+        ColFormat,
+        ColCreatedAt,
+        ColSourceScreen,
+        ColDeleted,
+    };
+
     Result<QSqlDatabase> readyDatabase();
     static CaptureRecord readRecord(const QSqlQuery& query);
 
     SqliteConnection& connection_;
-    SqliteMigrator migrator_;
-    bool migrated_ = false;
 };
 
 } // namespace snappaste

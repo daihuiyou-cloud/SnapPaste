@@ -126,6 +126,12 @@ Result<QImage> GdiScreenCaptureService::capturePrimaryScreen()
 #endif
 }
 
+Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
+{
+    Q_UNUSED(segments)
+    return captureRegion(region);
+}
+
 Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 {
 #if defined(Q_OS_WIN)

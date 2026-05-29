@@ -12,7 +12,7 @@ public:
     void add(const QRect& region);
     bool isEmpty() const noexcept;
     int size() const noexcept;
-    QVector<QRect> entries() const;
+    QVector<QRect> entries() const noexcept;
     QRect previous();
     QRect next();
 
