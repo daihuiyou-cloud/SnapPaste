@@ -28,6 +28,7 @@ Result<void> CaptureWorkflow::validateRegion(const QRect& region)
 
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
 {
+    QMutexLocker lock(&mutex_);
     auto validation = validateRegion(region);
     if (validation.isError()) {
         return Result<QImage>::failure(validation.error());
@@ -37,6 +38,7 @@ Result<QImage> CaptureWorkflow::captureRegion(const QRect& region)
 
 Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments)
 {
+    QMutexLocker lock(&mutex_);
     auto validation = validateRegion(region);
     if (validation.isError()) {
         return Result<QImage>::failure(validation.error());
@@ -46,6 +48,7 @@ Result<QImage> CaptureWorkflow::captureRegion(const QRect& region, const QVector
 
 Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, const QString& sourceScreen)
 {
+    QMutexLocker lock(&mutex_);
     if (image.isNull()) {
         return Result<CaptureRecord>::failure("No image data to save. Try capturing again.");
     }

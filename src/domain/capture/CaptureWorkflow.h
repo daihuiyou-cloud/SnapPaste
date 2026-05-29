@@ -8,6 +8,7 @@
 #include "shared/types/CaptureRecord.h"
 
 #include <QImage>
+#include <QMutex>
 #include <QRect>
 
 namespace snappaste {
@@ -26,6 +27,7 @@ public:
 private:
     static Result<void> validateRegion(const QRect& region);
 
+    QMutex mutex_;
     IScreenCaptureService& captureService_;
     IImageStorage& imageStorage_;
     IHistoryRepository& historyRepository_;

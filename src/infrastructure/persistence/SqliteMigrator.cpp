@@ -4,6 +4,8 @@
 #include <QSqlQuery>
 #include <QVariant>
 
+#include <iterator>
+
 namespace snappaste {
 
 Result<void> SqliteMigrator::migrate(QSqlDatabase& database)
@@ -27,7 +29,7 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase& database)
         &SqliteMigrator::applyVersion4,
         &SqliteMigrator::applyVersion5,
     };
-    const int maxVersion = static_cast<int>(sizeof(migrations) / sizeof(migrations[0]));
+    const int maxVersion = static_cast<int>(std::size(migrations));
     while (version < maxVersion) {
         const auto& fn = migrations[version];
         const auto result = (this->*fn)(database);

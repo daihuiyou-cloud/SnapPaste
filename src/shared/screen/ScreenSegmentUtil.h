@@ -1,6 +1,6 @@
 #pragma once
 
-#include "domain/capture/IScreenCaptureService.h"
+#include "shared/types/ScreenCaptureTypes.h"
 
 #include <QGuiApplication>
 #include <QScreen>

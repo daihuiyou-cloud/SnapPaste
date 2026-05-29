@@ -29,6 +29,7 @@ signals:
 public:
     static ThemeMode themeFromIndex(int index);
 
+private:
     SettingsService& service_;
     EventHub& eventHub_;
     AppSettings settings_;

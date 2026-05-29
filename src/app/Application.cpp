@@ -271,12 +271,13 @@ void Application::ocrRegion(const QRect& region)
         if (ocrService_) {
             ocrService_->cancel();
         }
+        auto ocrService = ocrService_;
         QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus(tr("OCR processing..."));
-        std::thread worker([guard, image]() {
+        std::thread worker([guard, ocrService, image]() {
             if (guard.isNull()) return;
-            const auto outcome = guard->ocrService_->recognizeText(image);
+            const auto outcome = ocrService->recognizeText(image);
             QMetaObject::invokeMethod(qApp, [guard, outcome]() {
                 if (guard.isNull()) return;
                 QApplication::restoreOverrideCursor();
@@ -287,13 +288,10 @@ void Application::ocrRegion(const QRect& region)
 
                 auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
                 guard->ocrWindow_ = win;
-#pragma warning(push)
-#pragma warning(disable: 4573)
                 QObject::connect(win, &QObject::destroyed, guard.data(), [guard] {
                     if (guard) guard->ocrWindow_.clear();
                 });
                 QObject::connect(win, &OcrResultWindow::pasteRequested, guard.data(), [guard] { if (guard) guard->pasteFromClipboard(); });
-#pragma warning(pop)
                 guard->showStatus(
                     tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);

@@ -30,30 +30,44 @@ struct Hotkey final {
         } else if (key >= 0x30 && key <= 0x39) {
             parts << QChar(static_cast<char>(key));
         } else {
-            static const struct { int vk; const char* name; } kNamed[] = {
-                {0x08, "Backspace"}, {0x09, "Tab"}, {0x0D, "Enter"},
-                {0x1B, "Esc"}, {0x20, "Space"},
-                {0x21, "PageUp"}, {0x22, "PageDown"},
-                {0x23, "End"}, {0x24, "Home"},
-                {0x25, "Left"}, {0x26, "Up"}, {0x27, "Right"}, {0x28, "Down"},
-                {0x2D, "Insert"}, {0x2E, "Delete"},
-                {0x5B, "Win"}, {0x5C, "Win"},
-                {0x6A, "*"}, {0x6B, "+"}, {0x6D, "-"}, {0x6E, "."}, {0x6F, "/"},
-                {0x90, "NumLock"}, {0x91, "ScrollLock"},
-                {0xBA, ";"}, {0xBB, "="}, {0xBC, ","}, {0xBD, "-"},
-                {0xBE, "."}, {0xBF, "/"}, {0xC0, "`"},
-                {0xDB, "["}, {0xDC, "\\"}, {0xDD, "]"}, {0xDE, "'"},
-            };
-            bool found = false;
-            for (const auto& entry : kNamed) {
-                if (entry.vk == key) {
-                    parts << entry.name;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
+            switch (key) {
+            case 0x08: parts << "Backspace"; break;
+            case 0x09: parts << "Tab"; break;
+            case 0x0D: parts << "Enter"; break;
+            case 0x1B: parts << "Esc"; break;
+            case 0x20: parts << "Space"; break;
+            case 0x21: parts << "PageUp"; break;
+            case 0x22: parts << "PageDown"; break;
+            case 0x23: parts << "End"; break;
+            case 0x24: parts << "Home"; break;
+            case 0x25: parts << "Left"; break;
+            case 0x26: parts << "Up"; break;
+            case 0x27: parts << "Right"; break;
+            case 0x28: parts << "Down"; break;
+            case 0x2D: parts << "Insert"; break;
+            case 0x2E: parts << "Delete"; break;
+            case 0x5B: case 0x5C: parts << "Win"; break;
+            case 0x6A: parts << "*"; break;
+            case 0x6B: parts << "+"; break;
+            case 0x6D: parts << "-"; break;
+            case 0x6E: parts << "."; break;
+            case 0x6F: parts << "/"; break;
+            case 0x90: parts << "NumLock"; break;
+            case 0x91: parts << "ScrollLock"; break;
+            case 0xBA: parts << ";"; break;
+            case 0xBB: parts << "="; break;
+            case 0xBC: parts << ","; break;
+            case 0xBD: parts << "-"; break;
+            case 0xBE: parts << "."; break;
+            case 0xBF: parts << "/"; break;
+            case 0xC0: parts << "`"; break;
+            case 0xDB: parts << "["; break;
+            case 0xDC: parts << "\\"; break;
+            case 0xDD: parts << "]"; break;
+            case 0xDE: parts << "'"; break;
+            default:
                 parts << QString("0x%1").arg(key, 0, 16);
+                break;
             }
         }
         return parts.join("+");

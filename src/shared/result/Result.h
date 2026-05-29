@@ -22,6 +22,7 @@ public:
     bool isError() const noexcept { return !ok_; }
     const T& value() const noexcept { return value_; }
     T& value() noexcept { return value_; }
+    T takeValue() noexcept { return std::move(value_); }
     const QString& error() const noexcept { return error_; }
 
 private:
@@ -46,6 +47,7 @@ public:
     bool isOk() const noexcept { return ok_; }
     bool isError() const noexcept { return !ok_; }
     const QString& error() const noexcept { return error_; }
+    QString takeError() noexcept { return std::move(error_); }
 
 private:
     Result(bool ok, QString error)

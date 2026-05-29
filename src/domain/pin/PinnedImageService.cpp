@@ -1,4 +1,5 @@
 #include "domain/pin/PinnedImageService.h"
+#include "domain/pin/PinnedItem.h"
 
 #include "shared/utils/TimeProvider.h"
 

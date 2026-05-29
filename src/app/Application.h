@@ -75,7 +75,7 @@ private:
     bool preferLastPinnableImage_ = false;
     std::optional<QRect> lastCaptureRegion_;
     int nextPinSlot_ = 0;
-    std::unique_ptr<IOcrService> ocrService_;
+    std::shared_ptr<IOcrService> ocrService_;
     QPointer<OcrResultWindow> ocrWindow_;
 };
 

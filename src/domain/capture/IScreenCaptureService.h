@@ -1,21 +1,14 @@
 #pragma once
 
 #include "shared/result/Result.h"
+#include "shared/types/ScreenCaptureTypes.h"
 
 #include <QImage>
 #include <QRect>
 #include <QString>
-#include <QtGlobal>
 #include <QVector>
 
 namespace snappaste {
-
-struct ScreenCaptureSegment final {
-    QRect logicalRegion;
-    QRect logicalScreenGeometry;
-    QString screenName;
-    qreal devicePixelRatio = 1.0;
-};
 
 class IScreenCaptureService {
 public:
