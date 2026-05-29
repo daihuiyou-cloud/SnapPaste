@@ -7,6 +7,7 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QImage>
+#include <QLabel>
 #include <QMainWindow>
 #include <QToolButton>
 
@@ -40,6 +41,8 @@ private:
 
     AnnotationCanvas* canvas_ = nullptr;
     QToolButton* colorBtn_ = nullptr;
+    QLabel* contextHint_ = nullptr;
+    QLabel* imageInfoLabel_ = nullptr;
     QAction* eyeAction_ = nullptr;
     std::function<void(AnnotationTool)> updateToolActions_;
 };

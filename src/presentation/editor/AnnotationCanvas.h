@@ -44,6 +44,11 @@ public:
     int fontSize() const;
     void setFontSize(int size);
     void setOnFontSizeChanged(std::function<void(int)> cb);
+    double zoomFactor() const;
+    QSize imageSize() const;
+    QColor color() const;
+    int strokeWidth() const;
+    void setOnZoomChanged(std::function<void(double)> cb);
     const QVector<QColor>& recentColors() const;
     void addRecentColor(const QColor& color);
     void undo();
@@ -110,6 +115,7 @@ private:
     QVector<QColor> customColors_;
     std::function<void(int)> onFontSizeChanged_;
     std::function<void(bool)> onPickingColorChanged_;
+    std::function<void(double)> onZoomChanged_;
 };
 
 } // namespace snappaste

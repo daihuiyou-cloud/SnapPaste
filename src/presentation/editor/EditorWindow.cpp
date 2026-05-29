@@ -144,6 +144,53 @@ QIcon makeColorIcon(const QColor& color)
     return QIcon(pix);
 }
 
+class StrokePreview : public QWidget {
+public:
+    explicit StrokePreview(QWidget* parent) : QWidget(parent) { setFixedHeight(16); }
+    void showStroke(QColor color, int width) {
+        if (color_ != color || width_ != width) {
+            color_ = color;
+            width_ = width;
+            update();
+        }
+    }
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(QPen(color_, qMax(1, width_), Qt::SolidLine, Qt::RoundCap));
+        int y = height() / 2;
+        p.drawLine(QPointF(6, y), QPointF(width() - 6, y));
+    }
+private:
+    QColor color_{"#ff3b30"};
+    int width_ = 4;
+};
+
+const char* scrollBarStyle = R"(
+QScrollBar:vertical {
+    background: transparent; width: 7px; margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: rgba(255,255,255,0.1); min-height: 28px; border-radius: 3px;
+}
+QScrollBar::handle:vertical:hover { background: rgba(255,255,255,0.18); }
+QScrollBar::handle:vertical:pressed { background: rgba(255,255,255,0.25); }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar:horizontal {
+    background: transparent; height: 7px; margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: rgba(255,255,255,0.1); min-width: 28px; border-radius: 3px;
+}
+QScrollBar::handle:horizontal:hover { background: rgba(255,255,255,0.18); }
+QScrollBar::handle:horizontal:pressed { background: rgba(255,255,255,0.25); }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
+QScrollBar::corner { background: transparent; }
+)";
+
 } // namespace
 
 
@@ -159,6 +206,7 @@ EditorWindow::EditorWindow(QWidget* parent)
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidget(canvas_);
     scrollArea->setAlignment(Qt::AlignCenter);
+    scrollArea->setStyleSheet(scrollBarStyle);
     setCentralWidget(scrollArea);
 
     createToolPanel();
@@ -261,6 +309,9 @@ void EditorWindow::closeEvent(QCloseEvent* event)
 void EditorWindow::setImage(const QImage& image)
 {
     canvas_->setImage(image);
+    if (imageInfoLabel_) {
+        imageInfoLabel_->setText(QString("Image: %1 x %2 px").arg(image.width()).arg(image.height()));
+    }
     show();
     raise();
     activateWindow();
@@ -270,6 +321,27 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
 {
     if (updateToolActions_) {
         updateToolActions_(tool);
+    }
+    if (contextHint_) {
+        static const char* hints[] = {
+            "Drag to draw a rectangle",        // Rectangle
+            "Drag to draw an ellipse",         // Ellipse
+            "Drag to draw an arrow",           // Arrow
+            "Drag to draw a line",             // Line
+            "Freehand drawing",                // Pen
+            "Click to place text",             // Text
+            "Drag to highlight an area",       // Highlight
+            "Click to place numbered circle",  // Numbered
+            "Drag to apply mosaic blur",       // Mosaic
+            "Click or drag to erase",          // Eraser
+            "Click or drag to select",         // Select
+            "Drag crop handles to trim",       // Crop
+            "Pick a color from the image",     // Eyedropper
+        };
+        auto idx = static_cast<int>(tool);
+        if (idx >= 0 && idx < static_cast<int>(sizeof(hints)/sizeof(hints[0]))) {
+            contextHint_->setText(hints[idx]);
+        }
     }
 }
 
@@ -345,6 +417,7 @@ void EditorWindow::createToolPanel()
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setStyleSheet(scrollBarStyle);
 
     auto* content = new QWidget(scrollArea);
     auto* layout = new QVBoxLayout(content);
@@ -352,12 +425,6 @@ void EditorWindow::createToolPanel()
     layout->setSpacing(0);
 
     // -- Styles --
-    const QString sectionStyle =
-        "QLabel { color: #8e8e93; font: bold 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
-        "  padding: 0; }";
-
-    const QString groupStyle =
-        "QLabel { color: #5e5e63; font: 8px; padding: 0; }";
 
     const QString toolStyle =
         "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
@@ -402,60 +469,36 @@ void EditorWindow::createToolPanel()
         return btn;
     };
 
-    auto addGroup = [&](const char* title, const ToolDef defs[], int count) {
-        auto* hdr = new QLabel(title, content);
-        hdr->setStyleSheet(groupStyle);
-        layout->addWidget(hdr);
-        layout->addSpacing(2);
-        auto* grid = new QGridLayout();
-        grid->setSpacing(2);
-        grid->setContentsMargins(0, 0, 0, 0);
-        for (int i = 0; i < count; ++i) {
-            auto* btn = makeToolBtn(defs[i]);
-            grid->addWidget(btn, i / 2, i % 2);
-            toolButtons.push_back(btn);
-        }
-        layout->addLayout(grid);
-    };
-
     // ==========================================
-    // Tools -- grouped categories
+    // Tools
     // ==========================================
-    const ToolDef shapes[] = {
+    const ToolDef allTools[] = {
         {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rect", "Rectangle (R)", AnnotationTool::Rectangle},
         {makeEllipseIcon, "Ellipse", "Ellipse (E)", AnnotationTool::Ellipse},
         {[]{ return IconProvider::icon(IconName::Arrow); }, "Arrow", "Arrow (A)", AnnotationTool::Arrow},
         {[]{ return IconProvider::icon(IconName::Line); }, "Line", "Line (L)", AnnotationTool::Line},
-    };
-    const ToolDef markup[] = {
         {[]{ return IconProvider::icon(IconName::Pen); }, "Pen", "Pen (P)", AnnotationTool::Pen},
         {[]{ return IconProvider::icon(IconName::Text); }, "Text", "Text (T)", AnnotationTool::Text},
         {makeHighlightIcon, "Highlight", "Highlight (H)", AnnotationTool::Highlight},
         {makeNumberedIcon, "Numbered", "Numbered (N)", AnnotationTool::Numbered},
-    };
-    const ToolDef edits[] = {
         {[]{ return IconProvider::icon(IconName::Mosaic); }, "Mosaic", "Mosaic (M)", AnnotationTool::Mosaic},
         {makeEraserIcon, "Eraser", "Eraser (X)", AnnotationTool::Eraser},
         {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
         {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
     };
 
-    addGroup("SHAPES", shapes, 4);
-    layout->addSpacing(6);
-    addGroup("MARKUP", markup, 4);
-    layout->addSpacing(6);
-    addGroup("EDIT", edits, 4);
+    auto* toolGrid = new QGridLayout();
+    toolGrid->setSpacing(2);
+    toolGrid->setContentsMargins(0, 0, 0, 0);
+    for (int i = 0; i < 12; ++i) {
+        auto* btn = makeToolBtn(allTools[i]);
+        toolGrid->addWidget(btn, i / 2, i % 2);
+        toolButtons.push_back(btn);
+    }
+    layout->addLayout(toolGrid);
 
     layout->addSpacing(8);
     addHr();
-    layout->addSpacing(6);
-
-    // ==========================================
-    // Color & Stroke
-    // ==========================================
-    auto* csHeader = new QLabel("COLOR & STROKE", content);
-    csHeader->setStyleSheet(sectionStyle);
-    layout->addWidget(csHeader);
     layout->addSpacing(6);
 
     colorBtn_ = new QToolButton(content);
@@ -486,6 +529,40 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
+    // -- Color swatches + Stroke preview --
+    auto* swatchRow = new QHBoxLayout();
+    swatchRow->setContentsMargins(0, 0, 0, 0);
+    swatchRow->setSpacing(2);
+    const QColor fixedColors[] = {
+        QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
+        QColor("#34c759"), QColor("#007aff"), QColor("#000000")
+    };
+    auto* preview = new StrokePreview(content);
+    auto refreshPreview = [this, preview]() {
+        preview->showStroke(canvas_->color(), canvas_->strokeWidth());
+    };
+    for (const auto& c : fixedColors) {
+        auto* swatch = new QToolButton(content);
+        QPixmap px(14, 14);
+        px.fill(c);
+        swatch->setIcon(QIcon(px));
+        swatch->setIconSize(QSize(14, 14));
+        swatch->setFixedSize(18, 18);
+        swatch->setToolTip(c.name(QColor::HexRgb).toUpper());
+        swatch->setStyleSheet(
+            "QToolButton { border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; padding: 0; }"
+            "QToolButton:hover { border-color: #2fbf9f; }");
+        connect(swatch, &QToolButton::clicked, this, [this, c, refreshPreview] {
+            canvas_->setColor(c);
+            updateColorWell(c);
+            refreshPreview();
+        });
+        swatchRow->addWidget(swatch);
+    }
+    layout->addLayout(swatchRow);
+
+    layout->addSpacing(4);
+
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
     auto* strokeGroup = new QButtonGroup(content);
@@ -503,23 +580,16 @@ void EditorWindow::createToolPanel()
         btn->setStyleSheet(selStyle);
         if (s.width == 4) btn->setChecked(true);
         strokeGroup->addButton(btn);
-        connect(btn, &QToolButton::clicked, this, [this, s] {
+        connect(btn, &QToolButton::clicked, this, [this, s, refreshPreview] {
             canvas_->setStrokeWidth(s.width);
+            refreshPreview();
         });
         widthRow->addWidget(btn);
     }
     layout->addLayout(widthRow);
 
-    layout->addSpacing(8);
-    addHr();
-    layout->addSpacing(6);
-
-    // ==========================================
-    // Options (Outline / Fill / Blur / Font)
-    // ==========================================
-    auto* optHeader = new QLabel("OPTIONS", content);
-    optHeader->setStyleSheet(sectionStyle);
-    layout->addWidget(optHeader);
+    layout->addSpacing(2);
+    layout->addWidget(preview);
     layout->addSpacing(6);
 
     struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
@@ -592,11 +662,82 @@ void EditorWindow::createToolPanel()
         fontSizeVal->setText(QString("%1px").arg(size));
     });
 
-    // -- Spacer --
-    layout->addStretch(1);
+    layout->addSpacing(6);
 
-    layout->addSpacing(4);
-    addHr();
+    // ==========================================
+    // Zoom
+    // ==========================================
+    auto* zoomRow = new QHBoxLayout();
+    zoomRow->setContentsMargins(0, 0, 0, 0);
+    zoomRow->setSpacing(4);
+
+    auto* zoomLabel = new QLabel("Zoom", content);
+    zoomLabel->setFixedWidth(34);
+    zoomLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+
+    auto* zoomOut = new QToolButton(content);
+    zoomOut->setText("-");
+    zoomOut->setToolTip("Zoom out");
+    zoomOut->setFixedSize(24, 24);
+    zoomOut->setStyleSheet(selStyle);
+
+    auto* zoomVal = new QLabel("100%", content);
+    zoomVal->setAlignment(Qt::AlignCenter);
+    zoomVal->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
+    zoomVal->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    auto* zoomIn = new QToolButton(content);
+    zoomIn->setText("+");
+    zoomIn->setToolTip("Zoom in");
+    zoomIn->setFixedSize(24, 24);
+    zoomIn->setStyleSheet(selStyle);
+
+    auto* zoomReset = new QToolButton(content);
+    zoomReset->setText("1:1");
+    zoomReset->setToolTip("Reset zoom to 100%");
+    zoomReset->setFixedSize(32, 24);
+    zoomReset->setStyleSheet(
+        "QToolButton { font: 8px; color: #999; background: transparent;"
+        "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
+        "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }");
+
+    connect(zoomOut, &QToolButton::clicked, this, [this, zoomVal] {
+        auto factor = canvas_->zoomFactor();
+        canvas_->zoomAt(factor / 1.2, QPoint(canvas_->width() / 2, canvas_->height() / 2));
+        zoomVal->setText(QString("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
+    });
+    connect(zoomIn, &QToolButton::clicked, this, [this, zoomVal] {
+        auto factor = canvas_->zoomFactor();
+        canvas_->zoomAt(factor * 1.2, QPoint(canvas_->width() / 2, canvas_->height() / 2));
+        zoomVal->setText(QString("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
+    });
+    connect(zoomReset, &QToolButton::clicked, this, [this, zoomVal] {
+        canvas_->zoomAt(1.0, QPoint(canvas_->width() / 2, canvas_->height() / 2));
+        zoomVal->setText("100%");
+    });
+    canvas_->setOnZoomChanged([zoomVal](double factor) {
+        zoomVal->setText(QString("%1%").arg(static_cast<int>(factor * 100)));
+    });
+
+    zoomRow->addWidget(zoomLabel);
+    zoomRow->addWidget(zoomOut);
+    zoomRow->addWidget(zoomVal);
+    zoomRow->addWidget(zoomIn);
+    zoomRow->addWidget(zoomReset);
+    layout->addLayout(zoomRow);
+
+    layout->addSpacing(6);
+
+    // -- Context hint + Image info --
+    contextHint_ = new QLabel(content);
+    contextHint_->setStyleSheet("color: #8e8e93; font: 9px; padding: 0 2px;");
+    contextHint_->setWordWrap(true);
+    layout->addWidget(contextHint_);
+
+    imageInfoLabel_ = new QLabel(content);
+    imageInfoLabel_->setStyleSheet("color: #5e5e63; font: 8px; padding: 0 2px;");
+    layout->addWidget(imageInfoLabel_);
+
     layout->addSpacing(4);
 
     // ==========================================

@@ -321,6 +321,11 @@ void AnnotationCanvas::setFontSize(int size)
     }
 }
 void AnnotationCanvas::setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
+double AnnotationCanvas::zoomFactor() const { return zoomFactor_; }
+QSize AnnotationCanvas::imageSize() const { return image_.size(); }
+QColor AnnotationCanvas::color() const { return currentColor_; }
+int AnnotationCanvas::strokeWidth() const { return currentStrokeWidth_; }
+void AnnotationCanvas::setOnZoomChanged(std::function<void(double)> cb) { onZoomChanged_ = std::move(cb); }
 
 const QVector<QColor>& AnnotationCanvas::recentColors() const { return customColors_; }
 
@@ -889,9 +894,10 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
                     setMinimumSize(newSize);
                     resize(newSize);
                     zoomFactor_ = fit;
-                    updateWindowTitle();
-                    update();
-                }
+    updateWindowTitle();
+    update();
+    if (onZoomChanged_) onZoomChanged_(zoomFactor_);
+}
             }
             event->accept();
             return;
