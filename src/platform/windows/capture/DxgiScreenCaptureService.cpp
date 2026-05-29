@@ -297,6 +297,25 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
 
     auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
     context.Unmap(stagingTexture.Get(), 0);
+
+    if (!image.isNull()) {
+        bool allBlack = true;
+        const int stepY = qMax(1, height / 8);
+        const int stepX = qMax(1, width / 8);
+        for (int y = 0; y < height && allBlack; y += stepY) {
+            auto* pixels = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+            for (int x = 0; x < width; x += stepX) {
+                if (qRed(pixels[x]) != 0 || qGreen(pixels[x]) != 0 || qBlue(pixels[x]) != 0) {
+                    allBlack = false;
+                    break;
+                }
+            }
+        }
+        if (allBlack) {
+            return Result<QImage>::failure("DXGI returned a black frame.");
+        }
+    }
+
     return Result<QImage>::success(std::move(image));
 }
 #endif
