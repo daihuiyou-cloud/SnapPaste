@@ -80,7 +80,7 @@ void Application::connectCoreSignals()
                 pinWindows_.erase(it);
             }
         }
-        showStatus("All pinned images closed.");
+        showStatus(tr("All pinned images closed."));
     });
     connect(&trayController_, &TrayController::quitRequested, &qtApplication_, &QApplication::quit);
     connect(QApplication::clipboard(), &QClipboard::dataChanged, this, [this] {
@@ -105,12 +105,12 @@ void Application::connectCoreSignals()
         showStatus(message);
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::copied, this, [this] {
-        showStatus("Screenshot copied. Press F3 to pin.", [this] {
+        showStatus(tr("Screenshot copied. Press F3 to pin."), [this] {
             showMainWindow();
         });
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::saved, this, [this](const QString& filePath) {
-        showStatus("Saved " + QFileInfo(filePath).fileName() + " \u2192 Click to open", [filePath] {
+        showStatus(tr("Saved %1 \u2192 Click to open").arg(QFileInfo(filePath).fileName()), [filePath] {
             QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
         });
     });
@@ -121,7 +121,7 @@ void Application::connectCoreSignals()
             preferLastPinnableImage_ = true;
         }
         openPinWindow(item);
-        showStatus("Pinned image created. Press F3 to repeat.");
+        showStatus(tr("Pinned image created. Press F3 to repeat."));
     });
     connect(&context_.pinViewModel(), &PinViewModel::pinRestored, this, [this](const PinnedItem& item) {
         openPinWindow(item);
@@ -173,15 +173,15 @@ void Application::startCapture()
 void Application::openFile()
 {
     const auto path = QFileDialog::getOpenFileName(
-        mainWindow_.get(), "Open Image", QString(),
-        "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)");
+        mainWindow_.get(), tr("Open Image"), QString(),
+        tr("Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)"));
     if (path.isEmpty()) {
         return;
     }
 
     QImage image(path);
     if (image.isNull()) {
-        showStatus("Failed to open image: " + QFileInfo(path).fileName());
+        showStatus(tr("Failed to open image: %1").arg(QFileInfo(path).fileName()));
         return;
     }
 
@@ -208,7 +208,7 @@ void Application::hideAllPins()
             entry.second->setPinnedVisible(false);
         }
     }
-    showStatus("Pinned images hidden.");
+    showStatus(tr("Pinned images hidden."));
 }
 
 void Application::showAllPins()
@@ -219,7 +219,7 @@ void Application::showAllPins()
             entry.second->restoreInteraction();
         }
     }
-    showStatus("Pinned images restored.");
+    showStatus(tr("Pinned images restored."));
 }
 
 void Application::copyRegion(const QRect& region)
@@ -234,7 +234,7 @@ void Application::pinRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this, region](const QImage& image) {
         if (image.isNull()) {
-            showStatus("Failed to capture image for pinning.");
+            showStatus(tr("Failed to capture image for pinning."));
             return;
         }
         pendingPinPosition_ = cascadedPinPosition(QCursor::pos() + QPoint(kPinBaseOffset, kPinBaseOffset));
@@ -254,7 +254,7 @@ void Application::editRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
         if (image.isNull()) {
-            showStatus("Failed to capture image for editing.");
+            showStatus(tr("Failed to capture image for editing."));
             return;
         }
         editorWindow().setImage(image);
@@ -265,7 +265,7 @@ void Application::ocrRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
         if (image.isNull()) {
-            showStatus("Failed to capture image for OCR.");
+            showStatus(tr("Failed to capture image for OCR."));
             return;
         }
         if (ocrService_) {
@@ -273,7 +273,7 @@ void Application::ocrRegion(const QRect& region)
         }
         QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        showStatus("OCR processing...");
+        showStatus(tr("OCR processing..."));
         std::thread worker([guard, image]() {
             if (guard.isNull()) return;
             const auto outcome = guard->ocrService_->recognizeText(image);
@@ -295,7 +295,7 @@ void Application::ocrRegion(const QRect& region)
                 QObject::connect(win, &OcrResultWindow::pasteRequested, guard.data(), [guard] { if (guard) guard->pasteFromClipboard(); });
 #pragma warning(pop)
                 guard->showStatus(
-                    QStringLiteral("OCR \u2192 %1 characters").arg(outcome.text.length()));
+                    tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);
         });
         worker.detach();
@@ -383,24 +383,24 @@ void Application::registerHotkey()
 
     context_.hotkeyService().unregisterAll();
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Capture, settings.captureHotkey)) {
-        const auto message = "Failed to register capture hotkey: " + settings.captureHotkey.toDisplayString();
+        const auto message = tr("Failed to register capture hotkey: %1").arg(settings.captureHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage("SnapPaste", message);
+        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Paste, settings.pasteHotkey)) {
-        const auto message = "Failed to register paste hotkey: " + settings.pasteHotkey.toDisplayString();
+        const auto message = tr("Failed to register paste hotkey: %1").arg(settings.pasteHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage("SnapPaste", message);
+        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
-        const auto message = "Failed to register hide-pins hotkey: " + settings.hidePinsHotkey.toDisplayString();
+        const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage("SnapPaste", message);
+        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::RepeatCapture, settings.repeatCaptureHotkey)) {
-        const auto message = "Failed to register repeat-capture hotkey: " + settings.repeatCaptureHotkey.toDisplayString();
+        const auto message = tr("Failed to register repeat-capture hotkey: %1").arg(settings.repeatCaptureHotkey.toDisplayString());
         Logger::warning(message);
-        trayController_.showMessage("SnapPaste", message);
+        trayController_.showMessage(QStringLiteral("SnapPaste"), message);
     }
 }
 
@@ -450,7 +450,7 @@ void Application::openPinWindow(PinnedItem item)
     });
     connect(window, &PinWindow::copyRequested, this, [this, source = item.source](const QImage& image) {
         if (image.isNull()) {
-            showStatus("No pinned image is available to copy.");
+            showStatus(tr("No pinned image is available to copy."));
             return;
         }
         lastPinnableImage_ = image;
@@ -458,7 +458,7 @@ void Application::openPinWindow(PinnedItem item)
         preferLastPinnableImage_ = true;
         const QSignalBlocker blocker(QApplication::clipboard());
         QApplication::clipboard()->setImage(image);
-        showStatus("Pinned image copied. Press F3 to repeat.");
+        showStatus(tr("Pinned image copied. Press F3 to repeat."));
     });
     connect(window, &PinWindow::saveRequested, this, [this](const QImage& image) {
         context_.captureViewModel().saveImage(image, "pin");

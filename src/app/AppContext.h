@@ -14,7 +14,7 @@
 #include "infrastructure/persistence/SqliteConnection.h"
 #include "infrastructure/persistence/SqliteHistoryRepository.h"
 #include "infrastructure/persistence/SqlitePinnedItemRepository.h"
-#include "platform/windows/capture/GdiScreenCaptureService.h"
+#include "platform/windows/capture/DxgiScreenCaptureService.h"
 #include "platform/windows/capture/QtScreenPixelSampler.h"
 #include "platform/windows/capture/WinScreenRegionDetector.h"
 #include "platform/windows/darkmode/DarkModeDetector.h"
@@ -54,7 +54,7 @@ private:
     std::unique_ptr<SqliteHistoryRepository> historyRepository_;
     std::unique_ptr<SqlitePinnedItemRepository> pinnedItemRepository_;
     std::unique_ptr<ClipboardImageProvider> clipboardImageProvider_;
-    std::unique_ptr<GdiScreenCaptureService> captureService_;
+    std::unique_ptr<DxgiScreenCaptureService> captureService_;
     std::unique_ptr<WinScreenRegionDetector> screenRegionDetector_;
     std::unique_ptr<QtScreenPixelSampler> screenPixelSampler_;
     std::unique_ptr<LocalImageStorage> imageStorage_;

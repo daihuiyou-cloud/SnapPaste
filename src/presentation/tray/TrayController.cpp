@@ -13,17 +13,17 @@ TrayController::TrayController(QObject* parent)
     , trayIcon_(this)
     , menu_(std::make_unique<QMenu>())
 {
-    auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), "Capture");
-    auto* openFileAction = menu_->addAction("Open Image...");
-    auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), "Open SnapPaste");
-    auto* hidePinsAction = menu_->addAction("Hide Pins");
-    auto* showPinsAction = menu_->addAction("Show Pins");
-    auto* closeAllPinsAction = menu_->addAction("Close All Pins");
+    auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), tr("Capture"));
+    auto* openFileAction = menu_->addAction(tr("Open Image..."));
+    auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), tr("Open SnapPaste"));
+    auto* hidePinsAction = menu_->addAction(tr("Hide Pins"));
+    auto* showPinsAction = menu_->addAction(tr("Show Pins"));
+    auto* closeAllPinsAction = menu_->addAction(tr("Close All Pins"));
     menu_->addSeparator();
-    auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), "Quit");
+    auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), tr("Quit"));
 
     trayIcon_.setContextMenu(menu_.get());
-    trayIcon_.setToolTip("SnapPaste");
+    trayIcon_.setToolTip(QStringLiteral("SnapPaste"));
     trayIcon_.setIcon(IconProvider::icon(IconName::App));
 
     connect(captureAction, &QAction::triggered, this, &TrayController::captureRequested);
@@ -33,8 +33,8 @@ TrayController::TrayController(QObject* parent)
     connect(showPinsAction, &QAction::triggered, this, &TrayController::showPinsRequested);
     connect(closeAllPinsAction, &QAction::triggered, this, &TrayController::closeAllPinsRequested);
     connect(quitAction, &QAction::triggered, this, [this] {
-        auto ret = QMessageBox::question(nullptr, "Quit SnapPaste",
-            "Are you sure you want to quit?\nPinned images will be lost.",
+        auto ret = QMessageBox::question(nullptr, tr("Quit SnapPaste"),
+            tr("Are you sure you want to quit?\nPinned images will be lost."),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (ret == QMessageBox::Yes) {
             emit quitRequested();

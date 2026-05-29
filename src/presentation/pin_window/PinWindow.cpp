@@ -252,35 +252,35 @@ bool PinWindow::toolbarFits() const
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
     QMenu menu(this);
-    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), "Copy\tCtrl+C");
-    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), "Save\tCtrl+S");
-    auto* saveAsAction = menu.addAction("Save As...\tCtrl+Shift+S");
-    auto* copyColorAction = menu.addAction("Copy Color");
+    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
+    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
+    auto* saveAsAction = menu.addAction(tr("Save As...\tCtrl+Shift+S"));
+    auto* copyColorAction = menu.addAction(tr("Copy Color"));
     menu.addSeparator();
-    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), "Rotate Left");
-    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), "Rotate Right");
-    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), "Flip Horizontal");
-    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), "Flip Vertical");
-    auto* alwaysOnTopAction = menu.addAction("Always on Top\tA");
+    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
+    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
+    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
+    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
+    auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
     alwaysOnTopAction->setCheckable(true);
     alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
-    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), "Click Through");
+    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
     clickThroughAction->setCheckable(true);
     clickThroughAction->setChecked(item_.state.options.clickThrough);
     menu.addSeparator();
-    auto* actualSizeAction = menu.addAction("Actual Size (1:1)\tCtrl+0");
-    auto* fitScreenAction = menu.addAction("Fit to Screen\tCtrl+9");
+    auto* actualSizeAction = menu.addAction(tr("Actual Size (1:1)\tCtrl+0"));
+    auto* fitScreenAction = menu.addAction(tr("Fit to Screen\tCtrl+9"));
     menu.addSeparator();
-    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), "Close");
+    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close"));
 
     const auto* action = menu.exec(event->globalPos());
     if (action == copyAction) {
         emit copyRequested(renderedImage());
-        QToolTip::showText(QCursor::pos(), "Copied to clipboard", this);
+        QToolTip::showText(QCursor::pos(), tr("Copied to clipboard"), this);
     } else if (action == saveAction) {
         emit saveRequested(renderedImage());
     } else if (action == saveAsAction) {
-        auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+        auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
             renderedImage().save(path);
@@ -292,7 +292,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
             int iy = qBound(0, event->pos().y() * img.height() / height(), img.height() - 1);
             QColor pixel = QColor::fromRgba(img.pixel(ix, iy));
             QApplication::clipboard()->setText(pixel.name().toUpper());
-            QToolTip::showText(QCursor::pos(), "Copied " + pixel.name().toUpper(), this);
+            QToolTip::showText(QCursor::pos(), tr("Copied %1").arg(pixel.name().toUpper()), this);
         }
     } else if (action == rotateLeftAction) {
         rotateBy(-90);
@@ -380,14 +380,14 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
     case Qt::Key_C:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             emit copyRequested(renderedImage());
-            QToolTip::showText(QCursor::pos(), "Copied to clipboard", this);
+            QToolTip::showText(QCursor::pos(), tr("Copied to clipboard"), this);
             return;
         }
         break;
     case Qt::Key_S:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             if (event->modifiers().testFlag(Qt::ShiftModifier)) {
-                auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+                auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
                     "PNG (*.png);;JPEG (*.jpg *.jpeg)");
                 if (!path.isEmpty()) {
                     renderedImage().save(path);
@@ -410,7 +410,7 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Z:
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
             undoTransform();
-            QToolTip::showText(QCursor::pos(), "Undo transform", this);
+            QToolTip::showText(QCursor::pos(), tr("Undo transform"), this);
             return;
         }
         break;
@@ -428,8 +428,8 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_F1:
     case Qt::Key_Slash:
-        QMessageBox::information(static_cast<QWidget*>(window()), "Keyboard Shortcuts",
-            "<b>Pin Window Controls</b><br><br>"
+        QMessageBox::information(static_cast<QWidget*>(window()), tr("Keyboard Shortcuts"),
+            tr("<b>Pin Window Controls</b><br><br>"
             "<b>Transform</b><br>"
             "R - Rotate 90&deg;<br>Shift+R - Rotate -90&deg;<br>"
             "H - Flip horizontally<br>V - Flip vertically<br>"
@@ -443,7 +443,7 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
             "Ctrl+Shift+S - Save As...<br>"
             "Ctrl+Drag - Drag image out<br>"
             "A - Toggle always on top<br>T - Toggle click through<br>"
-            "Escape - Close pin window");
+            "Escape - Close pin window"));
         event->accept();
         return;
     case Qt::Key_9:
@@ -826,22 +826,22 @@ void PinWindow::wheelEvent(QWheelEvent* event)
 void PinWindow::showOverflowMenu(const QPoint& pos)
 {
     QMenu menu(this);
-    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), "Copy\tCtrl+C");
-    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), "Save\tCtrl+S");
+    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
+    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
     menu.addSeparator();
-    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), "Rotate Left");
-    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), "Rotate Right");
-    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), "Flip Horizontal");
-    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), "Flip Vertical");
+    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
+    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
+    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
+    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
     menu.addSeparator();
-    auto* alwaysOnTopAction = menu.addAction("Always on Top\tA");
+    auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
     alwaysOnTopAction->setCheckable(true);
     alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
-    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), "Click Through");
+    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
     clickThroughAction->setCheckable(true);
     clickThroughAction->setChecked(item_.state.options.clickThrough);
     menu.addSeparator();
-    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), "Close\tEsc");
+    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close\tEsc"));
 
     const auto* action = menu.exec(pos);
     if (action == copyAction) {
@@ -971,7 +971,7 @@ void PinWindow::flipH()
     invalidateRenderedCache();
     update();
     emitStateChanged();
-    QToolTip::showText(QCursor::pos(), "Flipped horizontally", this);
+    QToolTip::showText(QCursor::pos(), tr("Flipped horizontally"), this);
 }
 
 void PinWindow::flipV()
@@ -981,7 +981,7 @@ void PinWindow::flipV()
     invalidateRenderedCache();
     update();
     emitStateChanged();
-    QToolTip::showText(QCursor::pos(), "Flipped vertically", this);
+    QToolTip::showText(QCursor::pos(), tr("Flipped vertically"), this);
 }
 
 void PinWindow::toggleAlwaysOnTop()

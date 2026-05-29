@@ -14,13 +14,13 @@ MainWindow::MainWindow(HistoryViewModel& historyViewModel,
                        QWidget* parent)
     : QMainWindow(parent)
 {
-    setWindowTitle("SnapPaste");
+    setWindowTitle(tr("SnapPaste"));
     resize(860, 560);
 
     auto* tabs = new QTabWidget(this);
 
     auto* home = new QWidget(this);
-    auto* captureButton = new QPushButton("Start Capture", home);
+    auto* captureButton = new QPushButton(tr("Start Capture"), home);
     captureButton->setMinimumHeight(42);
 
     auto* homeLayout = new QVBoxLayout(home);
@@ -28,13 +28,13 @@ MainWindow::MainWindow(HistoryViewModel& historyViewModel,
     homeLayout->addStretch();
     home->setLayout(homeLayout);
 
-    tabs->addTab(home, "Capture");
+    tabs->addTab(home, tr("Capture"));
     {
         auto* historyWidget = new HistoryWidget(historyViewModel, tabs);
         connect(historyWidget, &HistoryWidget::repinRequested, this, &MainWindow::repinRequested);
-        tabs->addTab(historyWidget, "History");
+        tabs->addTab(historyWidget, tr("History"));
     }
-    tabs->addTab(new SettingsWidget(settingsViewModel, tabs), "Settings");
+    tabs->addTab(new SettingsWidget(settingsViewModel, tabs), tr("Settings"));
 
     setCentralWidget(tabs);
 

@@ -24,5 +24,7 @@
         <file alias="icons/undo.svg">../icons/undo.svg</file>
         <file alias="icons/redo.svg">../icons/redo.svg</file>
         <file alias="icons/export.svg">../icons/export.svg</file>
+        <file alias="translations/snappaste_en.qm">../translations/snappaste_en.qm</file>
+        <file alias="translations/snappaste_zh_CN.qm">../translations/snappaste_zh_CN.qm</file>
     </qresource>
 </RCC>

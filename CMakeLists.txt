@@ -10,7 +10,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC OFF)
 
-find_package(Qt5 REQUIRED COMPONENTS Widgets Sql)
+find_package(Qt5 REQUIRED COMPONENTS Widgets Sql LinguistTools)
 
 set(SNAPPASTE_CORE_SOURCES
     src/shared/events/EventHub.h
@@ -80,6 +80,15 @@ add_executable(SnapPaste WIN32
 )
 
 target_link_libraries(SnapPaste PRIVATE SnapPasteCore)
+
+# Translation support: regenerate .qm when .ts changes
+set(SNAPPASTE_TS_FILES
+    ${CMAKE_SOURCE_DIR}/resources/translations/snappaste_en.ts
+    ${CMAKE_SOURCE_DIR}/resources/translations/snappaste_zh_CN.ts
+)
+qt5_add_translation(SNAPPASTE_QM_FILES ${SNAPPASTE_TS_FILES})
+# Make .qm available as source dependency so AUTORCC picks up changes
+add_dependencies(SnapPaste SnapPasteCore)
 
 if (WIN32)
     target_compile_definitions(SnapPasteCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)

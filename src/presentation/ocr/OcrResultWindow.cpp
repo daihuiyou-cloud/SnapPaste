@@ -79,7 +79,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     auto* titleLayout = new QHBoxLayout(titleBar);
     titleLayout->setContentsMargins(14, 0, 8, 0);
 
-    auto* titleLabel = new QLabel(QStringLiteral("OCR Result"), titleBar);
+    auto* titleLabel = new QLabel(tr("OCR Result"), titleBar);
     titleLabel->setStyleSheet("color: #edf1f5; font-size: 13px; font-weight: 600;"
                               " background: transparent;");
     titleLayout->addWidget(titleLabel);
@@ -90,7 +90,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     minimizeBtn_->setText(QString(QChar(0x2014)));
     minimizeBtn_->setFixedSize(32, 28);
     minimizeBtn_->setFocusPolicy(Qt::NoFocus);
-    minimizeBtn_->setToolTip("Minimize");
+    minimizeBtn_->setToolTip(tr("Minimize"));
     minimizeBtn_->setCursor(Qt::ArrowCursor);
     minimizeBtn_->setStyleSheet(titleBtnStyle("#4f5b70"));
     connect(minimizeBtn_, &QPushButton::clicked, this, &QWidget::showMinimized);
@@ -101,7 +101,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     maximizeBtn_->setText(QString(QChar(0x25A1)));
     maximizeBtn_->setFixedSize(32, 28);
     maximizeBtn_->setFocusPolicy(Qt::NoFocus);
-    maximizeBtn_->setToolTip("Maximize");
+    maximizeBtn_->setToolTip(tr("Maximize"));
     maximizeBtn_->setCursor(Qt::ArrowCursor);
     maximizeBtn_->setStyleSheet(titleBtnStyle("#4f5b70"));
     connect(maximizeBtn_, &QPushButton::clicked, this, [this] {
@@ -117,7 +117,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     auto* closeBtn = new QPushButton(QString(QChar(0x2715)), titleBar);
     closeBtn->setFixedSize(32, 28);
     closeBtn->setFocusPolicy(Qt::NoFocus);
-    closeBtn->setToolTip("Close (Esc)");
+    closeBtn->setToolTip(tr("Close (Esc)"));
     closeBtn->setCursor(Qt::ArrowCursor);
     closeBtn->setStyleSheet(titleBtnStyle("#e03a3a"));
     connect(closeBtn, &QPushButton::clicked, this, &QWidget::close);
@@ -170,7 +170,7 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
     textPanelLayout->setContentsMargins(0, 0, 0, 0);
     textPanelLayout->setSpacing(0);
 
-    auto* textHeader = new QLabel(QStringLiteral("  TEXT BLOCKS"), textPanel);
+    auto* textHeader = new QLabel(tr("  TEXT BLOCKS"), textPanel);
     textHeader->setFixedHeight(30);
     textHeader->setStyleSheet(
         "color: #6a7a88; font-size: 10px; font-weight: 600; letter-spacing: 1px;"
@@ -242,12 +242,12 @@ OcrResultWindow::OcrResultWindow(const QImage& source, const QVector<OcrBlockInf
         "QPushButton:hover { background: %3; }"
         "QPushButton:pressed { background: %4; }");
 
-    copyBtn_ = new QPushButton(QStringLiteral("Copy All"), toolBar);
+    copyBtn_ = new QPushButton(tr("Copy All"), toolBar);
     copyBtn_->setStyleSheet(
         btnBase.arg("#2fbf9f", "#ffffff", "#3ddbab", "#28a88c"));
     connect(copyBtn_, &QPushButton::clicked, this, &OcrResultWindow::performCopy);
 
-    pasteBtn_ = new QPushButton(QStringLiteral("Paste && Close"), toolBar);
+    pasteBtn_ = new QPushButton(tr("Paste && Close"), toolBar);
     pasteBtn_->setStyleSheet(
         btnBase.arg("#364150", "#edf1f5", "#43536a", "#2d3b4e"));
     connect(pasteBtn_, &QPushButton::clicked, this, &OcrResultWindow::performPaste);
@@ -385,14 +385,14 @@ void OcrResultWindow::updateTextRows()
 void OcrResultWindow::updateToolbar()
 {
     if (selectedIndices_.isEmpty()) {
-        selectionInfo_->setText(QStringLiteral("%1 text blocks")
+        selectionInfo_->setText(tr("%1 text blocks")
                                     .arg(blocks_.size()));
-        copyBtn_->setText(QStringLiteral("Copy All"));
+        copyBtn_->setText(tr("Copy All"));
     } else {
-        selectionInfo_->setText(QStringLiteral("%1/%2 selected")
+        selectionInfo_->setText(tr("%1/%2 selected")
                                     .arg(selectedIndices_.size())
                                     .arg(blocks_.size()));
-        copyBtn_->setText(QStringLiteral("Copy (%1)").arg(selectedIndices_.size()));
+        copyBtn_->setText(tr("Copy (%1)").arg(selectedIndices_.size()));
     }
 }
 
@@ -561,7 +561,7 @@ void OcrResultWindow::updateTitleButtons()
 {
     minimizeBtn_->setText(maximized_ ? QString(QChar(0x2212)) : QString(QChar(0x2014)));
     maximizeBtn_->setText(maximized_ ? QString(QChar(0x2717)) : QString(QChar(0x25A1)));
-    maximizeBtn_->setToolTip(maximized_ ? "Restore" : "Maximize");
+    maximizeBtn_->setToolTip(maximized_ ? tr("Restore") : tr("Maximize"));
 }
 
 QString OcrResultWindow::selectedText() const
@@ -585,7 +585,7 @@ void OcrResultWindow::performCopy()
     QApplication::clipboard()->setText(text);
 
     QString orig = copyBtn_->text();
-    copyBtn_->setText(QStringLiteral("Copied!"));
+    copyBtn_->setText(tr("Copied!"));
     QTimer::singleShot(1500, this, [this, orig] { copyBtn_->setText(orig); });
 }
 

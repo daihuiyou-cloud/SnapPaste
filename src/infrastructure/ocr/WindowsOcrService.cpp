@@ -1,4 +1,5 @@
 #include "infrastructure/ocr/WindowsOcrService.h"
+#include "infrastructure/logging/Logger.h"
 
 #include <atomic>
 #include <climits>
@@ -12,9 +13,6 @@
 #include <winrt/Windows.Graphics.Imaging.h>
 #include <winrt/Windows.Media.Ocr.h>
 #include <winrt/base.h>
-#if defined(_MSC_VER)
-#pragma comment(lib, "windowsapp")
-#endif
 #endif
 
 namespace snappaste {
@@ -148,7 +146,10 @@ WindowsOcrService::WindowsOcrService()
     try {
         winrt::init_apartment(winrt::apartment_type::single_threaded);
         apartmentInitialized_ = true;
-    } catch (...) {
+    } catch (const winrt::hresult_error& e) {
+        Logger::warning("Failed to initialize WinRT apartment: " + QString::fromWCharArray(e.message().c_str()));
+    } catch (const std::exception& e) {
+        Logger::warning("Failed to initialize WinRT apartment: " + QString::fromLatin1(e.what()));
     }
 #endif
 }
@@ -178,11 +179,11 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
     cancelled_ = false;
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     if (source.isNull()) {
-        return {false, {}, "No image is available for OCR.", {}, {}};
+        return {false, {}, QObject::tr("No image is available for OCR."), {}, {}};
     }
 
     try {
-        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
+        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
 
         QString lang;
         {
@@ -198,10 +199,10 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             engine = winrt::Windows::Media::Ocr::OcrEngine::TryCreateFromLanguage(langObj);
         }
         if (engine == nullptr) {
-            return {false, {}, "OCR is not available for the current Windows language profile.", {}, {}};
+            return {false, {}, QObject::tr("OCR is not available for the current Windows language profile."), {}, {}};
         }
 
-        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
+        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
 
         const auto processed = preprocessForOcr(source);
         const double scaleX = static_cast<double>(source.width()) / processed.width();
@@ -234,7 +235,7 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             }
         }
 
-        if (cancelled_) return {false, {}, "OCR cancelled.", {}, {}};
+        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
         const auto result = engine.RecognizeAsync(bitmap).get();
         QStringList lines;
         QVector<OcrBlockInfo> blocks;
@@ -262,15 +263,20 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
         }
         const auto text = lines.join('\n').trimmed();
         if (text.isEmpty()) {
-            return {false, {}, "No text was recognized in the selected region.", {}, {}};
+            return {false, {}, QObject::tr("No text was recognized in the selected region."), {}, {}};
         }
         return {true, text, {}, source, blocks};
-    } catch (...) {
-        return {false, {}, "OCR failed while processing the selected region.", {}, {}};
+    } catch (const winrt::hresult_error& e) {
+        auto msg = QString::fromWCharArray(e.message().c_str());
+        Logger::warning("OCR failed: " + msg);
+        return {false, {}, QObject::tr("OCR failed while processing the selected region."), {}, {}};
+    } catch (const std::exception& e) {
+        Logger::warning("OCR failed: " + QString::fromLatin1(e.what()));
+        return {false, {}, QObject::tr("OCR failed while processing the selected region."), {}, {}};
     }
 #else
     Q_UNUSED(source)
-    return {false, {}, "OCR is not available in this build.", {}, {}};
+    return {false, {}, QObject::tr("OCR is not available in this build."), {}, {}};
 #endif
 }
 

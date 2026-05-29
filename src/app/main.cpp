@@ -3,8 +3,19 @@
 #include "presentation/toast/ToastNotifier.h"
 
 #include <QApplication>
+#include <QLibraryInfo>
 #include <QSharedMemory>
 #include <QTimer>
+#include <QTranslator>
+
+static void installTranslators()
+{
+    auto* translator = new QTranslator(QCoreApplication::instance());
+    if (translator->load(QLocale(), QLatin1String("snappaste"), QLatin1String("_"),
+                         QLatin1String(":/translations"))) {
+        QCoreApplication::installTranslator(translator);
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -15,10 +26,12 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationName("SnapPaste");
     QCoreApplication::setApplicationVersion("0.1.0");
 
+    installTranslators();
+
     QSharedMemory singleInstanceGuard("SnapPasteSingleInstance");
     if (!singleInstanceGuard.create(1)) {
         auto* notifier = new snappaste::ToastNotifier(&qtApplication);
-        notifier->showMessage(QStringLiteral("\u7A0B\u5E8F\u5DF2\u8FD0\u884C"));
+        notifier->showMessage(QObject::tr("Program already running"));
         QTimer::singleShot(2000, &qtApplication, &QApplication::quit);
         return qtApplication.exec();
     }

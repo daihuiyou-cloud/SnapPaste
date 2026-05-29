@@ -28,9 +28,6 @@
 
 namespace snappaste {
 
-namespace {
-} // namespace
-
 AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     : QWidget(parent)
 {
@@ -158,7 +155,7 @@ void AnnotationCanvas::updateWindowTitle()
     if (w) {
         QString title;
         if (modified_) title += "* ";
-        title += "SnapPaste Editor";
+        title += tr("SnapPaste Editor");
         if (!image_.isNull()) {
             title += QString(" - %1x%2").arg(image_.width()).arg(image_.height());
         }
@@ -394,7 +391,7 @@ void AnnotationCanvas::mouseDoubleClickEvent(QMouseEvent* event)
         if (annotations_[selectedIndex_].tool == AnnotationTool::Text) {
             bool ok = false;
             const auto newText = QInputDialog::getMultiLineText(
-                static_cast<QWidget*>(parent()), "Edit Text", "Edit text:",
+                static_cast<QWidget*>(parent()), tr("Edit Text"), tr("Edit text:"),
                 annotations_[selectedIndex_].text, &ok);
             if (ok && !newText.isEmpty() && newText != annotations_[selectedIndex_].text) {
                 pushUndo();
@@ -421,7 +418,7 @@ void AnnotationCanvas::mouseDoubleClickEvent(QMouseEvent* event)
         if (annotations_[i].tool == AnnotationTool::Text && annotations_[i].bounds.contains(pos)) {
             bool ok = false;
             const auto newText = QInputDialog::getMultiLineText(
-                static_cast<QWidget*>(parent()), "Edit Text", "Edit text:", annotations_[i].text, &ok);
+                static_cast<QWidget*>(parent()), tr("Edit Text"), tr("Edit text:"), annotations_[i].text, &ok);
             if (ok && !newText.isEmpty() && newText != annotations_[i].text) {
                 undoStack_.push_back(annotations_);
                 redoStack_.clear();
@@ -1077,8 +1074,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
     case Qt::Key_F1:
     case Qt::Key_Slash:
         if (event->modifiers().testFlag(Qt::ShiftModifier) || event->key() == Qt::Key_F1) {
-            QMessageBox::information(static_cast<QWidget*>(window()), "Keyboard Shortcuts",
-                "<b>Tools</b><br>"
+            QMessageBox::information(static_cast<QWidget*>(window()), tr("Keyboard Shortcuts"),
+                tr("<b>Tools</b><br>"
                 "R - Rectangle<br>E - Ellipse<br>A - Arrow<br>L - Line<br>P - Pen<br>"
                 "T - Text<br>H - Highlight<br>N - Numbered<br>M - Mosaic<br>"
                 "V - Select<br>X - Eraser<br>C - Crop<br><br>"
@@ -1097,7 +1094,7 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
                 "Ctrl+C - Copy image<br>Ctrl+S - Save<br>"
                 "Ctrl+Shift+S - Export...<br>"
                 "F3 - Pin image<br>"
-                "Escape - Close editor");
+                "Escape - Close editor"));
             event->accept(); return;
         }
         break;
@@ -1109,28 +1106,28 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
 void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
 {
     QMenu menu;
-    auto* copyImage = menu.addAction("Copy Image\tCtrl+C");
-    auto* saveAs = menu.addAction("Export...");
+    auto* copyImage = menu.addAction(tr("Copy Image\tCtrl+C"));
+    auto* saveAs = menu.addAction(tr("Export..."));
     QAction* deleteAnn = nullptr;
     QAction* duplicateAnn = nullptr;
     QAction* bringForward = nullptr;
     QAction* sendBackward = nullptr;
     if (selectedIndex_ >= 0) {
         menu.addSeparator();
-        deleteAnn = menu.addAction("Delete Annotation\tDel");
-        duplicateAnn = menu.addAction("Duplicate Annotation");
+        deleteAnn = menu.addAction(tr("Delete Annotation\tDel"));
+        duplicateAnn = menu.addAction(tr("Duplicate Annotation"));
         if (selectedIndex_ < annotations_.size() - 1)
-            bringForward = menu.addAction("Bring Forward\tCtrl+Shift+Up");
+            bringForward = menu.addAction(tr("Bring Forward\tCtrl+Shift+Up"));
         if (selectedIndex_ > 0)
-            sendBackward = menu.addAction("Send Backward\tCtrl+Shift+Down");
+            sendBackward = menu.addAction(tr("Send Backward\tCtrl+Shift+Down"));
     }
     menu.addSeparator();
-    auto* zoomIn = menu.addAction("Zoom In\tCtrl++");
-    auto* zoomOut = menu.addAction("Zoom Out\tCtrl+-");
-    auto* zoom100 = menu.addAction("Actual Size (100%)\tCtrl+0");
-    auto* zoomFit = menu.addAction("Fit to Window\tCtrl+9");
+    auto* zoomIn = menu.addAction(tr("Zoom In\tCtrl++"));
+    auto* zoomOut = menu.addAction(tr("Zoom Out\tCtrl+-"));
+    auto* zoom100 = menu.addAction(tr("Actual Size (100%)\tCtrl+0"));
+    auto* zoomFit = menu.addAction(tr("Fit to Window\tCtrl+9"));
     menu.addSeparator();
-    auto* clearAll = menu.addAction("Clear All Annotations");
+    auto* clearAll = menu.addAction(tr("Clear All Annotations"));
     auto* action = menu.exec(event->globalPos());
     if (action == deleteAnn && selectedIndex_ >= 0) {
         pushUndo();
@@ -1161,7 +1158,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
     } else if (action == copyImage) {
         QApplication::clipboard()->setImage(renderedImage());
     } else if (action == saveAs) {
-        auto path = QFileDialog::getSaveFileName(this, "Save As", QString(),
+        auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
             "PNG (*.png);;JPEG (*.jpg *.jpeg)");
         if (!path.isEmpty()) {
             renderedImage().save(path);
@@ -1193,8 +1190,8 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         }
     } else if (action == clearAll) {
         if (!annotations_.isEmpty()) {
-            auto ret = QMessageBox::question(this, "Clear All Annotations",
-                "Are you sure you want to clear all annotations?",
+            auto ret = QMessageBox::question(this, tr("Clear All Annotations"),
+                tr("Are you sure you want to clear all annotations?"),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (ret == QMessageBox::Yes) {
                 pushUndo();

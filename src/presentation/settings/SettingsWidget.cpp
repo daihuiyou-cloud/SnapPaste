@@ -2,6 +2,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QFileDialog>
 #include <QFocusEvent>
 #include <QFormLayout>
@@ -46,7 +47,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override
     {
         recording_ = !recording_;
-        setText(recording_ ? "Press shortcut..." : hotkey_.toDisplayString());
+        setText(recording_ ? tr("Press shortcut...") : hotkey_.toDisplayString());
         if (recording_) {
             timer_.start();
             grabKeyboard();
@@ -134,49 +135,49 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     , imageFormatCombo_(new QComboBox(this))
     , themeCombo_(new QComboBox(this))
     , ocrLanguageCombo_(new QComboBox(this))
-    , autoSaveCheckbox_(new QCheckBox("Auto-save on capture", this))
+    , autoSaveCheckbox_(new QCheckBox(tr("Auto-save on capture"), this))
     , captureHotkeyInput_(new HotkeyInput(this))
     , pasteHotkeyInput_(new HotkeyInput(this))
     , hidePinsHotkeyInput_(new HotkeyInput(this))
     , repeatCaptureHotkeyInput_(new HotkeyInput(this))
 {
-    auto* browseButton = new QPushButton("Browse", this);
+    auto* browseButton = new QPushButton(tr("Browse"), this);
 
-    auto* saveButton = new QPushButton("Save Settings", this);
-    auto* restoreButton = new QPushButton("Restore Defaults", this);
+    auto* saveButton = new QPushButton(tr("Save Settings"), this);
+    auto* restoreButton = new QPushButton(tr("Restore Defaults"), this);
 
     imageFormatCombo_->addItems({"png", "jpg"});
-    themeCombo_->addItems({"System", "Light", "Dark"});
+    themeCombo_->addItems({tr("System"), tr("Light"), tr("Dark")});
 
     struct LangEntry { const char* label; const char* tag; };
     const LangEntry kLanguages[] = {
-        {"Auto (System Default)", ""},
-        {"English", "en"},
-        {"Chinese (Simplified)", "zh-Hans"},
-        {"Chinese (Traditional)", "zh-Hant"},
-        {"Japanese", "ja"},
-        {"Korean", "ko"},
-        {"French", "fr"},
-        {"German", "de"},
-        {"Spanish", "es"},
-        {"Italian", "it"},
-        {"Portuguese (Brazil)", "pt-BR"},
-        {"Russian", "ru"},
-        {"Arabic", "ar"},
-        {"Dutch", "nl"},
-        {"Polish", "pl"},
-        {"Swedish", "sv"},
-        {"Turkish", "tr"},
-        {"Czech", "cs"},
-        {"Danish", "da"},
-        {"Finnish", "fi"},
-        {"Greek", "el"},
-        {"Hungarian", "hu"},
-        {"Norwegian", "nb"},
-        {"Thai", "th"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Auto (System Default)"), ""},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "English"), "en"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Chinese (Simplified)"), "zh-Hans"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Chinese (Traditional)"), "zh-Hant"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Japanese"), "ja"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Korean"), "ko"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "French"), "fr"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "German"), "de"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Spanish"), "es"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Italian"), "it"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Portuguese (Brazil)"), "pt-BR"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Russian"), "ru"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Arabic"), "ar"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Dutch"), "nl"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Polish"), "pl"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Swedish"), "sv"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Turkish"), "tr"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Czech"), "cs"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Danish"), "da"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Finnish"), "fi"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Greek"), "el"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Hungarian"), "hu"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Norwegian"), "nb"},
+        {QT_TRANSLATE_NOOP("SettingsWidget", "Thai"), "th"},
     };
     for (const auto& lang : kLanguages) {
-        ocrLanguageCombo_->addItem(QLatin1String(lang.label), QLatin1String(lang.tag));
+        ocrLanguageCombo_->addItem(QCoreApplication::translate("SettingsWidget", lang.label), QLatin1String(lang.tag));
     }
 
     auto* pathLayout = new QHBoxLayout();
@@ -184,15 +185,15 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     pathLayout->addWidget(browseButton);
 
     auto* form = new QFormLayout();
-    form->addRow("Save directory", pathLayout);
-    form->addRow("Image format", imageFormatCombo_);
-    form->addRow("Theme", themeCombo_);
-    form->addRow("OCR language", ocrLanguageCombo_);
+    form->addRow(tr("Save directory"), pathLayout);
+    form->addRow(tr("Image format"), imageFormatCombo_);
+    form->addRow(tr("Theme"), themeCombo_);
+    form->addRow(tr("OCR language"), ocrLanguageCombo_);
     form->addRow("", autoSaveCheckbox_);
-    form->addRow("Capture hotkey", captureHotkeyInput_);
-    form->addRow("Paste hotkey", pasteHotkeyInput_);
-    form->addRow("Hide pins hotkey", hidePinsHotkeyInput_);
-    form->addRow("Repeat capture hotkey", repeatCaptureHotkeyInput_);
+    form->addRow(tr("Capture hotkey"), captureHotkeyInput_);
+    form->addRow(tr("Paste hotkey"), pasteHotkeyInput_);
+    form->addRow(tr("Hide pins hotkey"), hidePinsHotkeyInput_);
+    form->addRow(tr("Repeat capture hotkey"), repeatCaptureHotkeyInput_);
 
     auto* layout = new QVBoxLayout(this);
     layout->addLayout(form);
@@ -205,14 +206,14 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     setLayout(layout);
 
     connect(browseButton, &QPushButton::clicked, this, [this] {
-        const auto directory = QFileDialog::getExistingDirectory(this, "Choose capture directory", saveDirectoryEdit_->text());
+        const auto directory = QFileDialog::getExistingDirectory(this, tr("Choose capture directory"), saveDirectoryEdit_->text());
         if (!directory.isEmpty()) {
             saveDirectoryEdit_->setText(directory);
         }
     });
     connect(saveButton, &QPushButton::clicked, this, [this] {
         if (saveDirectoryEdit_->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Save directory cannot be empty.");
+            QMessageBox::warning(this, tr("Validation"), tr("Save directory cannot be empty."));
             saveDirectoryEdit_->setFocus();
             return;
         }
@@ -223,7 +224,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
             hidePinsHotkeyInput_->hotkey(),
             repeatCaptureHotkeyInput_->hotkey()
         };
-        const char* labels[] = {"Capture", "Paste", "Hide Pins", "Repeat Capture"};
+        const QString labels[] = {tr("Capture"), tr("Paste"), tr("Hide Pins"), tr("Repeat Capture")};
         for (int i = 0; i < 4; ++i) {
             for (int j = i + 1; j < 4; ++j) {
                 if (hotkeys[i].key > 0 && hotkeys[j].key > 0
@@ -231,8 +232,8 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                     && hotkeys[i].ctrl == hotkeys[j].ctrl
                     && hotkeys[i].alt == hotkeys[j].alt
                     && hotkeys[i].shift == hotkeys[j].shift) {
-                    QMessageBox::warning(this, "Hotkey Conflict",
-                        QString("\"%1\" and \"%2\" have the same shortcut.")
+                    QMessageBox::warning(this, tr("Hotkey Conflict"),
+                        tr("\"%1\" and \"%2\" have the same shortcut.")
                             .arg(labels[i], labels[j]));
                     return;
                 }
@@ -252,8 +253,8 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         viewModel_.save(settings);
     });
     connect(restoreButton, &QPushButton::clicked, this, [this] {
-        auto ret = QMessageBox::question(this, "Restore Defaults",
-            "Reset all settings to their default values?",
+        auto ret = QMessageBox::question(this, tr("Restore Defaults"),
+            tr("Reset all settings to their default values?"),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (ret == QMessageBox::Yes) {
             viewModel_.restoreDefaults();
@@ -274,18 +275,18 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
             });
     connect(&viewModel_, &SettingsViewModel::saved, this, [this, saveButton] {
         const auto original = saveButton->text();
-        saveButton->setText("Saved [OK]");
+        saveButton->setText(tr("Saved [OK]"));
         saveButton->setStyleSheet("QPushButton { color: #34c759; font-weight: bold; }");
         QTimer::singleShot(2000, this, [saveButton, original] {
             saveButton->setText(original);
             saveButton->setStyleSheet("");
         });
         QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, -20)),
-                           "Settings saved successfully", this, {}, 1500);
+                           tr("Settings saved successfully"), this, {}, 1500);
     });
     connect(&viewModel_, &SettingsViewModel::errorOccurred, this, [this, saveButton](const QString& message) {
         QToolTip::showText(saveButton->mapToGlobal(QPoint(saveButton->width() / 2, -20)),
-                           "Error: " + message, this, {}, 3000);
+                           tr("Error: ") + message, this, {}, 3000);
     });
 
     viewModel_.load();
