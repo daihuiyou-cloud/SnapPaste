@@ -7,6 +7,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include <functional>
 #include <optional>
 
 class QPropertyAnimation;
@@ -88,6 +89,7 @@ private:
     void undoSelection();
     void selectCandidate(int index);
     void cycleCandidate(int step);
+    void confirmWithFade(std::function<void()> onFinished);
     void confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&));
     void applyHistorySelection(bool forward);
     void updateSampledColor(const QPoint& globalPosition);

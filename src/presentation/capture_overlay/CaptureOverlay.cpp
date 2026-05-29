@@ -724,6 +724,23 @@ void CaptureOverlay::cycleCandidate(int step)
     selectCandidate(base + step);
 }
 
+void CaptureOverlay::confirmWithFade(std::function<void()> onFinished)
+{
+    fadeAnimation_->stop();
+    fadeAnimation_->setStartValue(windowOpacity());
+    fadeAnimation_->setEndValue(0.0);
+    QPointer<CaptureOverlay> guard(this);
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(fadeAnimation_, &QPropertyAnimation::finished, this, [this, guard, conn, onFinished] {
+        disconnect(*conn);
+        if (guard.isNull()) return;
+        hide();
+        emit hiddenAfterAction();
+        onFinished();
+    });
+    fadeAnimation_->start();
+}
+
 void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&))
 {
     const auto region = selectedRegion();
@@ -735,19 +752,9 @@ void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(cons
     actionBar_->hide();
     selectionHistory_.add(region);
 
-    fadeAnimation_->stop();
-    fadeAnimation_->setStartValue(windowOpacity());
-    fadeAnimation_->setEndValue(0.0);
-    QPointer<CaptureOverlay> guard(this);
-    auto conn = std::make_shared<QMetaObject::Connection>();
-    *conn = connect(fadeAnimation_, &QPropertyAnimation::finished, this, [this, guard, conn, signalEmitter, region] {
-        disconnect(*conn);
-        if (guard.isNull()) return;
-        hide();
-        emit hiddenAfterAction();
+    confirmWithFade([this, signalEmitter, region] {
         (this->*signalEmitter)(region);
     });
-    fadeAnimation_->start();
 }
 
 void CaptureOverlay::applyHistorySelection(bool forward)
@@ -830,18 +837,9 @@ void CaptureOverlay::cancel()
     actionBar_->hide();
     desktopBoundsValid_ = false;
 
-    fadeAnimation_->stop();
-    fadeAnimation_->setStartValue(windowOpacity());
-    fadeAnimation_->setEndValue(0.0);
-    QPointer<CaptureOverlay> guard(this);
-    auto conn = std::make_shared<QMetaObject::Connection>();
-    *conn = connect(fadeAnimation_, &QPropertyAnimation::finished, this, [this, guard, conn] {
-        disconnect(*conn);
-        if (guard.isNull()) return;
-        hide();
+    confirmWithFade([this] {
         emit cancelled();
     });
-    fadeAnimation_->start();
 }
 
 void CaptureOverlay::finishReady()

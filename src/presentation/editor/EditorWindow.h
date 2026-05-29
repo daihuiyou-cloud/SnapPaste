@@ -37,6 +37,7 @@ signals:
 
 private:
     void createToolPanel();
+    void setupActions();
     void rebuildColorMenu();
     void updateColorWell(const QColor& c);
 

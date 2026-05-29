@@ -102,6 +102,15 @@ private:
     void drawAnnotations(QPainter* painter, const QImage& sourceImage, bool includeSelectionChrome) const;
     static bool hitTestAnnotation(const Annotation& annotation, const QPoint& pos);
     static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize = 14);
+    static void drawRectAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawEllipseAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawArrowAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawLineAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawPenAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize);
+    static void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation);
+    static void drawHighlightAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawNumberedAnnotation(QPainter* painter, const Annotation& annotation);
 
     void handlePanningPress(QMouseEvent* event);
     bool handlePickingColorPress(QMouseEvent* event);
@@ -112,11 +121,24 @@ private:
     bool handleExistingAnnotationPress(const QPoint& pos);
     void startDrawingAnnotation(const QPoint& pos);
 
+    void drawCheckerboard(QPainter& painter);
+    void drawGridOverlay(QPainter& painter);
+    void drawTextEditCursor(QPainter& painter);
+    void drawDraftSizeLabel(QPainter& painter);
+
     void updateMouseInfo(QMouseEvent* event);
     void updateMoveCursor(QMouseEvent* event);
     void handleMovePan(QMouseEvent* event);
     void handleMoveSelect(QMouseEvent* event);
     void updateDrawingStroke(QMouseEvent* event);
+
+    void handleTextEditingKey(QKeyEvent* event);
+    void handleZoomFit();
+    void handleAnnotationDeleteKey();
+    void handleDuplicateKey();
+    void handleLayerReorderKey(int direction);
+    void handleNudgeKey(int key);
+    void handleFontSizeChange(int delta);
 
     static constexpr int kMaxUndo = 50;
 

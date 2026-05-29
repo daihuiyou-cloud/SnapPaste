@@ -98,7 +98,11 @@ EditorWindow::EditorWindow(QWidget* parent)
     setCentralWidget(scrollArea);
 
     createToolPanel();
+    setupActions();
+}
 
+void EditorWindow::setupActions()
+{
     auto* undoAction = new QAction("Undo", this);
     undoAction->setShortcut(QKeySequence::Undo);
     connect(undoAction, &QAction::triggered, this, [this] { canvas_->undo(); });

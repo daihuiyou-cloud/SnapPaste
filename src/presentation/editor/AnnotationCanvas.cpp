@@ -867,137 +867,181 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
+void AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
+{
+    auto& textAnn = annotations_[editingTextIndex_];
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        editingTextIndex_ = -1;
+        preeditString_.clear();
+        update();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Escape) {
+        if (textAnn.text.isEmpty()) {
+            pushUndo();
+            redoStack_.clear();
+            annotations_.removeAt(editingTextIndex_);
+            selectedIndex_ = -1;
+        }
+        editingTextIndex_ = -1;
+        preeditString_.clear();
+        markModified();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Backspace) {
+        if (!textAnn.text.isEmpty()) {
+            textAnn.text.chop(1);
+            updateTextBounds(editingTextIndex_);
+            markModified();
+        }
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Delete) {
+        event->accept();
+        return;
+    }
+    QString text = event->text();
+    if (!text.isEmpty() && text[0].isPrint()) {
+        textAnn.text += text;
+        updateTextBounds(editingTextIndex_);
+        markModified();
+        event->accept();
+    }
+}
+
+void AnnotationCanvas::handleZoomFit()
+{
+    auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
+    if (scrollArea && !image_.isNull()) {
+        auto vp = scrollArea->viewport()->size();
+        auto logicalSize = image_.size() / image_.devicePixelRatio();
+        double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
+                           static_cast<double>(vp.height()) / logicalSize.height());
+        int newW = static_cast<int>(logicalSize.width() * fit);
+        int newH = static_cast<int>(logicalSize.height() * fit);
+        if (newW > 0 && newH > 0) {
+            QSize newSize(newW, newH);
+            setMinimumSize(newSize);
+            resize(newSize);
+            zoomFactor_ = fit;
+            updateWindowTitle();
+            update();
+            if (onZoomChanged_) onZoomChanged_(zoomFactor_);
+        }
+    }
+}
+
+void AnnotationCanvas::handleAnnotationDeleteKey()
+{
+    pushUndo();
+    redoStack_.clear();
+    annotations_.removeAt(selectedIndex_);
+    selectedIndex_ = -1;
+    markModified();
+}
+
+void AnnotationCanvas::handleDuplicateKey()
+{
+    editingTextIndex_ = -1;
+    preeditString_.clear();
+    auto dup = annotations_.at(selectedIndex_);
+    dup.bounds.translate(10, 10);
+    pushUndo();
+    redoStack_.clear();
+    annotations_.push_back(std::move(dup));
+    selectedIndex_ = annotations_.size() - 1;
+    markModified();
+}
+
+void AnnotationCanvas::handleLayerReorderKey(int direction)
+{
+    int swap = selectedIndex_ + direction;
+    if (swap >= 0 && swap < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
+        qSwap(annotations_[selectedIndex_], annotations_[swap]);
+        selectedIndex_ = swap;
+        markModified();
+    }
+}
+
+void AnnotationCanvas::handleNudgeKey(int key)
+{
+    int step = (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) ? 10 : 1;
+    QPoint delta(0, 0);
+    if (key == Qt::Key_Up) delta.setY(-step);
+    else if (key == Qt::Key_Down) delta.setY(step);
+    else if (key == Qt::Key_Left) delta.setX(-step);
+    else if (key == Qt::Key_Right) delta.setX(step);
+    annotations_[selectedIndex_].bounds.translate(delta);
+    if (annotations_[selectedIndex_].tool == AnnotationTool::Pen) {
+        for (auto& pt : annotations_[selectedIndex_].points) pt += delta;
+    }
+    markModified();
+}
+
+void AnnotationCanvas::handleFontSizeChange(int delta)
+{
+    int newSize = fontSize_ + delta;
+    if (newSize >= 8 && newSize <= 72) {
+        fontSize_ = newSize;
+        markModified();
+        update();
+        if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+        QSettings().setValue("editor/fontSize", fontSize_);
+    }
+}
+
 void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
 {
     if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()
         && annotations_[editingTextIndex_].tool == AnnotationTool::Text) {
-        auto& textAnn = annotations_[editingTextIndex_];
-        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-            editingTextIndex_ = -1;
-            preeditString_.clear();
-            update();
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_Escape) {
-            if (textAnn.text.isEmpty()) {
-                pushUndo();
-                redoStack_.clear();
-                annotations_.removeAt(editingTextIndex_);
-                selectedIndex_ = -1;
-            }
-            editingTextIndex_ = -1;
-            preeditString_.clear();
-            markModified();
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_Backspace) {
-            if (!textAnn.text.isEmpty()) {
-                textAnn.text.chop(1);
-                updateTextBounds(editingTextIndex_);
-                markModified();
-            }
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_Delete) {
-            event->accept();
-            return;
-        }
-        QString text = event->text();
-        if (!text.isEmpty() && text[0].isPrint()) {
-            textAnn.text += text;
-            updateTextBounds(editingTextIndex_);
-            markModified();
-            event->accept();
-            return;
-        }
+        handleTextEditingKey(event);
+        return;
     }
 
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
         && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && editingTextIndex_ < 0) {
-        pushUndo();
-        redoStack_.clear();
-        annotations_.removeAt(selectedIndex_);
-        selectedIndex_ = -1;
-        markModified();
+        handleAnnotationDeleteKey();
         event->accept();
         return;
     }
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
         if (event->key() == Qt::Key_Equal || event->key() == Qt::Key_Plus) {
             zoomAt(zoomFactor_ * 1.15, QPoint(width() / 2, height() / 2));
-            event->accept();
-            return;
+            event->accept(); return;
         }
         if (event->key() == Qt::Key_Minus) {
             zoomAt(zoomFactor_ / 1.15, QPoint(width() / 2, height() / 2));
-            event->accept();
-            return;
+            event->accept(); return;
         }
         if (event->key() == Qt::Key_0) {
             zoomAt(1.0, QPoint(width() / 2, height() / 2));
-            event->accept();
-            return;
+            event->accept(); return;
         }
         if (event->key() == Qt::Key_9) {
-            auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
-            if (scrollArea && !image_.isNull()) {
-                auto vp = scrollArea->viewport()->size();
-                auto logicalSize = image_.size() / image_.devicePixelRatio();
-                double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
-                                   static_cast<double>(vp.height()) / logicalSize.height());
-                int newW = static_cast<int>(logicalSize.width() * fit);
-                int newH = static_cast<int>(logicalSize.height() * fit);
-                if (newW > 0 && newH > 0) {
-                    QSize newSize(newW, newH);
-                    setMinimumSize(newSize);
-                    resize(newSize);
-                    zoomFactor_ = fit;
-                    updateWindowTitle();
-                    update();
-                    if (onZoomChanged_) onZoomChanged_(zoomFactor_);
-                }
-            }
-            event->accept();
-            return;
+            handleZoomFit();
+            event->accept(); return;
         }
         if (event->key() == Qt::Key_D && selectedIndex_ >= 0) {
-            editingTextIndex_ = -1;
-            preeditString_.clear();
-            auto dup = annotations_.at(selectedIndex_);
-            dup.bounds.translate(10, 10);
-            pushUndo();
-            redoStack_.clear();
-            annotations_.push_back(std::move(dup));
-            selectedIndex_ = annotations_.size() - 1;
-            markModified();
-            event->accept();
-            return;
+            handleDuplicateKey();
+            event->accept(); return;
         }
         if (event->key() == Qt::Key_A && !annotations_.isEmpty()) {
             selectedIndex_ = annotations_.size() - 1;
             markModified();
-            event->accept();
-            return;
+            event->accept(); return;
         }
-        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
-            if ((event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
-                && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
-                int dir = (event->key() == Qt::Key_Up) ? 1 : -1;
-                int swap = selectedIndex_ + dir;
-                if (swap >= 0 && swap < annotations_.size()) {
-                    pushUndo();
-                    redoStack_.clear();
-                    qSwap(annotations_[selectedIndex_], annotations_[swap]);
-                    selectedIndex_ = swap;
-                    markModified();
-                }
-                event->accept();
-                return;
-            }
+        if (event->modifiers().testFlag(Qt::ShiftModifier)
+            && (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
+            && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+            int dir = (event->key() == Qt::Key_Up) ? 1 : -1;
+            handleLayerReorderKey(dir);
+            event->accept(); return;
         }
         QWidget::keyPressEvent(event);
         return;
@@ -1020,37 +1064,16 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Left:
     case Qt::Key_Right:
         if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
-            int step = event->modifiers().testFlag(Qt::ShiftModifier) ? 10 : 1;
-            QPoint delta(0, 0);
-            if (event->key() == Qt::Key_Up) delta.setY(-step);
-            else if (event->key() == Qt::Key_Down) delta.setY(step);
-            else if (event->key() == Qt::Key_Left) delta.setX(-step);
-            else if (event->key() == Qt::Key_Right) delta.setX(step);
-            annotations_[selectedIndex_].bounds.translate(delta);
-            if (annotations_[selectedIndex_].tool == AnnotationTool::Pen) {
-                for (auto& pt : annotations_[selectedIndex_].points) pt += delta;
-            }
-            markModified();
-            event->accept();
-            return;
+            handleNudgeKey(event->key());
+            event->accept(); return;
         }
         break;
     case Qt::Key_BracketLeft:
-        if (currentTool_ == AnnotationTool::Text && fontSize_ > 8) {
-            fontSize_ -= 2; markModified(); update();
-            if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
-            QSettings().setValue("editor/fontSize", fontSize_);
-            event->accept(); return;
-        }
-        break;
+        handleFontSizeChange(-2);
+        event->accept(); return;
     case Qt::Key_BracketRight:
-        if (currentTool_ == AnnotationTool::Text && fontSize_ < 72) {
-            fontSize_ += 2; markModified(); update();
-            if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
-            QSettings().setValue("editor/fontSize", fontSize_);
-            event->accept(); return;
-        }
-        break;
+        handleFontSizeChange(2);
+        event->accept(); return;
     case Qt::Key_F1:
     case Qt::Key_Slash:
         if (event->modifiers().testFlag(Qt::ShiftModifier) || event->key() == Qt::Key_F1) {
@@ -1075,8 +1098,7 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
                 "Ctrl+Shift+S - Export...<br>"
                 "F3 - Pin image<br>"
                 "Escape - Close editor");
-            event->accept();
-            return;
+            event->accept(); return;
         }
         break;
     default: break;
@@ -1185,6 +1207,88 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
     }
 }
 
+void AnnotationCanvas::drawCheckerboard(QPainter& painter)
+{
+    int tile = 8;
+    auto dpr = image_.devicePixelRatio();
+    auto logicalH = image_.height() / dpr;
+    auto logicalW = image_.width() / dpr;
+    for (int y = 0; y < logicalH; y += tile) {
+        for (int x = 0; x < logicalW; x += tile) {
+            bool light = ((x / tile) + (y / tile)) % 2 == 0;
+            painter.fillRect(x, y, tile, tile, light ? QColor("#cccccc") : QColor("#888888"));
+        }
+    }
+}
+
+void AnnotationCanvas::drawGridOverlay(QPainter& painter)
+{
+    auto dpr = image_.devicePixelRatio();
+    auto w = static_cast<int>(image_.width() / dpr * zoomFactor_);
+    auto h = static_cast<int>(image_.height() / dpr * zoomFactor_);
+    int step = static_cast<int>(50 * zoomFactor_);
+    if (step < 8) step = 8;
+    painter.save();
+    painter.setClipRect(0, 0, w, h);
+    painter.setPen(QPen(QColor(255, 255, 255, 22), 1));
+    for (int x = step; x < w; x += step)
+        painter.drawLine(x, 0, x, h);
+    for (int y = step; y < h; y += step)
+        painter.drawLine(0, y, w, y);
+    painter.restore();
+}
+
+void AnnotationCanvas::drawTextEditCursor(QPainter& painter)
+{
+    painter.save();
+    painter.scale(zoomFactor_, zoomFactor_);
+    if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
+        const auto& a = annotations_[editingTextIndex_];
+        if (a.tool == AnnotationTool::Text) {
+            QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            painter.setFont(font);
+            int textWidth = painter.fontMetrics().horizontalAdvance(a.text);
+            int cx = a.bounds.left() + 4 + textWidth;
+            int cy = a.bounds.top() + 4;
+            int ch = painter.fontMetrics().height();
+            if (!preeditString_.isEmpty()) {
+                painter.setPen(QPen(a.color, 1));
+                painter.drawText(cx, cy, painter.fontMetrics().horizontalAdvance(preeditString_) + 4, ch,
+                    Qt::AlignLeft | Qt::AlignTop, preeditString_);
+                int preeditWidth = painter.fontMetrics().horizontalAdvance(preeditString_);
+                painter.setPen(QPen(a.color, 1, Qt::DashLine));
+                painter.drawLine(cx, cy + ch + 1, cx + preeditWidth, cy + ch + 1);
+                textWidth += preeditWidth;
+                cx += preeditWidth;
+            }
+            painter.setPen(QPen(a.color, 1.5));
+            painter.drawLine(cx, cy, cx, cy + ch);
+        }
+    }
+    painter.restore();
+}
+
+void AnnotationCanvas::drawDraftSizeLabel(QPainter& painter)
+{
+    if (!drawing_ || draft_.tool == AnnotationTool::Pen || draft_.tool == AnnotationTool::Numbered || draft_.tool == AnnotationTool::Crop) {
+        return;
+    }
+    auto dims = draft_.bounds.size();
+    QString label = QString("%1 × %2").arg(dims.width()).arg(dims.height());
+    painter.setPen(Qt::NoPen);
+    auto textRect = painter.fontMetrics().boundingRect(label);
+    auto labelPos = current_;
+    labelPos = QPoint(static_cast<int>(labelPos.x() * zoomFactor_),
+                      static_cast<int>(labelPos.y() * zoomFactor_));
+    labelPos += QPoint(12, -textRect.height() - 8);
+    textRect = QRect(labelPos.x() - 4, labelPos.y() - 2,
+                     textRect.width() + 8, textRect.height() + 4);
+    painter.setBrush(QColor(0, 0, 0, 160));
+    painter.drawRoundedRect(textRect, 3, 3);
+    painter.setPen(Qt::white);
+    painter.drawText(textRect, Qt::AlignCenter, label);
+}
+
 void AnnotationCanvas::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event)
@@ -1195,16 +1299,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         painter.save();
         painter.scale(zoomFactor_, zoomFactor_);
         if (image_.hasAlphaChannel()) {
-            int tile = 8;
-            auto dpr = image_.devicePixelRatio();
-            auto logicalH = image_.height() / dpr;
-            auto logicalW = image_.width() / dpr;
-            for (int y = 0; y < logicalH; y += tile) {
-                for (int x = 0; x < logicalW; x += tile) {
-                    bool light = ((x / tile) + (y / tile)) % 2 == 0;
-                    painter.fillRect(x, y, tile, tile, light ? QColor("#cccccc") : QColor("#888888"));
-                }
-            }
+            drawCheckerboard(painter);
         }
         painter.drawImage(QPoint(0, 0), image_);
         drawAnnotations(&painter, image_, true);
@@ -1213,63 +1308,11 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         }
         painter.restore();
         if (gridEnabled_) {
-            auto dpr = image_.devicePixelRatio();
-            auto w = static_cast<int>(image_.width() / dpr * zoomFactor_);
-            auto h = static_cast<int>(image_.height() / dpr * zoomFactor_);
-            int step = static_cast<int>(50 * zoomFactor_);
-            if (step < 8) step = 8;
-            painter.save();
-            painter.setClipRect(0, 0, w, h);
-            painter.setPen(QPen(QColor(255, 255, 255, 22), 1));
-            for (int x = step; x < w; x += step)
-                painter.drawLine(x, 0, x, h);
-            for (int y = step; y < h; y += step)
-                painter.drawLine(0, y, w, y);
-            painter.restore();
+            drawGridOverlay(painter);
         }
-        painter.save();
-        painter.scale(zoomFactor_, zoomFactor_);
-        if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
-            const auto& a = annotations_[editingTextIndex_];
-            if (a.tool == AnnotationTool::Text) {
-                QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
-                painter.setFont(font);
-                int textWidth = painter.fontMetrics().horizontalAdvance(a.text);
-                int cx = a.bounds.left() + 4 + textWidth;
-                int cy = a.bounds.top() + 4;
-                int ch = painter.fontMetrics().height();
-                if (!preeditString_.isEmpty()) {
-                    painter.setPen(QPen(a.color, 1));
-                    painter.drawText(cx, cy, painter.fontMetrics().horizontalAdvance(preeditString_) + 4, ch,
-                        Qt::AlignLeft | Qt::AlignTop, preeditString_);
-                    int preeditWidth = painter.fontMetrics().horizontalAdvance(preeditString_);
-                    painter.setPen(QPen(a.color, 1, Qt::DashLine));
-                    painter.drawLine(cx, cy + ch + 1, cx + preeditWidth, cy + ch + 1);
-                    textWidth += preeditWidth;
-                    cx += preeditWidth;
-                }
-                painter.setPen(QPen(a.color, 1.5));
-                painter.drawLine(cx, cy, cx, cy + ch);
-            }
-        }
-        painter.restore();
+        drawTextEditCursor(painter);
     }
-    if (drawing_ && draft_.tool != AnnotationTool::Pen && draft_.tool != AnnotationTool::Numbered && draft_.tool != AnnotationTool::Crop) {
-        auto dims = draft_.bounds.size();
-        QString label = QString("%1 × %2").arg(dims.width()).arg(dims.height());
-        painter.setPen(Qt::NoPen);
-        auto textRect = painter.fontMetrics().boundingRect(label);
-        auto labelPos = current_;
-        labelPos = QPoint(static_cast<int>(labelPos.x() * zoomFactor_),
-                          static_cast<int>(labelPos.y() * zoomFactor_));
-        labelPos += QPoint(12, -textRect.height() - 8);
-        textRect = QRect(labelPos.x() - 4, labelPos.y() - 2,
-                         textRect.width() + 8, textRect.height() + 4);
-        painter.setBrush(QColor(0, 0, 0, 160));
-        painter.drawRoundedRect(textRect, 3, 3);
-        painter.setPen(Qt::white);
-        painter.drawText(textRect, Qt::AlignCenter, label);
-    }
+    drawDraftSizeLabel(painter);
 }
 
 void AnnotationCanvas::wheelEvent(QWheelEvent* event)
@@ -1371,137 +1414,177 @@ bool AnnotationCanvas::hitTestAnnotation(const Annotation& annotation, const QPo
     return annotation.bounds.adjusted(-kMargin, -kMargin, kMargin, kMargin).contains(pos);
 }
 
-void AnnotationCanvas::drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize)
+void AnnotationCanvas::drawRectAnnotation(QPainter* painter, const Annotation& annotation)
 {
-    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
+    if (annotation.cornerRadius > 0)
+        painter->drawRoundedRect(annotation.bounds, annotation.cornerRadius, annotation.cornerRadius);
+    else
+        painter->drawRect(annotation.bounds);
+}
 
-    switch (annotation.tool) {
-    case AnnotationTool::Rectangle:
-        painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
-        if (annotation.cornerRadius > 0)
-            painter->drawRoundedRect(annotation.bounds, annotation.cornerRadius, annotation.cornerRadius);
-        else
-            painter->drawRect(annotation.bounds);
-        break;
-    case AnnotationTool::Ellipse:
-        painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
-        painter->drawEllipse(annotation.bounds);
-        break;
-    case AnnotationTool::Arrow: {
-        const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
-        const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
-        painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->drawLine(from, to);
-        constexpr double kArrowSize = 12.0;
-        const auto angle = std::atan2(to.y() - from.y(), to.x() - from.x());
-        painter->setBrush(annotation.color);
-        painter->setPen(Qt::NoPen);
-        if (annotation.arrowStyle == ArrowStyle::CircleArrow) {
-            auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
-            auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
-            painter->drawEllipse(QPointF(cx, cy), kArrowSize * 0.5, kArrowSize * 0.5);
-        } else if (annotation.arrowStyle == ArrowStyle::SquareArrow) {
-            auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
-            auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
-            painter->drawRect(QRectF(cx - kArrowSize * 0.4, cy - kArrowSize * 0.4,
-                                     kArrowSize * 0.8, kArrowSize * 0.8));
-        } else {
-            const auto p1 = QPointF(to.x() - kArrowSize * std::cos(angle - M_PI / 6),
-                                     to.y() - kArrowSize * std::sin(angle - M_PI / 6));
-            const auto p2 = QPointF(to.x() - kArrowSize * std::cos(angle + M_PI / 6),
-                                     to.y() - kArrowSize * std::sin(angle + M_PI / 6));
-            QPolygonF arrowHead;
-            arrowHead << to << p1 << p2;
-            painter->drawPolygon(arrowHead);
-        }
-        break;
+void AnnotationCanvas::drawEllipseAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
+    painter->drawEllipse(annotation.bounds);
+}
+
+void AnnotationCanvas::drawArrowAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
+    const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
+    painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter->drawLine(from, to);
+    constexpr double kArrowSize = 12.0;
+    const auto angle = std::atan2(to.y() - from.y(), to.x() - from.x());
+    painter->setBrush(annotation.color);
+    painter->setPen(Qt::NoPen);
+    if (annotation.arrowStyle == ArrowStyle::CircleArrow) {
+        auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
+        auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
+        painter->drawEllipse(QPointF(cx, cy), kArrowSize * 0.5, kArrowSize * 0.5);
+    } else if (annotation.arrowStyle == ArrowStyle::SquareArrow) {
+        auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
+        auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
+        painter->drawRect(QRectF(cx - kArrowSize * 0.4, cy - kArrowSize * 0.4,
+                                 kArrowSize * 0.8, kArrowSize * 0.8));
+    } else {
+        const auto p1 = QPointF(to.x() - kArrowSize * std::cos(angle - M_PI / 6),
+                                 to.y() - kArrowSize * std::sin(angle - M_PI / 6));
+        const auto p2 = QPointF(to.x() - kArrowSize * std::cos(angle + M_PI / 6),
+                                 to.y() - kArrowSize * std::sin(angle + M_PI / 6));
+        QPolygonF arrowHead;
+        arrowHead << to << p1 << p2;
+        painter->drawPolygon(arrowHead);
     }
-    case AnnotationTool::Line: {
-        const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
-        const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
-        painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->drawLine(from, to);
-        break;
+}
+
+void AnnotationCanvas::drawLineAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    const auto from = annotation.points.size() >= 2 ? annotation.points.first() : annotation.bounds.topLeft();
+    const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
+    painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter->drawLine(from, to);
+}
+
+void AnnotationCanvas::drawPenAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    for (int i = 1; i < annotation.points.size(); ++i) {
+        painter->drawLine(annotation.points.at(i - 1), annotation.points.at(i));
     }
-    case AnnotationTool::Pen:
-        painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        for (int i = 1; i < annotation.points.size(); ++i) {
-            painter->drawLine(annotation.points.at(i - 1), annotation.points.at(i));
-        }
-        break;
-    case AnnotationTool::Text: {
-        QFont font("Microsoft YaHei UI", annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
-        painter->setFont(font);
-        const auto flags = Qt::AlignLeft | Qt::AlignTop;
-        if (annotation.textOutline) {
-            painter->setPen(QColor(255, 255, 255, 220));
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    if (dx == 0 && dy == 0) continue;
-                    painter->drawText(annotation.bounds.adjusted(dx, dy, dx, dy), flags, annotation.text);
-                }
+}
+
+void AnnotationCanvas::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize)
+{
+    QFont font("Microsoft YaHei UI", annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
+    painter->setFont(font);
+    const auto flags = Qt::AlignLeft | Qt::AlignTop;
+    if (annotation.textOutline) {
+        painter->setPen(QColor(255, 255, 255, 220));
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) continue;
+                painter->drawText(annotation.bounds.adjusted(dx, dy, dx, dy), flags, annotation.text);
             }
         }
-        painter->setPen(QPen(annotation.color, 1));
-        painter->drawText(annotation.bounds, flags, annotation.text);
-        break;
     }
-    case AnnotationTool::Mosaic: {
-        if (!annotation.points.isEmpty()) {
-            const int blockSize = qMax(4, annotation.strokeWidth * 4);
-            for (const auto& pt : annotation.points) {
-                QRect blockRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
-                const auto clipped = blockRect.intersected(sourceImage.rect());
-                if (clipped.isEmpty()) continue;
-                if (annotation.blurRadius > 0) {
-                    auto region = sourceImage.copy(clipped);
-                    painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
-                } else {
-                    constexpr int kBlock = 8;
-                    const int bw = qMax(1, clipped.width() / kBlock);
-                    const int bh = qMax(1, clipped.height() / kBlock);
-                    auto region = sourceImage.copy(clipped);
-                    auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                                          .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
-                    painter->drawImage(clipped.topLeft(), pixelated);
-                }
-            }
-        } else {
-            const auto clipped = annotation.bounds.intersected(sourceImage.rect());
-            if (clipped.isEmpty()) break;
+    painter->setPen(QPen(annotation.color, 1));
+    painter->drawText(annotation.bounds, flags, annotation.text);
+}
+
+void AnnotationCanvas::drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation)
+{
+    if (!annotation.points.isEmpty()) {
+        const int blockSize = qMax(4, annotation.strokeWidth * 4);
+        for (const auto& pt : annotation.points) {
+            QRect blockRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
+            const auto clipped = blockRect.intersected(sourceImage.rect());
+            if (clipped.isEmpty()) continue;
             if (annotation.blurRadius > 0) {
                 auto region = sourceImage.copy(clipped);
                 painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
             } else {
-                constexpr int kBlockSize = 8;
-                const int bw = qMax(1, clipped.width() / kBlockSize);
-                const int bh = qMax(1, clipped.height() / kBlockSize);
+                constexpr int kBlock = 8;
+                const int bw = qMax(1, clipped.width() / kBlock);
+                const int bh = qMax(1, clipped.height() / kBlock);
                 auto region = sourceImage.copy(clipped);
                 auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
                                       .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
                 painter->drawImage(clipped.topLeft(), pixelated);
             }
         }
-        break;
+    } else {
+        const auto clipped = annotation.bounds.intersected(sourceImage.rect());
+        if (clipped.isEmpty()) return;
+        if (annotation.blurRadius > 0) {
+            auto region = sourceImage.copy(clipped);
+            painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+        } else {
+            constexpr int kBlockSize = 8;
+            const int bw = qMax(1, clipped.width() / kBlockSize);
+            const int bh = qMax(1, clipped.height() / kBlockSize);
+            auto region = sourceImage.copy(clipped);
+            auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                                  .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+            painter->drawImage(clipped.topLeft(), pixelated);
+        }
     }
+}
+
+void AnnotationCanvas::drawHighlightAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    painter->fillRect(annotation.bounds, QColor(annotation.color.red(), annotation.color.green(), annotation.color.blue(), 100));
+}
+
+void AnnotationCanvas::drawNumberedAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    const auto center = annotation.bounds.center();
+    const auto r = kDefaultNumberedSize / 2;
+    painter->setPen(QPen(annotation.color, 2));
+    painter->setBrush(annotation.color);
+    painter->drawEllipse(center, r, r);
+    painter->setPen(Qt::white);
+    painter->setFont(QFont("Segoe UI", r, QFont::Bold));
+    painter->drawText(QRect(center.x() - r, center.y() - r, kDefaultNumberedSize, kDefaultNumberedSize),
+                      Qt::AlignCenter, QString::number(annotation.number));
+}
+
+void AnnotationCanvas::drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize)
+{
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    switch (annotation.tool) {
+    case AnnotationTool::Rectangle:
+        drawRectAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Ellipse:
+        drawEllipseAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Arrow:
+        drawArrowAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Line:
+        drawLineAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Pen:
+        drawPenAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Text:
+        drawTextAnnotation(painter, annotation, fontSize);
+        break;
+    case AnnotationTool::Mosaic:
+        drawMosaicAnnotation(painter, sourceImage, annotation);
+        break;
     case AnnotationTool::Highlight:
-        painter->fillRect(annotation.bounds, QColor(annotation.color.red(), annotation.color.green(), annotation.color.blue(), 100));
+        drawHighlightAnnotation(painter, annotation);
         break;
-    case AnnotationTool::Numbered: {
-        painter->setRenderHint(QPainter::Antialiasing, true);
-        const auto center = annotation.bounds.center();
-        const auto r = kDefaultNumberedSize / 2;
-        painter->setPen(QPen(annotation.color, 2));
-        painter->setBrush(annotation.color);
-        painter->drawEllipse(center, r, r);
-        painter->setPen(Qt::white);
-        painter->setFont(QFont("Segoe UI", r, QFont::Bold));
-        painter->drawText(QRect(center.x() - r, center.y() - r, kDefaultNumberedSize, kDefaultNumberedSize),
-                          Qt::AlignCenter, QString::number(annotation.number));
+    case AnnotationTool::Numbered:
+        drawNumberedAnnotation(painter, annotation);
         break;
-    }
     case AnnotationTool::Select:
     case AnnotationTool::Eraser:
         break;

@@ -19,45 +19,23 @@ Result<void> SqliteMigrator::migrate(QSqlDatabase& database)
     }
 
     auto version = versionResult.value();
-    if (version < 1) {
-        const auto result = applyVersion1(database);
+    using MigrateFn = Result<void> (SqliteMigrator::*)(QSqlDatabase&);
+    const MigrateFn migrations[] = {
+        &SqliteMigrator::applyVersion1,
+        &SqliteMigrator::applyVersion2,
+        &SqliteMigrator::applyVersion3,
+        &SqliteMigrator::applyVersion4,
+        &SqliteMigrator::applyVersion5,
+    };
+    const int maxVersion = static_cast<int>(sizeof(migrations) / sizeof(migrations[0]));
+    while (version < maxVersion) {
+        const auto& fn = migrations[version];
+        const auto result = (this->*fn)(database);
         if (result.isError()) {
             database.rollback();
             return result;
         }
-        version = 1;
-    }
-    if (version < 2) {
-        const auto result = applyVersion2(database);
-        if (result.isError()) {
-            database.rollback();
-            return result;
-        }
-        version = 2;
-    }
-    if (version < 3) {
-        const auto result = applyVersion3(database);
-        if (result.isError()) {
-            database.rollback();
-            return result;
-        }
-        version = 3;
-    }
-    if (version < 4) {
-        const auto result = applyVersion4(database);
-        if (result.isError()) {
-            database.rollback();
-            return result;
-        }
-        version = 4;
-    }
-    if (version < 5) {
-        const auto result = applyVersion5(database);
-        if (result.isError()) {
-            database.rollback();
-            return result;
-        }
-        version = 5;
+        ++version;
     }
 
     if (!database.commit()) {
