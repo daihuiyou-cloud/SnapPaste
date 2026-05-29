@@ -104,7 +104,7 @@ void sharpenImage(QImage& img)
             }
         }
 
-        // Step 4: aggressive upscale — target min dimension 200px
+        // Step 4: aggressive upscale - target min dimension 200px
         double minDim = qMin(gray.width(), gray.height());
         QImage result = gray;
         if (minDim < 200) {

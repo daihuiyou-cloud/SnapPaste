@@ -772,7 +772,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.drawRoundedRect(ob, 3, 3);
             painter.setPen(QColor("#bcbec6"));
             painter.setFont(QFont("Segoe UI", 10, QFont::Bold));
-            painter.drawText(ob, Qt::AlignCenter, "\u22EF");
+            painter.drawText(ob, Qt::AlignCenter, "...");
         }
     }
 }
