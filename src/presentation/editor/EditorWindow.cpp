@@ -589,7 +589,7 @@ void EditorWindow::createToolPanel()
     const QString sliderSub = "QSlider::sub-page:horizontal { background: #2fbf9f; border-radius: 1px; }";
     const QString sliderStyle = sliderGroove + sliderHandle + sliderSub;
 
-    auto addSliderRow = [&](const char* label, int min, int max, int def,
+    auto addSliderRow = [&](const QString& label, int min, int max, int def,
                             std::function<void(int)> onChanged,
                             std::function<QString(int)> fmt) -> QSlider*
     {
