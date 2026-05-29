@@ -352,9 +352,12 @@ void EditorWindow::createToolPanel()
     layout->setSpacing(0);
 
     // -- Styles --
-    const QString headerStyle =
+    const QString sectionStyle =
         "QLabel { color: #8e8e93; font: bold 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
         "  padding: 0; }";
+
+    const QString groupStyle =
+        "QLabel { color: #5e5e63; font: 8px; padding: 0; }";
 
     const QString toolStyle =
         "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
@@ -362,7 +365,7 @@ void EditorWindow::createToolPanel()
         "QToolButton:hover { background: rgba(255,255,255,0.06); }"
         "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
 
-    const QString activeStyle =
+    const QString selStyle =
         "QToolButton { font: bold 10px; color: #999; background: transparent;"
         "  border: none; border-radius: 4px; padding: 3px 5px; }"
         "QToolButton:hover { background: rgba(47,191,159,0.1); color: #2fbf9f; }"
@@ -382,71 +385,114 @@ void EditorWindow::createToolPanel()
         layout->addWidget(line);
     };
 
-    // ==========================================
-    // Tools -- single column, compact
-    // ==========================================
-    struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tooltip; AnnotationTool tool; };
-    const ToolDef toolDefs[] = {
-        {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rectangle", "Rectangle (R)", AnnotationTool::Rectangle},
-        {makeEllipseIcon, "Ellipse", "Ellipse (E)", AnnotationTool::Ellipse},
-        {[]{ return IconProvider::icon(IconName::Arrow); }, "Arrow", "Arrow (A)", AnnotationTool::Arrow},
-        {[]{ return IconProvider::icon(IconName::Line); }, "Line", "Line (L)", AnnotationTool::Line},
-        {[]{ return IconProvider::icon(IconName::Pen); }, "Pen", "Pen (P)", AnnotationTool::Pen},
-        {[]{ return IconProvider::icon(IconName::Text); }, "Text", "Text (T)", AnnotationTool::Text},
-        {makeHighlightIcon, "Highlight", "Highlight (H)", AnnotationTool::Highlight},
-        {makeNumberedIcon, "Numbered", "Numbered (N)", AnnotationTool::Numbered},
-        {[]{ return IconProvider::icon(IconName::Mosaic); }, "Mosaic", "Mosaic (M)", AnnotationTool::Mosaic},
-        {makeEraserIcon, "Eraser", "Eraser (X)", AnnotationTool::Eraser},
-        {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
-        {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
-    };
+    struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tip; AnnotationTool tool; };
     QVector<QToolButton*> toolButtons;
-    toolButtons.reserve(std::size(toolDefs));
 
-    auto* toolsLayout = new QVBoxLayout();
-    toolsLayout->setSpacing(2);
-    toolsLayout->setContentsMargins(0, 0, 0, 0);
-    for (const auto& td : toolDefs) {
+    auto makeToolBtn = [&](const ToolDef& d) -> QToolButton* {
         auto* btn = new QToolButton(content);
-        btn->setIcon(td.iconFn());
-        btn->setText(td.name);
-        btn->setToolTip(td.tooltip);
+        btn->setIcon(d.iconFn());
+        btn->setText(d.name);
+        btn->setToolTip(d.tip);
         btn->setCheckable(true);
         btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         btn->setIconSize(QSize(14, 14));
         btn->setStyleSheet(toolStyle);
         btn->setFixedHeight(24);
-        btn->setProperty("tool", static_cast<int>(td.tool));
-        toolsLayout->addWidget(btn);
-        toolButtons.push_back(btn);
-    }
-    layout->addLayout(toolsLayout);
+        btn->setProperty("tool", static_cast<int>(d.tool));
+        return btn;
+    };
+
+    auto addGroup = [&](const char* title, const ToolDef defs[], int count) {
+        auto* hdr = new QLabel(title, content);
+        hdr->setStyleSheet(groupStyle);
+        layout->addWidget(hdr);
+        layout->addSpacing(2);
+        auto* grid = new QGridLayout();
+        grid->setSpacing(2);
+        grid->setContentsMargins(0, 0, 0, 0);
+        for (int i = 0; i < count; ++i) {
+            auto* btn = makeToolBtn(defs[i]);
+            grid->addWidget(btn, i / 2, i % 2);
+            toolButtons.push_back(btn);
+        }
+        layout->addLayout(grid);
+    };
+
+    // ==========================================
+    // Tools -- grouped categories
+    // ==========================================
+    const ToolDef shapes[] = {
+        {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rect", "Rectangle (R)", AnnotationTool::Rectangle},
+        {makeEllipseIcon, "Ellipse", "Ellipse (E)", AnnotationTool::Ellipse},
+        {[]{ return IconProvider::icon(IconName::Arrow); }, "Arrow", "Arrow (A)", AnnotationTool::Arrow},
+        {[]{ return IconProvider::icon(IconName::Line); }, "Line", "Line (L)", AnnotationTool::Line},
+    };
+    const ToolDef markup[] = {
+        {[]{ return IconProvider::icon(IconName::Pen); }, "Pen", "Pen (P)", AnnotationTool::Pen},
+        {[]{ return IconProvider::icon(IconName::Text); }, "Text", "Text (T)", AnnotationTool::Text},
+        {makeHighlightIcon, "Highlight", "Highlight (H)", AnnotationTool::Highlight},
+        {makeNumberedIcon, "Numbered", "Numbered (N)", AnnotationTool::Numbered},
+    };
+    const ToolDef edits[] = {
+        {[]{ return IconProvider::icon(IconName::Mosaic); }, "Mosaic", "Mosaic (M)", AnnotationTool::Mosaic},
+        {makeEraserIcon, "Eraser", "Eraser (X)", AnnotationTool::Eraser},
+        {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
+        {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
+    };
+
+    addGroup("SHAPES", shapes, 4);
+    layout->addSpacing(6);
+    addGroup("MARKUP", markup, 4);
+    layout->addSpacing(6);
+    addGroup("EDIT", edits, 4);
 
     layout->addSpacing(8);
     addHr();
     layout->addSpacing(6);
 
     // ==========================================
-    // Properties -- stroke + toggles + font
+    // Color & Stroke
     // ==========================================
-    auto* propsHeader = new QLabel("PROPERTIES", content);
-    propsHeader->setStyleSheet(headerStyle);
-    layout->addWidget(propsHeader);
+    auto* csHeader = new QLabel("COLOR & STROKE", content);
+    csHeader->setStyleSheet(sectionStyle);
+    layout->addWidget(csHeader);
     layout->addSpacing(6);
 
-    // Stroke width
-    auto* strokeRow = new QHBoxLayout();
-    strokeRow->setContentsMargins(0, 0, 0, 0);
-    strokeRow->setSpacing(4);
+    colorBtn_ = new QToolButton(content);
+    colorBtn_->setObjectName("colorWell");
+    colorBtn_->setFixedHeight(32);
+    colorBtn_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    colorBtn_->setPopupMode(QToolButton::InstantPopup);
+    colorBtn_->setToolTip("Color");
+    colorBtn_->setStyleSheet(
+        "QToolButton#colorWell { border: 1px solid rgba(255,255,255,0.1);"
+        "  border-radius: 4px; padding: 2px; }"
+        "QToolButton#colorWell:hover { border-color: rgba(255,255,255,0.25); }");
+    updateColorWell(QColor("#ff3b30"));
 
-    auto* widthLabel = new QLabel("Width", content);
-    widthLabel->setFixedWidth(34);
-    widthLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    auto* colorMenu = new QMenu(colorBtn_);
+    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", colorMenu);
+    eyeAction_->setCheckable(true);
+    connect(eyeAction_, &QAction::triggered, this, [this] {
+        canvas_->setPickingColor(eyeAction_->isChecked());
+    });
+    canvas_->setOnPickingColorChanged([this](bool picking) {
+        eyeAction_->setChecked(picking);
+    });
+    colorMenu->addAction(eyeAction_);
+    connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
+    colorBtn_->setMenu(colorMenu);
+    layout->addWidget(colorBtn_);
+
+    layout->addSpacing(4);
 
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
     auto* strokeGroup = new QButtonGroup(content);
     strokeGroup->setExclusive(true);
+    auto* widthRow = new QHBoxLayout();
+    widthRow->setContentsMargins(0, 0, 0, 0);
+    widthRow->setSpacing(4);
     for (const auto& s : strokes) {
         auto* btn = new QToolButton(content);
         btn->setText(s.label);
@@ -454,20 +500,28 @@ void EditorWindow::createToolPanel()
         btn->setFixedHeight(24);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
-        btn->setStyleSheet(activeStyle);
+        btn->setStyleSheet(selStyle);
         if (s.width == 4) btn->setChecked(true);
         strokeGroup->addButton(btn);
         connect(btn, &QToolButton::clicked, this, [this, s] {
             canvas_->setStrokeWidth(s.width);
         });
-        strokeRow->addWidget(btn);
+        widthRow->addWidget(btn);
     }
-    strokeRow->insertWidget(0, widthLabel);
-    layout->addLayout(strokeRow);
+    layout->addLayout(widthRow);
 
-    layout->addSpacing(4);
+    layout->addSpacing(8);
+    addHr();
+    layout->addSpacing(6);
 
-    // Mode toggles (Outline / Fill / Blur)
+    // ==========================================
+    // Options (Outline / Fill / Blur / Font)
+    // ==========================================
+    auto* optHeader = new QLabel("OPTIONS", content);
+    optHeader->setStyleSheet(sectionStyle);
+    layout->addWidget(optHeader);
+    layout->addSpacing(6);
+
     struct PropToggle { const char* text; const char* tip; bool defaultOn; void (AnnotationCanvas::*setter)(bool); };
     const PropToggle props[] = {
         {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
@@ -496,7 +550,6 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
-    // Font size
     auto* fontRow = new QHBoxLayout();
     fontRow->setContentsMargins(0, 0, 0, 0);
     fontRow->setSpacing(4);
@@ -509,7 +562,7 @@ void EditorWindow::createToolPanel()
     fontSizeDec->setText("-");
     fontSizeDec->setToolTip("Decrease font size ( [ )");
     fontSizeDec->setFixedSize(24, 24);
-    fontSizeDec->setStyleSheet(activeStyle);
+    fontSizeDec->setStyleSheet(selStyle);
 
     auto* fontSizeVal = new QLabel("14px", content);
     fontSizeVal->setToolTip("Font size for Text / Numbered tools");
@@ -521,7 +574,7 @@ void EditorWindow::createToolPanel()
     fontSizeInc->setText("+");
     fontSizeInc->setToolTip("Increase font size ( ] )");
     fontSizeInc->setFixedSize(24, 24);
-    fontSizeInc->setStyleSheet(activeStyle);
+    fontSizeInc->setStyleSheet(selStyle);
 
     fontRow->addWidget(fontLabel);
     fontRow->addWidget(fontSizeDec);
@@ -538,44 +591,6 @@ void EditorWindow::createToolPanel()
     canvas_->setOnFontSizeChanged([fontSizeVal](int size) {
         fontSizeVal->setText(QString("%1px").arg(size));
     });
-
-    layout->addSpacing(8);
-    addHr();
-    layout->addSpacing(6);
-
-    // ==========================================
-    // Color
-    // ==========================================
-    auto* colorHeader = new QLabel("COLOR", content);
-    colorHeader->setStyleSheet(headerStyle);
-    layout->addWidget(colorHeader);
-    layout->addSpacing(6);
-
-    colorBtn_ = new QToolButton(content);
-    colorBtn_->setObjectName("colorWell");
-    colorBtn_->setFixedHeight(32);
-    colorBtn_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    colorBtn_->setPopupMode(QToolButton::InstantPopup);
-    colorBtn_->setToolTip("Color");
-    colorBtn_->setStyleSheet(
-        "QToolButton#colorWell { border: 1px solid rgba(255,255,255,0.1);"
-        "  border-radius: 4px; padding: 2px; }"
-        "QToolButton#colorWell:hover { border-color: rgba(255,255,255,0.25); }");
-    updateColorWell(QColor("#ff3b30"));
-
-    auto* colorMenu = new QMenu(colorBtn_);
-    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", colorMenu);
-    eyeAction_->setCheckable(true);
-    connect(eyeAction_, &QAction::triggered, this, [this] {
-        canvas_->setPickingColor(eyeAction_->isChecked());
-    });
-    canvas_->setOnPickingColorChanged([this](bool picking) {
-        eyeAction_->setChecked(picking);
-    });
-    colorMenu->addAction(eyeAction_);
-    connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
-    colorBtn_->setMenu(colorMenu);
-    layout->addWidget(colorBtn_);
 
     // -- Spacer --
     layout->addStretch(1);
