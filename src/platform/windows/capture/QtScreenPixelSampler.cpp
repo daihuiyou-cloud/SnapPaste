@@ -1,13 +1,22 @@
 #include "platform/windows/capture/QtScreenPixelSampler.h"
 
+#include <QApplication>
 #include <QGuiApplication>
 #include <QPainter>
 #include <QScreen>
+#include <QThread>
 
 #include <algorithm>
 #include <cmath>
 
 namespace snappaste {
+
+void QtScreenPixelSampler::assertMainThread() const
+{
+    Q_ASSERT_X(QThread::currentThread() == qApp->thread(),
+               "QtScreenPixelSampler",
+               "Must be called from the main thread");
+}
 
 void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
 {
