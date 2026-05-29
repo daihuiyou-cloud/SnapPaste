@@ -224,7 +224,7 @@ void EditorWindow::refreshPanelUi()
                     case AnnotationTool::Highlight: return tr("Highlight"); case AnnotationTool::Numbered: return tr("Numbered");
                     case AnnotationTool::Mosaic: return tr("Mosaic"); case AnnotationTool::Eraser: return tr("Eraser");
                     case AnnotationTool::Select: return tr("Select"); case AnnotationTool::Crop: return tr("Crop");
-                    default: return "";
+                    default: return QString();
                 }
             }());
             recentToolBtns_[i]->setVisible(true);
