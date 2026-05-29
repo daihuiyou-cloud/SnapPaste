@@ -534,39 +534,44 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
     event->accept();
 }
 
+void PinWindow::updateToolbarHover(QMouseEvent* event)
+{
+    bool onToolbar = false;
+    if ((hovered_ || controlsVisible_) && toolbarFits()) {
+        const auto btns = toolbarButtonRects();
+        static const char* kTooltipLabels[] = {
+            "Close", "Rotate Left", "Rotate Right",
+            "Flip Horizontal", "Flip Vertical",
+            "Click Through", "Always on Top"
+        };
+        for (int i = 0; i < btns.size(); ++i) {
+            if (btns[i].contains(event->pos())) {
+                QToolTip::showText(event->globalPos(), kTooltipLabels[i], this);
+                onToolbar = true;
+                break;
+            }
+        }
+    }
+    if (!onToolbar) {
+        QToolTip::hideText();
+    }
+    switch (resizeEdgeAt(event->pos())) {
+    case EdgeLeft:
+    case EdgeRight:     setCursor(Qt::SizeHorCursor); break;
+    case EdgeTop:
+    case EdgeBottom:    setCursor(Qt::SizeVerCursor); break;
+    case EdgeTopLeft:
+    case EdgeBottomRight: setCursor(Qt::SizeFDiagCursor); break;
+    case EdgeTopRight:
+    case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
+    case EdgeNone:      setCursor(Qt::ArrowCursor); break;
+    }
+}
+
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if (!dragging_ && !resizing_) {
-        bool onToolbar = false;
-        if ((hovered_ || controlsVisible_) && toolbarFits()) {
-            const auto btns = toolbarButtonRects();
-            static const char* kTooltipLabels[] = {
-                "Close", "Rotate Left", "Rotate Right",
-                "Flip Horizontal", "Flip Vertical",
-                "Click Through", "Always on Top"
-            };
-            for (int i = 0; i < btns.size(); ++i) {
-                if (btns[i].contains(event->pos())) {
-                    QToolTip::showText(event->globalPos(), kTooltipLabels[i], this);
-                    onToolbar = true;
-                    break;
-                }
-            }
-        }
-        if (!onToolbar) {
-            QToolTip::hideText();
-        }
-        switch (resizeEdgeAt(event->pos())) {
-        case EdgeLeft:
-        case EdgeRight:     setCursor(Qt::SizeHorCursor); break;
-        case EdgeTop:
-        case EdgeBottom:    setCursor(Qt::SizeVerCursor); break;
-        case EdgeTopLeft:
-        case EdgeBottomRight: setCursor(Qt::SizeFDiagCursor); break;
-        case EdgeTopRight:
-        case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
-        case EdgeNone:      setCursor(Qt::ArrowCursor); break;
-        }
+        updateToolbarHover(event);
     }
 
     if (dragDropping_) {

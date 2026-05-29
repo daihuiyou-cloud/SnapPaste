@@ -9,6 +9,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QMainWindow>
+#include <QSlider>
 #include <QToolButton>
 
 namespace snappaste {
@@ -39,10 +40,16 @@ private:
     void rebuildColorMenu();
     void updateColorWell(const QColor& c);
 
+    void refreshPanelUi();
+
     AnnotationCanvas* canvas_ = nullptr;
     QToolButton* colorBtn_ = nullptr;
     QLabel* contextHint_ = nullptr;
     QLabel* imageInfoLabel_ = nullptr;
+    QLabel* pixelInfoLabel_ = nullptr;
+    QToolButton* undoBtn_ = nullptr;
+    QToolButton* redoBtn_ = nullptr;
+    QVector<QToolButton*> recentToolBtns_;
     QAction* eyeAction_ = nullptr;
     std::function<void(AnnotationTool)> updateToolActions_;
 };

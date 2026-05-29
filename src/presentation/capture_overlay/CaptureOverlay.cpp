@@ -1,4 +1,5 @@
 #include "presentation/capture_overlay/CaptureOverlay.h"
+#include "presentation/capture_overlay/CaptureOverlayGeometry.h"
 
 #include "domain/capture/CaptureSelectionHistory.h"
 #include "domain/capture/IScreenPixelSampler.h"
@@ -8,7 +9,6 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QEasingCurve>
-#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -21,28 +21,9 @@
 #include <cmath>
 #include <memory>
 
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
-
 namespace snappaste {
 
 namespace {
-
-constexpr int kHandleSize = 8;
-constexpr int kHandleHitSlop = 5;
-constexpr int kMinSelectionSize = 8;
-constexpr int kNudgeStep = 1;
-constexpr int kFastNudgeStep = 10;
-constexpr int kDragThreshold = 4;
-constexpr int kOverlayFrameIntervalMs = 6;
-constexpr int kSmartCandidateIntervalMs = 120;
-constexpr int kFullScreenSelectionInset = 1;
-constexpr int kOverlayMaskAlpha = 96;
-constexpr int kSizeLabelHeight = 20;
-constexpr int kSizeLabelPaddingX = 10;
-constexpr int kSizeLabelRadius = 3;
-constexpr int kOverlayMargin = 8;
 
 const QColor kSelectionColor("#2fbf9f");
 const QColor kSelectionShadowColor(8, 12, 16, 170);
@@ -51,97 +32,6 @@ const QColor kLabelBackgroundColor(14, 20, 26, 218);
 const QColor kLabelTextColor("#f4fbff");
 const QColor kCandidateColor(47, 191, 159, 155);
 const QColor kCandidateFillColor(47, 191, 159, 22);
-
-QRect normalizedWithMinimum(QRect rect)
-{
-    rect = rect.normalized();
-    if (rect.width() < kMinSelectionSize) {
-        rect.setWidth(kMinSelectionSize);
-    }
-    if (rect.height() < kMinSelectionSize) {
-        rect.setHeight(kMinSelectionSize);
-    }
-    return rect;
-}
-
-QRect clampedTo(QRect rect, const QRect& bounds)
-{
-    if (rect.width() > bounds.width()) {
-        rect.setWidth(bounds.width());
-    }
-    if (rect.height() > bounds.height()) {
-        rect.setHeight(bounds.height());
-    }
-    if (rect.left() < bounds.left()) {
-        rect.moveLeft(bounds.left());
-    }
-    if (rect.top() < bounds.top()) {
-        rect.moveTop(bounds.top());
-    }
-    if (rect.right() > bounds.right()) {
-        rect.moveRight(bounds.right());
-    }
-    if (rect.bottom() > bounds.bottom()) {
-        rect.moveBottom(bounds.bottom());
-    }
-    return rect;
-}
-
-QRect insetIfFullScreen(QRect rect, const QRect& desktopBounds)
-{
-    rect = rect.normalized();
-    if (!rect.isValid()) {
-        return rect;
-    }
-
-    auto inset = [](const QRect& region) {
-        if (region.width() <= kFullScreenSelectionInset * 2
-            || region.height() <= kFullScreenSelectionInset * 2) {
-            return region;
-        }
-        return region.adjusted(kFullScreenSelectionInset,
-                               kFullScreenSelectionInset,
-                               -kFullScreenSelectionInset,
-                               -kFullScreenSelectionInset);
-    };
-
-    if (rect == desktopBounds) {
-        return inset(rect);
-    }
-
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen != nullptr && rect == screen->geometry()) {
-            return inset(rect);
-        }
-    }
-
-    return rect;
-}
-
-QRect selectableRegion(QRect rect, const QRect& bounds)
-{
-    return insetIfFullScreen(clampedTo(rect, bounds), bounds);
-}
-
-void applyNativeDesktopBounds(QWidget& widget)
-{
-#ifdef Q_OS_WIN
-    const auto hwnd = reinterpret_cast<HWND>(widget.winId());
-    if (hwnd == nullptr) {
-        return;
-    }
-
-    SetWindowPos(hwnd,
-                 HWND_TOPMOST,
-                 GetSystemMetrics(SM_XVIRTUALSCREEN),
-                 GetSystemMetrics(SM_YVIRTUALSCREEN),
-                 GetSystemMetrics(SM_CXVIRTUALSCREEN),
-                 GetSystemMetrics(SM_CYVIRTUALSCREEN),
-                 SWP_SHOWWINDOW);
-#else
-    Q_UNUSED(widget)
-#endif
-}
 
 } // namespace
 
@@ -586,36 +476,29 @@ void CaptureOverlay::mouseDoubleClickEvent(QMouseEvent* event)
     emit copyRequested(selection_);
 }
 
-void CaptureOverlay::paintEvent(QPaintEvent* event)
+void CaptureOverlay::drawOverlayState(QPainter& painter)
 {
-    Q_UNUSED(event)
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.fillRect(rect(), QColor(0, 0, 0, kOverlayMaskAlpha));
-
-    const auto globalRegion = selectedRegion();
-    if (!globalRegion.isValid()) {
-        const auto candidate = candidateRegion();
-        if (candidate.isValid()) {
-            drawCandidate(painter, candidate);
+    const auto candidate = candidateRegion();
+    if (candidate.isValid()) {
+        drawCandidate(painter, candidate);
+        drawMagnifier(painter);
+        painter.setPen(QColor(255, 255, 255, 80));
+        painter.setFont(QFont("Microsoft YaHei UI", 11));
+        painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
+            "Tab / Arrow keys to cycle  ·  Enter to capture");
+    } else {
+        if (state_ == State::Idle) {
             drawMagnifier(painter);
             painter.setPen(QColor(255, 255, 255, 80));
             painter.setFont(QFont("Microsoft YaHei UI", 11));
-            painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
-                "Tab / Arrow keys to cycle  ·  Enter to capture");
-        } else {
-            if (state_ == State::Idle) {
-                drawMagnifier(painter);
-                painter.setPen(QColor(255, 255, 255, 80));
-                painter.setFont(QFont("Microsoft YaHei UI", 11));
-                painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
-                    "Drag to select area  ·  Double-click to capture full screen");
-            }
+            painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
+                "Drag to select area  ·  Double-click to capture full screen");
         }
-        return;
     }
+}
 
+void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalRegion)
+{
     const auto localRegion = localSelectedRegion();
     painter.setCompositionMode(QPainter::CompositionMode_Clear);
     painter.fillRect(localRegion, Qt::transparent);
@@ -645,6 +528,23 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
     if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
         drawMagnifier(painter);
     }
+}
+
+void CaptureOverlay::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.fillRect(rect(), QColor(0, 0, 0, kOverlayMaskAlpha));
+
+    const auto globalRegion = selectedRegion();
+    if (!globalRegion.isValid()) {
+        drawOverlayState(painter);
+        return;
+    }
+
+    drawSelectionRegion(painter, globalRegion);
 }
 
 QRect CaptureOverlay::selectedRegion() const noexcept

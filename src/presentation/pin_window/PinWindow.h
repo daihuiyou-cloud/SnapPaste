@@ -56,6 +56,7 @@ private:
     void requestClose();
     void showOverflowMenu(const QPoint& pos);
     void pushUndoState();
+    void updateToolbarHover(QMouseEvent* event);
     void undoTransform();
     void rotateBy(int degrees);
     void setScale(double scale);

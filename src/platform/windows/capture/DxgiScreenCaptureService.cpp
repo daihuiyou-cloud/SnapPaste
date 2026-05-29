@@ -182,6 +182,25 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
     return image;
 }
 
+class ScopedFrameRelease {
+public:
+    explicit ScopedFrameRelease(IDXGIOutputDuplication* duplication)
+        : duplication_(duplication)
+    {
+    }
+    ~ScopedFrameRelease()
+    {
+        if (duplication_ != nullptr) {
+            duplication_->ReleaseFrame();
+        }
+    }
+    ScopedFrameRelease(const ScopedFrameRelease&) = delete;
+    ScopedFrameRelease& operator=(const ScopedFrameRelease&) = delete;
+    void dismiss() { duplication_ = nullptr; }
+private:
+    IDXGIOutputDuplication* duplication_;
+};
+
 Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
                                       ID3D11Device& device,
                                       ID3D11DeviceContext& context)
@@ -227,10 +246,11 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
         return Result<QImage>::failure("Failed to acquire a DXGI desktop frame.");
     }
 
+    ScopedFrameRelease frameGuard(duplication.Get());
+
     ComPtr<ID3D11Texture2D> desktopTexture;
     hr = desktopResource.As(&desktopTexture);
     if (FAILED(hr)) {
-        duplication->ReleaseFrame();
         return Result<QImage>::failure("DXGI desktop frame is not a D3D11 texture.");
     }
 
@@ -253,7 +273,6 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
     ComPtr<ID3D11Texture2D> stagingTexture;
     hr = device.CreateTexture2D(&stagingDesc, nullptr, stagingTexture.GetAddressOf());
     if (FAILED(hr)) {
-        duplication->ReleaseFrame();
         return Result<QImage>::failure("Failed to allocate DXGI readback texture.");
     }
 
@@ -271,13 +290,11 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
     D3D11_MAPPED_SUBRESOURCE mapped{};
     hr = context.Map(stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
     if (FAILED(hr)) {
-        duplication->ReleaseFrame();
         return Result<QImage>::failure("Failed to map DXGI readback texture.");
     }
 
     auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
     context.Unmap(stagingTexture.Get(), 0);
-    duplication->ReleaseFrame();
     return Result<QImage>::success(std::move(image));
 }
 #endif

@@ -3,8 +3,8 @@
 #include <cmath>
 
 #include "presentation/editor/AnnotationCanvas.h"
+#include "presentation/editor/EditorIconFactory.h"
 #include "presentation/editor/EditorWindow.h"
-
 #include "presentation/icons/IconProvider.h"
 
 #include <QApplication>
@@ -31,118 +31,6 @@
 namespace snappaste {
 
 namespace {
-
-QIcon makeEllipseIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#bcbec6"), 2));
-    p.drawEllipse(QRectF(3, 3, 14, 14));
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeHighlightIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.fillRect(QRectF(3, 6, 14, 8), QColor(255, 230, 0, 140));
-    p.setPen(QPen(QColor("#bcbec6"), 1));
-    p.drawRect(QRectF(3, 6, 14, 8));
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeSelectIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#bcbec6"), 1.5));
-    p.drawRect(QRectF(3, 3, 14, 14));
-    p.drawRect(QRectF(5, 5, 10, 10));
-    // corner handles
-    constexpr QPointF handles[] = {{3,3},{17,3},{3,17},{17,17}};
-    p.setBrush(QColor("#bcbec6"));
-    for (auto& pt : handles) p.drawRect(QRectF(pt.x()-2, pt.y()-2, 4, 4));
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeEraserIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#ff3b30"), 2));
-    p.drawLine(4, 4, 16, 16);
-    p.drawLine(16, 4, 4, 16);
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeCropIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#bcbec6"), 2));
-    p.drawLine(3, 10, 3, 3);
-    p.drawLine(3, 3, 10, 3);
-    p.drawLine(17, 10, 17, 17);
-    p.drawLine(10, 17, 17, 17);
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeNumberedIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#bcbec6"), 2));
-    p.setBrush(Qt::NoBrush);
-    p.drawEllipse(QRectF(2, 2, 16, 16));
-    p.setPen(QColor("#bcbec6"));
-    p.setFont(QFont("Segoe UI", 8, QFont::Bold));
-    p.drawText(QRectF(2, 2, 16, 16), Qt::AlignCenter, "1");
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeEyedropperIcon()
-{
-    QPixmap pix(20, 20);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor("#bcbec6"), 2, Qt::SolidLine, Qt::RoundCap));
-    p.drawEllipse(QPointF(6, 16), 3, 3);
-    p.drawLine(7, 15, 15, 4);
-    p.setBrush(QColor("#bcbec6"));
-    p.drawRect(QRectF(12, 1, 6, 5));
-    p.end();
-    return QIcon(pix);
-}
-
-QIcon makeColorIcon(const QColor& color)
-{
-    QPixmap pix(16, 16);
-    pix.fill(color);
-    QPainter p(&pix);
-    p.setPen(QPen(QColor(255, 255, 255, 48), 1));
-    p.drawRect(QRectF(0.5, 0.5, 15, 15));
-    p.end();
-    return QIcon(pix);
-}
 
 class StrokePreview : public QWidget {
 public:
@@ -292,8 +180,7 @@ void EditorWindow::closeEvent(QCloseEvent* event)
             "You have unsaved annotations. Save before closing?",
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
         if (ret == QMessageBox::Save) {
-            auto img = canvas_->renderedImage();
-            emit imageEdited(img);
+            emit imageEdited(canvas_->renderedImage());
             emit saveRequested();
             event->accept();
         } else if (ret == QMessageBox::Discard) {
@@ -312,9 +199,48 @@ void EditorWindow::setImage(const QImage& image)
     if (imageInfoLabel_) {
         imageInfoLabel_->setText(QString("Image: %1 x %2 px").arg(image.width()).arg(image.height()));
     }
+    refreshPanelUi();
     show();
     raise();
     activateWindow();
+}
+
+void EditorWindow::refreshPanelUi()
+{
+    // Recent tools
+    auto recent = canvas_->recentTools();
+    for (int i = 0; i < recentToolBtns_.size(); ++i) {
+        if (i < recent.size()) {
+            recentToolBtns_[i]->setIcon(iconForTool(recent[i]));
+            recentToolBtns_[i]->setToolTip([&]{
+                switch (recent[i]) {
+                    case AnnotationTool::Rectangle: return "Rect"; case AnnotationTool::Ellipse: return "Ellipse";
+                    case AnnotationTool::Arrow: return "Arrow"; case AnnotationTool::Line: return "Line";
+                    case AnnotationTool::Pen: return "Pen"; case AnnotationTool::Text: return "Text";
+                    case AnnotationTool::Highlight: return "Highlight"; case AnnotationTool::Numbered: return "Numbered";
+                    case AnnotationTool::Mosaic: return "Mosaic"; case AnnotationTool::Eraser: return "Eraser";
+                    case AnnotationTool::Select: return "Select"; case AnnotationTool::Crop: return "Crop";
+                    default: return "";
+                }
+            }());
+            recentToolBtns_[i]->setVisible(true);
+        } else {
+            recentToolBtns_[i]->setVisible(false);
+        }
+    }
+    // Undo/Redo counts
+    if (undoBtn_) {
+        QString text = undoBtn_->text();
+        int uc = canvas_->undoCount();
+        QString newText = uc > 0 ? QString("Undo (%1)").arg(uc) : "Undo";
+        if (text != newText) undoBtn_->setText(newText);
+    }
+    if (redoBtn_) {
+        QString text = redoBtn_->text();
+        int rc = canvas_->redoCount();
+        QString newText = rc > 0 ? QString("Redo (%1)").arg(rc) : "Redo";
+        if (text != newText) redoBtn_->setText(newText);
+    }
 }
 
 void EditorWindow::onToolChanged(AnnotationTool tool)
@@ -324,25 +250,25 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
     }
     if (contextHint_) {
         static const char* hints[] = {
+            "Click or drag to select",         // Select (0)
             "Drag to draw a rectangle",        // Rectangle
-            "Drag to draw an ellipse",         // Ellipse
             "Drag to draw an arrow",           // Arrow
             "Drag to draw a line",             // Line
             "Freehand drawing",                // Pen
             "Click to place text",             // Text
-            "Drag to highlight an area",       // Highlight
-            "Click to place numbered circle",  // Numbered
             "Drag to apply mosaic blur",       // Mosaic
+            "Drag to draw an ellipse",         // Ellipse
+            "Drag to highlight an area",       // Highlight
             "Click or drag to erase",          // Eraser
-            "Click or drag to select",         // Select
+            "Click to place numbered circle",  // Numbered
             "Drag crop handles to trim",       // Crop
-            "Pick a color from the image",     // Eyedropper
         };
         auto idx = static_cast<int>(tool);
         if (idx >= 0 && idx < static_cast<int>(sizeof(hints)/sizeof(hints[0]))) {
             contextHint_->setText(hints[idx]);
         }
     }
+    refreshPanelUi();
 }
 
 void EditorWindow::updateColorWell(const QColor& c)
@@ -473,18 +399,18 @@ void EditorWindow::createToolPanel()
     // Tools
     // ==========================================
     const ToolDef allTools[] = {
-        {[]{ return IconProvider::icon(IconName::Rectangle); }, "Rect", "Rectangle (R)", AnnotationTool::Rectangle},
-        {makeEllipseIcon, "Ellipse", "Ellipse (E)", AnnotationTool::Ellipse},
-        {[]{ return IconProvider::icon(IconName::Arrow); }, "Arrow", "Arrow (A)", AnnotationTool::Arrow},
-        {[]{ return IconProvider::icon(IconName::Line); }, "Line", "Line (L)", AnnotationTool::Line},
-        {[]{ return IconProvider::icon(IconName::Pen); }, "Pen", "Pen (P)", AnnotationTool::Pen},
-        {[]{ return IconProvider::icon(IconName::Text); }, "Text", "Text (T)", AnnotationTool::Text},
-        {makeHighlightIcon, "Highlight", "Highlight (H)", AnnotationTool::Highlight},
-        {makeNumberedIcon, "Numbered", "Numbered (N)", AnnotationTool::Numbered},
-        {[]{ return IconProvider::icon(IconName::Mosaic); }, "Mosaic", "Mosaic (M)", AnnotationTool::Mosaic},
-        {makeEraserIcon, "Eraser", "Eraser (X)", AnnotationTool::Eraser},
-        {makeSelectIcon, "Select", "Select (V)", AnnotationTool::Select},
-        {makeCropIcon, "Crop", "Crop (C)", AnnotationTool::Crop},
+        {[]{ return iconForTool(AnnotationTool::Rectangle); }, "Rect (R)", "Rectangle", AnnotationTool::Rectangle},
+        {[]{ return iconForTool(AnnotationTool::Ellipse); }, "Ellipse (E)", "Ellipse", AnnotationTool::Ellipse},
+        {[]{ return iconForTool(AnnotationTool::Arrow); }, "Arrow (A)", "Arrow", AnnotationTool::Arrow},
+        {[]{ return iconForTool(AnnotationTool::Line); }, "Line (L)", "Line", AnnotationTool::Line},
+        {[]{ return iconForTool(AnnotationTool::Pen); }, "Pen (P)", "Pen", AnnotationTool::Pen},
+        {[]{ return iconForTool(AnnotationTool::Text); }, "Text (T)", "Text", AnnotationTool::Text},
+        {[]{ return iconForTool(AnnotationTool::Highlight); }, "Hi (H)", "Highlight", AnnotationTool::Highlight},
+        {[]{ return iconForTool(AnnotationTool::Numbered); }, "Num (N)", "Numbered", AnnotationTool::Numbered},
+        {[]{ return iconForTool(AnnotationTool::Mosaic); }, "Mosaic (M)", "Mosaic", AnnotationTool::Mosaic},
+        {[]{ return iconForTool(AnnotationTool::Eraser); }, "Eraser (X)", "Eraser", AnnotationTool::Eraser},
+        {[]{ return iconForTool(AnnotationTool::Select); }, "Select (V)", "Select", AnnotationTool::Select},
+        {[]{ return iconForTool(AnnotationTool::Crop); }, "Crop (C)", "Crop", AnnotationTool::Crop},
     };
 
     auto* toolGrid = new QGridLayout();
@@ -495,6 +421,30 @@ void EditorWindow::createToolPanel()
         toolGrid->addWidget(btn, i / 2, i % 2);
         toolButtons.push_back(btn);
     }
+
+    // -- Recent tools --
+    auto* recentRow = new QHBoxLayout();
+    recentRow->setContentsMargins(0, 0, 0, 0);
+    recentRow->setSpacing(2);
+    QVector<QToolButton*> recentBtns;
+    for (int i = 0; i < 4; ++i) {
+        auto* btn = new QToolButton(content);
+        btn->setFixedSize(22, 22);
+        btn->setVisible(false);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(
+            "QToolButton { border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; }"
+            "QToolButton:hover { border-color: #2fbf9f; background: rgba(47,191,159,0.1); }");
+        connect(btn, &QToolButton::clicked, this, [this, i] {
+            auto recent = canvas_->recentTools();
+            if (i < recent.size()) canvas_->setTool(recent[i]);
+        });
+        recentBtns.push_back(btn);
+        recentRow->addWidget(btn);
+    }
+    recentToolBtns_ = recentBtns;
+    layout->addLayout(recentRow);
+
     layout->addLayout(toolGrid);
 
     layout->addSpacing(8);
@@ -514,7 +464,7 @@ void EditorWindow::createToolPanel()
     updateColorWell(QColor("#ff3b30"));
 
     auto* colorMenu = new QMenu(colorBtn_);
-    eyeAction_ = new QAction(makeEyedropperIcon(), "Eyedropper", colorMenu);
+    eyeAction_ = new QAction(IconProvider::icon(IconName::Edit), "Eyedropper", colorMenu);
     eyeAction_->setCheckable(true);
     connect(eyeAction_, &QAction::triggered, this, [this] {
         canvas_->setPickingColor(eyeAction_->isChecked());
@@ -597,6 +547,7 @@ void EditorWindow::createToolPanel()
         {"Outline", "Toggle text outline", true, &AnnotationCanvas::setTextOutlineEnabled},
         {"Fill", "Toggle fill for shapes", false, &AnnotationCanvas::setFilled},
         {"Blur", "Toggle mosaic blur mode", false, &AnnotationCanvas::setMosaicBlurred},
+        {"Grid", "Toggle alignment grid", false, &AnnotationCanvas::setGridEnabled},
     };
 
     auto* chipRow = new QHBoxLayout();
@@ -617,6 +568,81 @@ void EditorWindow::createToolPanel()
         chipRow->addWidget(btn);
     }
     layout->addLayout(chipRow);
+
+    layout->addSpacing(4);
+
+    const QString sliderLabelStyle = "color: #8e8e93; font: 9px; padding: 0;";
+    const QString sliderValStyle = "color: #bcbec6; font: 9px; padding: 0;";
+    const QString sliderGroove = "QSlider::groove:horizontal { height: 3px; background: rgba(255,255,255,0.08); border-radius: 1px; margin: 0; }";
+    const QString sliderHandle = "QSlider::handle:horizontal { width: 10px; height: 10px; margin: -4px 0; background: #2fbf9f; border-radius: 5px; }";
+    const QString sliderSub = "QSlider::sub-page:horizontal { background: #2fbf9f; border-radius: 1px; }";
+    const QString sliderStyle = sliderGroove + sliderHandle + sliderSub;
+
+    auto addSliderRow = [&](const char* label, int min, int max, int def,
+                            std::function<void(int)> onChanged,
+                            std::function<QString(int)> fmt) -> QSlider*
+    {
+        auto* row = new QHBoxLayout();
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(4);
+        auto* lbl = new QLabel(label, content);
+        lbl->setFixedWidth(34);
+        lbl->setStyleSheet(sliderLabelStyle);
+        auto* slider = new QSlider(Qt::Horizontal, content);
+        slider->setRange(min, max);
+        slider->setValue(def);
+        slider->setFixedHeight(18);
+        slider->setStyleSheet(sliderStyle);
+        auto* val = new QLabel(fmt(def), content);
+        val->setFixedWidth(30);
+        val->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        val->setStyleSheet(sliderValStyle);
+        connect(slider, &QSlider::valueChanged, this, [val, onChanged, fmt](int v) {
+            onChanged(v);
+            val->setText(fmt(v));
+        });
+        row->addWidget(lbl);
+        row->addWidget(slider);
+        row->addWidget(val);
+        layout->addLayout(row);
+        return slider;
+    };
+
+    addSliderRow("Opacity", 0, 255, 255,
+        [this](int v) { canvas_->setStrokeAlpha(v); },
+        [](int v) { return QString("%1%").arg(v * 100 / 255); });
+
+    // Arrow style
+    auto* arrowRow = new QHBoxLayout();
+    arrowRow->setContentsMargins(0, 0, 0, 0);
+    arrowRow->setSpacing(4);
+    auto* arrowLbl = new QLabel("Arrow", content);
+    arrowLbl->setFixedWidth(34);
+    arrowLbl->setStyleSheet(sliderLabelStyle);
+    arrowRow->addWidget(arrowLbl);
+    struct ArrowDef { const char* text; int value; };
+    const ArrowDef arrowDefs[] = {{"Tri", 0}, {"Circle", 1}, {"Square", 2}};
+    auto* arrowGroup = new QButtonGroup(content);
+    arrowGroup->setExclusive(true);
+    for (const auto& ad : arrowDefs) {
+        auto* btn = new QToolButton(content);
+        btn->setText(ad.text);
+        btn->setCheckable(true);
+        btn->setFixedHeight(22);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        btn->setStyleSheet(chipStyle);
+        if (ad.value == 0) btn->setChecked(true);
+        arrowGroup->addButton(btn, ad.value);
+        connect(btn, &QToolButton::clicked, this, [this, val = ad.value] {
+            canvas_->setArrowStyle(static_cast<ArrowStyle>(val));
+        });
+        arrowRow->addWidget(btn);
+    }
+    layout->addLayout(arrowRow);
+
+    addSliderRow("Radius", 0, 40, 0,
+        [this](int v) { canvas_->setCornerRadius(v); },
+        [](int v) { return v > 0 ? QString("%1px").arg(v) : "Off"; });
 
     layout->addSpacing(4);
 
@@ -728,7 +754,7 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(6);
 
-    // -- Context hint + Image info --
+    // -- Info --
     contextHint_ = new QLabel(content);
     contextHint_->setStyleSheet("color: #8e8e93; font: 9px; padding: 0 2px;");
     contextHint_->setWordWrap(true);
@@ -738,19 +764,24 @@ void EditorWindow::createToolPanel()
     imageInfoLabel_->setStyleSheet("color: #5e5e63; font: 8px; padding: 0 2px;");
     layout->addWidget(imageInfoLabel_);
 
+    pixelInfoLabel_ = new QLabel(content);
+    pixelInfoLabel_->setStyleSheet("color: #5e5e63; font: 8px; padding: 0 2px;");
+    layout->addWidget(pixelInfoLabel_);
+
     layout->addSpacing(4);
 
     // ==========================================
     // Actions (2-column grid)
     // ==========================================
-    struct ActionDef { QIcon icon; const char* text; const char* tip; };
+    struct ActionDef { QIcon icon; const char* text; const char* tip; QToolButton** ptr; };
+    undoBtn_ = nullptr; redoBtn_ = nullptr;
     const ActionDef actionDefs[] = {
-        {IconProvider::icon(IconName::Undo), "Undo", "Undo (Ctrl+Z)"},
-        {IconProvider::icon(IconName::Redo), "Redo", "Redo (Ctrl+Y)"},
-        {IconProvider::icon(IconName::Copy), "Copy", "Copy (Ctrl+Shift+C)"},
-        {IconProvider::icon(IconName::Pin), "Pin", "Pin (F3)"},
-        {IconProvider::icon(IconName::Save), "Save", "Save (Ctrl+S)"},
-        {IconProvider::icon(IconName::Export), "Export...", "Export (Ctrl+Shift+S)"},
+        {IconProvider::icon(IconName::Undo), "Undo", "Undo (Ctrl+Z)", &undoBtn_},
+        {IconProvider::icon(IconName::Redo), "Redo", "Redo (Ctrl+Y)", &redoBtn_},
+        {IconProvider::icon(IconName::Copy), "Copy", "Copy (Ctrl+Shift+C)", nullptr},
+        {IconProvider::icon(IconName::Pin), "Pin", "Pin (F3)", nullptr},
+        {IconProvider::icon(IconName::Save), "Save", "Save (Ctrl+S)", nullptr},
+        {IconProvider::icon(IconName::Export), "Export...", "Export (Ctrl+Shift+S)", nullptr},
     };
 
     auto* actionsGrid = new QGridLayout();
@@ -771,6 +802,7 @@ void EditorWindow::createToolPanel()
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         actionsGrid->addWidget(btn, i / 2, i % 2);
         actionButtons.push_back(btn);
+        if (actionDefs[i].ptr) *actionDefs[i].ptr = btn;
     }
     layout->addLayout(actionsGrid);
 
@@ -780,15 +812,28 @@ void EditorWindow::createToolPanel()
             btn->setChecked(static_cast<AnnotationTool>(btn->property("tool").toInt()) == tool);
     };
     updateToolActions_(AnnotationTool::Rectangle);
+    refreshPanelUi();
 
     // -- Connections --
-    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); });
-    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); });
+    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); });
+    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); });
     for (auto* btn : toolButtons) {
         connect(btn, &QToolButton::clicked, this, [this, tool = static_cast<AnnotationTool>(btn->property("tool").toInt())] {
             canvas_->setTool(tool);
         });
     }
+
+    // -- Pixel info --
+    canvas_->setOnMouseInfoChanged([this](QPointF pos, QColor c) {
+        if (pixelInfoLabel_)
+            pixelInfoLabel_->setText(QString("(%1, %2) %3")
+                .arg(static_cast<int>(pos.x())).arg(static_cast<int>(pos.y()))
+                .arg(c.name(QColor::HexRgb).toUpper()));
+    });
+
+    // -- State change (undo/redo counts etc.) --
+    canvas_->setOnModified([this] { refreshPanelUi(); });
+
     connect(actionButtons[2], &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();

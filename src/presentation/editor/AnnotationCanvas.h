@@ -55,6 +55,31 @@ public:
     void pushUndo();
     void redo();
 
+    int strokeAlpha() const;
+    void setStrokeAlpha(int alpha);
+    void setOnStrokeAlphaChanged(std::function<void(int)> cb);
+
+    ArrowStyle arrowStyle() const;
+    void setArrowStyle(ArrowStyle style);
+    void setOnArrowStyleChanged(std::function<void(int)> cb);
+
+    int cornerRadius() const;
+    void setCornerRadius(int radius);
+    void setOnCornerRadiusChanged(std::function<void(int)> cb);
+
+    bool gridEnabled() const;
+    void setGridEnabled(bool enabled);
+
+    QPointF mouseImagePos() const;
+    QColor mousePixelColor() const;
+    void setOnMouseInfoChanged(std::function<void(QPointF, QColor)> cb);
+    void setOnModified(std::function<void()> cb);
+
+    const QVector<AnnotationTool>& recentTools() const;
+
+    int undoCount() const;
+    int redoCount() const;
+
 signals:
     void imageEdited(const QImage& image);
     void toolChanged(AnnotationTool tool);
@@ -77,6 +102,21 @@ private:
     void drawAnnotations(QPainter* painter, const QImage& sourceImage, bool includeSelectionChrome) const;
     static bool hitTestAnnotation(const Annotation& annotation, const QPoint& pos);
     static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize = 14);
+
+    void handlePanningPress(QMouseEvent* event);
+    bool handlePickingColorPress(QMouseEvent* event);
+    bool handleSelectPress(const QPoint& pos);
+    bool handleEraserPress(const QPoint& pos);
+    bool handleNumberedPress(const QPoint& pos);
+    bool handleTextPress(const QPoint& pos);
+    bool handleExistingAnnotationPress(const QPoint& pos);
+    void startDrawingAnnotation(const QPoint& pos);
+
+    void updateMouseInfo(QMouseEvent* event);
+    void updateMoveCursor(QMouseEvent* event);
+    void handleMovePan(QMouseEvent* event);
+    void handleMoveSelect(QMouseEvent* event);
+    void updateDrawingStroke(QMouseEvent* event);
 
     static constexpr int kMaxUndo = 50;
 
@@ -113,9 +153,21 @@ private:
     bool filled_ = false;
     bool textOutlineEnabled_ = true;
     QVector<QColor> customColors_;
+    int strokeAlpha_ = 255;
+    ArrowStyle arrowStyle_ = ArrowStyle::DefaultArrow;
+    int cornerRadius_ = 0;
+    bool gridEnabled_ = false;
+    QPointF mouseImagePos_;
+    QColor mousePixelColor_;
+    QVector<AnnotationTool> recentTools_;
     std::function<void(int)> onFontSizeChanged_;
     std::function<void(bool)> onPickingColorChanged_;
     std::function<void(double)> onZoomChanged_;
+    std::function<void(int)> onStrokeAlphaChanged_;
+    std::function<void(int)> onArrowStyleChanged_;
+    std::function<void(int)> onCornerRadiusChanged_;
+    std::function<void(QPointF, QColor)> onMouseInfoChanged_;
+    std::function<void()> onModified_;
 };
 
 } // namespace snappaste

@@ -95,8 +95,8 @@ bool WinHotkeyService::nativeEventFilter(const QByteArray& eventType, void* mess
 
 unsigned int WinHotkeyService::modifiersFor(const Hotkey& hotkey)
 {
-    unsigned int modifiers = MOD_NOREPEAT;
 #ifdef Q_OS_WIN
+    unsigned int modifiers = MOD_NOREPEAT;
     if (hotkey.ctrl) {
         modifiers |= MOD_CONTROL;
     }
@@ -106,10 +106,11 @@ unsigned int WinHotkeyService::modifiersFor(const Hotkey& hotkey)
     if (hotkey.shift) {
         modifiers |= MOD_SHIFT;
     }
+    return modifiers;
 #else
     Q_UNUSED(hotkey)
+    return 0;
 #endif
-    return modifiers;
 }
 
 int WinHotkeyService::idFor(HotkeyAction action)

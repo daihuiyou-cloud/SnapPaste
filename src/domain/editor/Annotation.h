@@ -25,6 +25,12 @@ enum class AnnotationTool {
 
 constexpr int kDefaultNumberedSize = 28;
 
+enum class ArrowStyle {
+    DefaultArrow,
+    CircleArrow,
+    SquareArrow
+};
+
 struct Annotation final {
     AnnotationTool tool = AnnotationTool::Rectangle;
     QRect bounds;
@@ -37,6 +43,8 @@ struct Annotation final {
     int textFontSize = 14;
     bool filled = false;
     bool textOutline = false;
+    ArrowStyle arrowStyle = ArrowStyle::DefaultArrow;
+    int cornerRadius = 0;  // 0=sharp, >0 for rounded rect corners
 };
 
 } // namespace snappaste
