@@ -540,13 +540,17 @@ void PinWindow::updateToolbarHover(QMouseEvent* event)
     if ((hovered_ || controlsVisible_) && toolbarFits()) {
         const auto btns = toolbarButtonRects();
         static const char* kTooltipLabels[] = {
-            "Close", "Rotate Left", "Rotate Right",
-            "Flip Horizontal", "Flip Vertical",
-            "Click Through", "Always on Top"
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Close"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Rotate Left"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Rotate Right"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Flip Horizontal"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Flip Vertical"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Click Through"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top")
         };
         for (int i = 0; i < btns.size(); ++i) {
             if (btns[i].contains(event->pos())) {
-                QToolTip::showText(event->globalPos(), kTooltipLabels[i], this);
+                QToolTip::showText(event->globalPos(), tr(kTooltipLabels[i]), this);
                 onToolbar = true;
                 break;
             }
@@ -943,7 +947,7 @@ void PinWindow::rotateBy(int degrees)
     resize(logicalImageSize() * item_.state.transform.scale);
     update();
     emitStateChanged();
-    QToolTip::showText(QCursor::pos(), QString("Rotated %1\xC2\xB0").arg(degrees), this);
+    QToolTip::showText(QCursor::pos(), tr("Rotated %1\xC2\xB0").arg(degrees), this);
 }
 
 void PinWindow::setScale(double scale)

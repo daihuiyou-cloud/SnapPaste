@@ -52,7 +52,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     , searchBox_(new QLineEdit(this))
     , proxyModel_(new QSortFilterProxyModel(this))
 {
-    searchBox_->setPlaceholderText("Search by filename...");
+    searchBox_->setPlaceholderText(tr("Search by filename..."));
     searchBox_->setClearButtonEnabled(true);
     searchBox_->setStyleSheet(
         "QLineEdit {"
@@ -62,12 +62,12 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         " font: 10pt 'Segoe UI';"
         "}");
 
-    auto* refreshButton = new QPushButton("Refresh", this);
-    auto* pinButton = new QPushButton("Pin", this);
-    auto* copyButton = new QPushButton("Copy", this);
-    auto* openButton = new QPushButton("Open", this);
-    auto* showInExplorerButton = new QPushButton("Explore", this);
-    auto* deleteButton = new QPushButton("Delete", this);
+    auto* refreshButton = new QPushButton(tr("Refresh"), this);
+    auto* pinButton = new QPushButton(tr("Pin"), this);
+    auto* copyButton = new QPushButton(tr("Copy"), this);
+    auto* openButton = new QPushButton(tr("Open"), this);
+    auto* showInExplorerButton = new QPushButton(tr("Explore"), this);
+    auto* deleteButton = new QPushButton(tr("Delete"), this);
 
     proxyModel_->setSourceModel(viewModel_.model());
     proxyModel_->setFilterCaseSensitivity(Qt::CaseInsensitive);
@@ -81,7 +81,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     listView_->installEventFilter(this);
 
     auto* searchLayout = new QHBoxLayout();
-    auto* searchLabel = new QLabel("Search:", this);
+    auto* searchLabel = new QLabel(tr("Search:"), this);
     searchLayout->addWidget(searchLabel);
     searchLayout->addWidget(searchBox_, 1);
 
@@ -108,7 +108,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     auto emitRepinFirst = [this] {
         const auto paths = selectedFilePaths(listView_, proxyModel_);
         if (paths.isEmpty()) {
-            QMessageBox::information(this, "SnapPaste", "No captures selected.");
+            QMessageBox::information(this, tr("SnapPaste"), tr("No captures selected."));
             return;
         }
         emit repinRequested(paths.first());
@@ -118,13 +118,13 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     connect(deleteButton, &QPushButton::clicked, this, [this] {
         const auto paths = selectedFilePaths(listView_, proxyModel_);
         if (paths.isEmpty()) {
-            QMessageBox::information(this, "SnapPaste", "No captures selected.");
+            QMessageBox::information(this, tr("SnapPaste"), tr("No captures selected."));
             return;
         }
         const QString msg = paths.size() == 1
-            ? "Are you sure you want to delete this capture?"
-            : QString("Are you sure you want to delete %1 captures?").arg(paths.size());
-        auto ret = QMessageBox::question(this, "Delete Capture", msg,
+            ? tr("Are you sure you want to delete this capture?")
+            : tr("Are you sure you want to delete %1 captures?").arg(paths.size());
+        auto ret = QMessageBox::question(this, tr("Delete Capture"), msg,
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (ret == QMessageBox::Yes) {
             const auto selected = listView_->selectionModel()->selectedIndexes();
@@ -147,13 +147,13 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     connect(copyButton, &QPushButton::clicked, this, [this] {
         const auto paths = selectedFilePaths(listView_, proxyModel_);
         if (paths.isEmpty()) {
-            QMessageBox::information(this, "SnapPaste", "No captures selected.");
+            QMessageBox::information(this, tr("SnapPaste"), tr("No captures selected."));
             return;
         }
         if (paths.size() == 1) {
             QImage img(paths.first());
             if (img.isNull()) {
-                QMessageBox::warning(this, "SnapPaste", "Failed to load image.");
+                QMessageBox::warning(this, tr("SnapPaste"), tr("Failed to load image."));
                 return;
             }
             QApplication::clipboard()->setImage(img);
@@ -185,7 +185,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
 #endif
     });
     connect(&viewModel_, &HistoryViewModel::errorOccurred, this, [this](const QString& message) {
-        QMessageBox::warning(this, "SnapPaste", message);
+        QMessageBox::warning(this, tr("SnapPaste"), message);
     });
 
     connect(listView_, &QListView::customContextMenuRequested, this, [this](const QPoint& pos) {
@@ -193,12 +193,12 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         if (paths.isEmpty()) return;
 
         QMenu menu(this);
-        auto* pinAction = paths.size() == 1 ? menu.addAction("Pin") : nullptr;
-        auto* copyAction = menu.addAction(paths.size() == 1 ? "Copy" : "Copy All");
-        auto* openAction = menu.addAction("Open");
-        auto* exploreAction = menu.addAction("Show in Explorer");
+        auto* pinAction = paths.size() == 1 ? menu.addAction(tr("Pin")) : nullptr;
+        auto* copyAction = menu.addAction(paths.size() == 1 ? tr("Copy") : tr("Copy All"));
+        auto* openAction = menu.addAction(tr("Open"));
+        auto* exploreAction = menu.addAction(tr("Show in Explorer"));
         menu.addSeparator();
-        auto* deleteAction = menu.addAction(paths.size() == 1 ? "Delete" : "Delete All");
+        auto* deleteAction = menu.addAction(paths.size() == 1 ? tr("Delete") : tr("Delete All"));
 
         const auto* action = menu.exec(listView_->mapToGlobal(pos));
         if (action == pinAction && pinAction) {
@@ -224,9 +224,9 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
 #endif
         } else if (action == deleteAction) {
             const QString msg = paths.size() == 1
-                ? "Are you sure you want to delete this capture?"
-                : QString("Delete %1 captures?").arg(paths.size());
-            auto ret = QMessageBox::question(this, "Delete", msg,
+                ? tr("Are you sure you want to delete this capture?")
+                : tr("Delete %1 captures?").arg(paths.size());
+            auto ret = QMessageBox::question(this, tr("Delete"), msg,
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (ret == QMessageBox::Yes) {
                 const auto selected = listView_->selectionModel()->selectedIndexes();
@@ -256,9 +256,9 @@ void HistoryWidget::deleteSelected()
     const auto paths = selectedFilePaths(listView_, proxyModel_);
     if (paths.isEmpty()) return;
     const QString msg = paths.size() == 1
-        ? "Are you sure you want to delete this capture?"
-        : QString("Delete %1 captures?").arg(paths.size());
-    auto ret = QMessageBox::question(this, "Delete", msg,
+        ? tr("Are you sure you want to delete this capture?")
+        : tr("Delete %1 captures?").arg(paths.size());
+    auto ret = QMessageBox::question(this, tr("Delete"), msg,
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (ret != QMessageBox::Yes) return;
     const auto selected = listView_->selectionModel()->selectedIndexes();

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="zh-CN">
 <context>
@@ -224,62 +224,62 @@
         <translation>切换对齐网格</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="790"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
         <source>Undo</source>
         <translation>撤销</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="790"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
         <source>Undo (Ctrl+Z)</source>
         <translation>撤销 (Ctrl+Z)</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="791"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
         <source>Redo</source>
         <translation>重做</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="791"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
         <source>Redo (Ctrl+Y)</source>
         <translation>重做 (Ctrl+Y)</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
         <source>Copy</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
         <source>Copy (Ctrl+Shift+C)</source>
         <translation>复制 (Ctrl+Shift+C)</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
         <source>Pin</source>
         <translation>贴图</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
         <source>Pin (F3)</source>
         <translation>贴图 (F3)</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="796"/>
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="796"/>
         <source>Save (Ctrl+S)</source>
         <translation>保存 (Ctrl+S)</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="797"/>
         <source>Export...</source>
         <translation>导出...</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="797"/>
         <source>Export (Ctrl+Shift+S)</source>
         <translation>导出 (Ctrl+Shift+S)</translation>
     </message>
@@ -456,6 +456,11 @@
         <translation>SnapPaste 编辑器</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="165"/>
+        <source> - %1 ann</source>
+        <translation> - %1 个标注</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="394"/>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="421"/>
         <source>Edit Text</source>
@@ -607,44 +612,107 @@
         <translation>截图 OCR 识别失败</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="276"/>
+        <location filename="../../src/app/Application.cpp" line="277"/>
         <source>OCR processing...</source>
         <translation>OCR 识别中...</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="298"/>
+        <location filename="../../src/app/Application.cpp" line="299"/>
         <source>OCR → %1 characters</source>
         <translation>OCR → %1 个字符</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="386"/>
+        <location filename="../../src/app/Application.cpp" line="387"/>
         <source>Failed to register capture hotkey: %1</source>
         <translation>注册截图快捷键失败：%1</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="391"/>
+        <location filename="../../src/app/Application.cpp" line="392"/>
         <source>Failed to register paste hotkey: %1</source>
         <translation>注册贴图快捷键失败：%1</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="396"/>
+        <location filename="../../src/app/Application.cpp" line="397"/>
         <source>Failed to register hide-pins hotkey: %1</source>
         <translation>注册隐藏贴图快捷键失败：%1</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="401"/>
+        <location filename="../../src/app/Application.cpp" line="402"/>
         <source>Failed to register repeat-capture hotkey: %1</source>
         <translation>注册重复截图快捷键失败：%1</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="453"/>
+        <location filename="../../src/app/Application.cpp" line="454"/>
         <source>No pinned image is available to copy.</source>
         <translation>没有可复制的贴图</translation>
     </message>
     <message>
-        <location filename="../../src/app/Application.cpp" line="461"/>
+        <location filename="../../src/app/Application.cpp" line="462"/>
         <source>Pinned image copied. Press F3 to repeat.</source>
         <translation>贴图已复制，按 F3 重复</translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::CaptureActionBar</name>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="75"/>
+        <source>Copy (Enter)</source>
+        <translation>复制 (Enter)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="75"/>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="76"/>
+        <source>Pin (F3)</source>
+        <translation>贴图 (F3)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="76"/>
+        <source>Pin</source>
+        <translation>贴图</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="77"/>
+        <source>Save (Ctrl+S)</source>
+        <translation>保存 (Ctrl+S)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="77"/>
+        <source>Save</source>
+        <translation>保存</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="78"/>
+        <source>Edit (Space)</source>
+        <translation>编辑 (Space)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="78"/>
+        <source>Edit</source>
+        <translation>编辑</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="79"/>
+        <source>OCR (O)</source>
+        <translation>OCR (O)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="79"/>
+        <source>OCR</source>
+        <translation>OCR</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="80"/>
+        <source>Cancel (Esc)</source>
+        <translation>取消 (Esc)</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_actions/CaptureActionBar.cpp" line="80"/>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
 </context>
 <context>
@@ -673,7 +741,7 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="121"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="851"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="853"/>
         <source>Copied to clipboard</source>
         <translation>已复制到剪贴板</translation>
     </message>
@@ -694,13 +762,13 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="146"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="870"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="872"/>
         <source>Saved to %1</source>
         <translation>已保存到 %1</translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="148"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="872"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="874"/>
         <source>Failed to save image</source>
         <translation>保存图片失败</translation>
     </message>
@@ -716,7 +784,7 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="165"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="863"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="865"/>
         <source>Saved</source>
         <translation>已保存</translation>
     </message>
@@ -727,7 +795,7 @@
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="175"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="857"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="859"/>
         <source>Image pinned</source>
         <translation>图片已贴图</translation>
     </message>
@@ -757,6 +825,16 @@
         <translation>重做 (%1)</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="325"/>
+        <source>Custom Color...</source>
+        <translation>自定义颜色...</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="328"/>
+        <source>Choose Color</source>
+        <translation>选择颜色</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="340"/>
         <source>Tools</source>
         <translation>工具</translation>
@@ -777,54 +855,182 @@
         <translation>描边：%1像素</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="622"/>
+        <source>Opacity</source>
+        <translation>不透明度</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="630"/>
         <source>Arrow</source>
         <translation>箭头</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="664"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="635"/>
+        <source>Tri</source>
+        <translation>三角</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="636"/>
+        <source>Circle</source>
+        <translation>圆形</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="637"/>
+        <source>Square</source>
+        <translation>方形</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="666"/>
         <source>Font</source>
         <translation>字体</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="670"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="672"/>
         <source>Decrease font size ( [ )</source>
         <translation>减小字号 ( [ )</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="675"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="677"/>
         <source>Font size for Text / Numbered tools</source>
         <translation>文字/序号工具的字号</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="682"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="684"/>
         <source>Increase font size ( ] )</source>
         <translation>增大字号 ( ] )</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="711"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="713"/>
         <source>Zoom</source>
         <translation>缩放</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="717"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="719"/>
         <source>Zoom out</source>
         <translation>缩小</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="728"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="730"/>
         <source>Zoom in</source>
         <translation>放大</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="734"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="736"/>
         <source>Reset zoom to 100%</source>
         <translation>重置缩放为 100%</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="866"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="868"/>
         <source>Save As</source>
         <translation>另存为</translation>
+    </message>
+</context>
+<context>
+    <name>snappaste::HistoryWidget</name>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="55"/>
+        <source>Search by filename...</source>
+        <translation>按文件名搜索...</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="65"/>
+        <source>Refresh</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="66"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="196"/>
+        <source>Pin</source>
+        <translation>贴图</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="67"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="197"/>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="68"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="198"/>
+        <source>Open</source>
+        <translation>打开</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="69"/>
+        <source>Explore</source>
+        <translation>浏览</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="70"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="201"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="229"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="261"/>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="84"/>
+        <source>Search:</source>
+        <translation>搜索：</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="111"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="121"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="150"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="156"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="188"/>
+        <source>SnapPaste</source>
+        <translation>SnapPaste</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="111"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="121"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="150"/>
+        <source>No captures selected.</source>
+        <translation>未选择截图</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="125"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="227"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="259"/>
+        <source>Are you sure you want to delete this capture?</source>
+        <translation>确定要删除此截图吗？</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="126"/>
+        <source>Are you sure you want to delete %1 captures?</source>
+        <translation>确定要删除 %1 个截图吗？</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="127"/>
+        <source>Delete Capture</source>
+        <translation>删除截图</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="156"/>
+        <source>Failed to load image.</source>
+        <translation>加载图片失败</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="197"/>
+        <source>Copy All</source>
+        <translation>全部复制</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="199"/>
+        <source>Show in Explorer</source>
+        <translation>在资源管理器中显示</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="201"/>
+        <source>Delete All</source>
+        <translation>全部删除</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="228"/>
+        <location filename="../../src/presentation/history/HistoryWidget.cpp" line="260"/>
+        <source>Delete %1 captures?</source>
+        <translation>删除 %1 个截图？</translation>
     </message>
 </context>
 <context>
@@ -932,13 +1138,13 @@
     <name>snappaste::PinWindow</name>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="255"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="829"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="833"/>
         <source>Copy	Ctrl+C</source>
         <translation>复制	Ctrl+C</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="256"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="830"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="834"/>
         <source>Save	Ctrl+S</source>
         <translation>保存	Ctrl+S</translation>
     </message>
@@ -954,37 +1160,42 @@
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="260"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="832"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="544"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="836"/>
         <source>Rotate Left</source>
         <translation>左旋转</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="261"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="833"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="545"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="837"/>
         <source>Rotate Right</source>
         <translation>右旋转</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="262"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="834"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="546"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="838"/>
         <source>Flip Horizontal</source>
         <translation>水平翻转</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="263"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="835"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="547"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="839"/>
         <source>Flip Vertical</source>
         <translation>垂直翻转</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="264"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="837"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="841"/>
         <source>Always on Top	A</source>
         <translation>总在最前	A</translation>
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="267"/>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="840"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="548"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="844"/>
         <source>Click Through</source>
         <translation>点击穿透</translation>
     </message>
@@ -1000,6 +1211,7 @@
     </message>
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="274"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="543"/>
         <source>Close</source>
         <translation>关闭</translation>
     </message>
@@ -1036,17 +1248,27 @@
         <translation>&lt;b&gt;贴图窗口控制&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;变换&lt;/b&gt;&lt;br&gt;R - 顺时针旋转 90&amp;deg;&lt;br&gt;Shift+R - 逆时针旋转 90&amp;deg;&lt;br&gt;H - 水平翻转&lt;br&gt;V - 垂直翻转&lt;br&gt;Ctrl+Z - 撤销变换&lt;br&gt;&lt;br&gt;&lt;b&gt;视图&lt;/b&gt;&lt;br&gt;Ctrl+0 - 实际大小 (1:1)&lt;br&gt;Ctrl+9 - 适应屏幕&lt;br&gt;Ctrl+滚轮 - 调节透明度&lt;br&gt;滚轮 - 缩放&lt;br&gt;Shift+双击 - 切换缩略图模式&lt;br&gt;&lt;br&gt;&lt;b&gt;操作&lt;/b&gt;&lt;br&gt;Ctrl+C - 复制图片&lt;br&gt;Ctrl+S - 保存&lt;br&gt;Ctrl+Shift+S - 另存为...&lt;br&gt;Ctrl+拖动 - 拖出图片&lt;br&gt;A - 切换总在最前&lt;br&gt;T - 切换点击穿透&lt;br&gt;Esc - 关闭贴图窗口</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="844"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="549"/>
+        <source>Always on Top</source>
+        <translation>总在最前</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="848"/>
         <source>Close	Esc</source>
         <translation>关闭	Esc</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="974"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="950"/>
+        <source>Rotated %1°</source>
+        <translation>已旋转 %1°</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="978"/>
         <source>Flipped horizontally</source>
         <translation>已水平翻转</translation>
     </message>
     <message>
-        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="984"/>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="988"/>
         <source>Flipped vertically</source>
         <translation>已垂直翻转</translation>
     </message>
@@ -1093,6 +1315,16 @@
         <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="155"/>
         <source>Auto (System Default)</source>
         <translation>自动（系统默认）</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="156"/>
+        <source>English</source>
+        <translation>英语</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="157"/>
+        <source>Chinese (Simplified)</source>
+        <translation>简体中文</translation>
     </message>
     <message>
         <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="199"/>

@@ -153,8 +153,8 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     struct UiLangEntry { QString label; QString tag; };
     const UiLangEntry kUiLanguages[] = {
         {tr("Auto (System Default)"), QStringLiteral("")},
-        {QStringLiteral("English"),   QStringLiteral("en")},
-        {QStringLiteral("\xe4\xb8\xad\xe6\x96\x87\xef\xbc\x88\xe7\xae\x80\xe4\xbd\x93\xef\xbc\x89"), QStringLiteral("zh_CN")},
+        {tr("English"),   QStringLiteral("en")},
+        {tr("Chinese (Simplified)"), QStringLiteral("zh_CN")},
     };
     for (const auto& lang : kUiLanguages) {
         uiLanguageCombo_->addItem(lang.label, lang.tag);

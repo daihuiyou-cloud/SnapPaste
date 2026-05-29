@@ -162,7 +162,7 @@ void AnnotationCanvas::updateWindowTitle()
         title += QString(" - %1%").arg(static_cast<int>(zoomFactor_ * 100));
         int annCount = annotations_.size();
         if (annCount > 0) {
-            title += QString(" - %1 ann").arg(annCount);
+            title += tr(" - %1 ann").arg(annCount);
         }
         w->setWindowTitle(title);
     }

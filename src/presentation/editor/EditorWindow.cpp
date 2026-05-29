@@ -322,10 +322,10 @@ void EditorWindow::rebuildColorMenu()
         });
     }
     colorBtn_->menu()->insertSeparator(eyeAction_);
-    auto* customAction = new QAction("Custom Color...", colorBtn_->menu());
+    auto* customAction = new QAction(tr("Custom Color..."), colorBtn_->menu());
     colorBtn_->menu()->insertAction(eyeAction_, customAction);
     connect(customAction, &QAction::triggered, this, [this] {
-        auto color = QColorDialog::getColor(Qt::white, this, "Choose Color");
+        auto color = QColorDialog::getColor(Qt::white, this, tr("Choose Color"));
         if (color.isValid()) {
             canvas_->setColor(color);
             canvas_->addRecentColor(color);
@@ -619,7 +619,7 @@ void EditorWindow::createToolPanel()
         return slider;
     };
 
-    addSliderRow("Opacity", 0, 255, 255,
+    addSliderRow(tr("Opacity"), 0, 255, 255,
         [this](int v) { canvas_->setStrokeAlpha(v); },
         [](int v) { return QString("%1%").arg(v * 100 / 255); });
 
@@ -632,12 +632,14 @@ void EditorWindow::createToolPanel()
     arrowLbl->setStyleSheet(sliderLabelStyle);
     arrowRow->addWidget(arrowLbl);
     struct ArrowDef { const char* text; int value; };
-    const ArrowDef arrowDefs[] = {{"Tri", 0}, {"Circle", 1}, {"Square", 2}};
+    const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Tri"), 0},
+                                  {QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Circle"), 1},
+                                  {QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Square"), 2}};
     auto* arrowGroup = new QButtonGroup(content);
     arrowGroup->setExclusive(true);
     for (const auto& ad : arrowDefs) {
         auto* btn = new QToolButton(content);
-        btn->setText(ad.text);
+        btn->setText(tr(ad.text));
         btn->setCheckable(true);
         btn->setFixedHeight(22);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);

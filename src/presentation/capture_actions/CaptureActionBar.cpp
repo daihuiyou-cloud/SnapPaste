@@ -72,12 +72,12 @@ CaptureActionBar::CaptureActionBar(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
 
     const ActionDef actions[] = {
-        {IconName::Copy, "Copy (Enter)", "Copy"},
-        {IconName::Pin, "Pin (F3)", "Pin"},
-        {IconName::Save, "Save (Ctrl+S)", "Save"},
-        {IconName::Edit, "Edit (Space)", "Edit"},
-        {IconName::Text, "OCR (O)", "OCR"},
-        {IconName::Close, "Cancel (Esc)", "Cancel"}
+        {IconName::Copy, tr("Copy (Enter)"), tr("Copy")},
+        {IconName::Pin, tr("Pin (F3)"), tr("Pin")},
+        {IconName::Save, tr("Save (Ctrl+S)"), tr("Save")},
+        {IconName::Edit, tr("Edit (Space)"), tr("Edit")},
+        {IconName::Text, tr("OCR (O)"), tr("OCR")},
+        {IconName::Close, tr("Cancel (Esc)"), tr("Cancel")}
     };
 
     auto* layout = new QHBoxLayout(this);
