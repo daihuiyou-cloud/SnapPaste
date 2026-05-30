@@ -59,6 +59,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/capture_overlay/OverlayStateMachine.h
     src/presentation/capture_overlay/OverlayStateMachine.cpp
     src/presentation/editor/AnnotationCanvas.cpp
+    src/presentation/editor/AnnotationRenderer.h
+    src/presentation/editor/AnnotationRenderer.cpp
     src/presentation/editor/EditorIconFactory.cpp
     src/presentation/editor/EditorWindow.cpp
     src/presentation/editor/ImageBlur.cpp

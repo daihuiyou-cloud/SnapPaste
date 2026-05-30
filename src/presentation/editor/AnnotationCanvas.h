@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/editor/Annotation.h"
+#include "presentation/editor/AnnotationRenderer.h"
 
 #include <QColor>
 #include <QImage>
@@ -99,19 +100,6 @@ protected:
     QVariant inputMethodQuery(Qt::InputMethodQuery query) const override;
 
 private:
-    void drawAnnotations(QPainter* painter, const QImage& sourceImage, bool includeSelectionChrome) const;
-    static bool hitTestAnnotation(const Annotation& annotation, const QPoint& pos);
-    static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize = 14);
-    static void drawRectAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawEllipseAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawArrowAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawLineAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawPenAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize);
-    static void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation);
-    static void drawHighlightAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawNumberedAnnotation(QPainter* painter, const Annotation& annotation);
-
     void handlePanningPress(QMouseEvent* event);
     bool handlePickingColorPress(QMouseEvent* event);
     bool handleSelectPress(const QPoint& pos);
@@ -120,11 +108,6 @@ private:
     bool handleTextPress(const QPoint& pos);
     bool handleExistingAnnotationPress(const QPoint& pos);
     void startDrawingAnnotation(const QPoint& pos);
-
-    void drawCheckerboard(QPainter& painter);
-    void drawGridOverlay(QPainter& painter);
-    void drawTextEditCursor(QPainter& painter);
-    void drawDraftSizeLabel(QPainter& painter);
 
     void updateMouseInfo(QMouseEvent* event);
     void updateMoveCursor(QMouseEvent* event);
@@ -142,9 +125,8 @@ private:
 
     static constexpr int kMaxUndo = 50;
 
+    AnnotationRenderer renderer_;
     QImage image_;
-    mutable QImage annotationCache_;
-    mutable bool cacheValid_ = false;
     QVector<Annotation> annotations_;
     QVector<QVector<Annotation>> undoStack_;
     QVector<QVector<Annotation>> redoStack_;
