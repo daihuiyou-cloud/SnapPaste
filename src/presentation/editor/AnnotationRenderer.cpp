@@ -99,18 +99,14 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
 void AnnotationRenderer::drawAnnotations(QPainter& painter,
     const QImage& sourceImage,
     const QVector<Annotation>& annotations,
-    int selectedIndex, int editingTextIndex,
-    const QString& preeditString,
-    int fontSize, double zoomFactor,
-    bool includeSelectionChrome)
+    int fontSize)
 {
     if (cacheValid_) {
         painter.drawImage(QPoint(0, 0), annotationCache_);
         return;
     }
 
-    QImage cache(sourceImage.size(), sourceImage.hasAlphaChannel()
-        ? QImage::Format_ARGB32_Premultiplied : QImage::Format_RGB32);
+    QImage cache(sourceImage.size(), QImage::Format_ARGB32_Premultiplied);
     cache.setDevicePixelRatio(sourceImage.devicePixelRatio());
     cache.fill(Qt::transparent);
     QPainter cachePainter(&cache);
@@ -118,18 +114,6 @@ void AnnotationRenderer::drawAnnotations(QPainter& painter,
 
     for (int i = 0; i < annotations.size(); ++i) {
         drawAnnotation(&cachePainter, sourceImage, annotations.at(i), fontSize);
-        if (includeSelectionChrome && i == selectedIndex) {
-            cachePainter.setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
-            cachePainter.setBrush(Qt::NoBrush);
-            cachePainter.drawRect(annotations.at(i).bounds.adjusted(-3, -3, 3, 3));
-            cachePainter.setPen(Qt::NoPen);
-            cachePainter.setBrush(QColor("#2fbf9f"));
-            const auto r = annotations.at(i).bounds;
-            const QPoint corners[] = {r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()};
-            for (const auto& c : corners) {
-                cachePainter.drawRect(QRect(c.x() - 4, c.y() - 4, 8, 8));
-            }
-        }
     }
     cachePainter.end();
 

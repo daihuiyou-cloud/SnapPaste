@@ -1201,8 +1201,19 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
             renderer_.drawCheckerboard(painter, image_);
         }
         painter.drawImage(QPoint(0, 0), image_);
-        renderer_.drawAnnotations(painter, image_, annotations_, selectedIndex_,
-            editingTextIndex_, preeditString_, fontSize_, zoomFactor_, true);
+        renderer_.drawAnnotations(painter, image_, annotations_, fontSize_);
+        if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+            painter.setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawRect(annotations_[selectedIndex_].bounds.adjusted(-3, -3, 3, 3));
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor("#2fbf9f"));
+            const auto r = annotations_[selectedIndex_].bounds;
+            const QPoint corners[] = {r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()};
+            for (const auto& c : corners) {
+                painter.drawRect(QRect(c.x() - 4, c.y() - 4, 8, 8));
+            }
+        }
         if (drawing_) {
             renderer_.drawDraft(painter, image_, draft_, fontSize_);
         }

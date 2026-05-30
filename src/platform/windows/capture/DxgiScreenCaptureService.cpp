@@ -154,33 +154,71 @@ QRect toPhysicalRegion(const QRect& logicalRegion,
 
 QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, int height, DXGI_FORMAT format)
 {
-    QImage::Format qfmt = QImage::Format_RGB32;
+    const auto srcRowBytes = static_cast<size_t>(mapped.RowPitch);
+    QImage image(width, height, QImage::Format_RGB32);
+
     switch (format) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
     case DXGI_FORMAT_B8G8R8X8_UNORM:
-        qfmt = QImage::Format_RGB32;
+        for (int y = 0; y < height; ++y) {
+            const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
+            std::memcpy(image.scanLine(y), src, std::min(static_cast<size_t>(width) * 4, srcRowBytes));
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x) {
+                pixels[x] |= 0xff000000;
+            }
+        }
         break;
+
     case DXGI_FORMAT_R10G10B10A2_UNORM:
-        qfmt = QImage::Format_BGR30;  // closest match
+        for (int y = 0; y < height; ++y) {
+            const auto* src = reinterpret_cast<const uint32_t*>(static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch));
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x) {
+                uint32_t p = src[x];
+                int r = (p >> 20) & 0x3ff;
+                int g = (p >> 10) & 0x3ff;
+                int b = p & 0x3ff;
+                int a = (p >> 30) & 0x3;
+                int r8 = (r * 255 + 511) / 1023;
+                int g8 = (g * 255 + 511) / 1023;
+                int b8 = (b * 255 + 511) / 1023;
+                int a8 = a ? 255 : 0;
+                pixels[x] = qRgba(r8, g8, b8, a8);
+            }
+        }
         break;
+
     case DXGI_FORMAT_R16G16B16A16_UNORM:
-        qfmt = QImage::Format_RGBA64_Premultiplied;
+        for (int y = 0; y < height; ++y) {
+            const auto* src = reinterpret_cast<const uint16_t*>(static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch));
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x) {
+                int r = src[x * 4 + 0];
+                int g = src[x * 4 + 1];
+                int b = src[x * 4 + 2];
+                int a = src[x * 4 + 3];
+                int r8 = (r * 255 + 32767) / 65535;
+                int g8 = (g * 255 + 32767) / 65535;
+                int b8 = (b * 255 + 32767) / 65535;
+                int a8 = (a * 255 + 32767) / 65535;
+                pixels[x] = qRgba(r8, g8, b8, a8);
+            }
+        }
         break;
+
     default:
-        qfmt = QImage::Format_RGB32;
+        for (int y = 0; y < height; ++y) {
+            const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
+            std::memcpy(image.scanLine(y), src, std::min(static_cast<size_t>(width) * 4, srcRowBytes));
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x) {
+                pixels[x] |= 0xff000000;
+            }
+        }
         break;
     }
 
-    QImage image(width, height, qfmt);
-    const auto rowBytes = static_cast<size_t>(width) * 4;
-    for (int y = 0; y < height; ++y) {
-        const auto* source = static_cast<const uchar*>(mapped.pData) + (static_cast<size_t>(y) * mapped.RowPitch);
-        std::memcpy(image.scanLine(y), source, std::min(rowBytes, static_cast<size_t>(mapped.RowPitch)));
-        auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
-        for (int x = 0; x < width; ++x) {
-            pixels[x] |= 0xff000000;
-        }
-    }
     return image;
 }
 

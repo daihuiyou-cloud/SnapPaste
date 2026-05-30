@@ -16,10 +16,7 @@ class AnnotationRenderer {
 public:
     void drawAnnotations(QPainter& painter, const QImage& sourceImage,
                          const QVector<Annotation>& annotations,
-                         int selectedIndex, int editingTextIndex,
-                         const QString& preeditString,
-                         int fontSize, double zoomFactor,
-                         bool includeSelectionChrome);
+                         int fontSize);
 
     void drawDraft(QPainter& painter, const QImage& sourceImage,
                    const Annotation& draft, int fontSize);

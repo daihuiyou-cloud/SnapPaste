@@ -403,8 +403,8 @@ void Application::registerHotkey()
         logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
-    if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
-        const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
+    if (!context_.hotkeyService().registerHotkey(HotkeyAction::RepeatCapture, settings.repeatCaptureHotkey)) {
+        const auto message = tr("Failed to register repeat-capture hotkey: %1").arg(settings.repeatCaptureHotkey.toDisplayString());
         logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
