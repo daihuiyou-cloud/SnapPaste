@@ -523,7 +523,7 @@ void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalR
         painter.setPen(kLabelTextColor);
         painter.setFont(QFont("Microsoft YaHei UI", 11));
         painter.drawText(localRegion.bottomLeft() + QPoint(0, 20),
-            QString("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+            tr("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     }
     if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
         drawMagnifier(painter);

@@ -1271,7 +1271,7 @@ void AnnotationCanvas::drawDraftSizeLabel(QPainter& painter)
         return;
     }
     auto dims = draft_.bounds.size();
-    QString label = QString("%1 × %2").arg(dims.width()).arg(dims.height());
+    QString label = tr("%1 × %2").arg(dims.width()).arg(dims.height());
     painter.setPen(Qt::NoPen);
     auto textRect = painter.fontMetrics().boundingRect(label);
     auto labelPos = current_;

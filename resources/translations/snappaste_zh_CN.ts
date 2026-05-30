@@ -791,6 +791,11 @@
         <translation>确定要清除所有标注吗？</translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1274"/>
+        <source>%1 × %2</source>
+        <translation>%1 × %2</translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="160"/>
         <source> - %1x%2</source>
         <translation> - %1x%2</translation>
@@ -982,6 +987,11 @@
         <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="495"/>
         <source>Drag to select area  ·  Double-click to capture full screen</source>
         <translation>拖动选择区域  ·  双击截取全屏</translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="526"/>
+        <source>(%1, %2)</source>
+        <translation>(%1, %2)</translation>
     </message>
     <message>
         <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="956"/>

@@ -791,6 +791,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="1274"/>
+        <source>%1 × %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="160"/>
         <source> - %1x%2</source>
         <translation type="unfinished"></translation>
@@ -981,6 +986,11 @@
     <message>
         <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="495"/>
         <source>Drag to select area  ·  Double-click to capture full screen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="526"/>
+        <source>(%1, %2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
