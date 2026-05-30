@@ -1,5 +1,6 @@
 #pragma once
 
+#include "infrastructure/filesystem/IAppPaths.h"
 #include "platform/IPlatformService.h"
 
 #include <memory>
@@ -8,6 +9,7 @@
 namespace snappaste {
 
 class SqliteConnection;
+class TimeProvider;
 class JsonSettingsRepository;
 class SqliteHistoryRepository;
 class SqlitePinnedItemRepository;
@@ -30,11 +32,13 @@ struct InfrastructureServices {
     std::unique_ptr<LocalImageStorage> imageStorage;
     std::unique_ptr<WinHotkeyService> hotkeyService;
     std::unique_ptr<IPlatformService> platformService;
+    std::unique_ptr<TimeProvider> timeProvider;
+    std::unique_ptr<IAppPaths> appPaths;
 };
 
 class InfrastructureFactory final {
 public:
-    static InfrastructureServices create(const QString& databaseFilePath);
+    static InfrastructureServices create(std::unique_ptr<IAppPaths> appPaths);
 };
 
 } // namespace snappaste

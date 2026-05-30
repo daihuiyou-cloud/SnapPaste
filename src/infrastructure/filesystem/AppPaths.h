@@ -1,18 +1,17 @@
 #pragma once
 
-#include <QString>
+#include "infrastructure/filesystem/IAppPaths.h"
 
 namespace snappaste {
 
-class AppPaths final {
+class AppPaths final : public IAppPaths {
 public:
-    static QString dataDirectory();
-    static QString configFilePath();
-    static QString databaseFilePath();
-    static QString defaultCaptureDirectory();
-    static QString thumbnailDirectory();
-
-    static bool ensureDirectory(const QString& path);
+    QString dataDirectory() override;
+    QString configFilePath() override;
+    QString databaseFilePath() override;
+    QString defaultCaptureDirectory() override;
+    QString thumbnailDirectory() override;
+    bool ensureDirectory(const QString& path) override;
 };
 
 } // namespace snappaste

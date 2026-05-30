@@ -1,12 +1,12 @@
 #pragma once
 
-#include <QDateTime>
+#include "shared/utils/ITimeProvider.h"
 
 namespace snappaste {
 
-class TimeProvider final {
+class TimeProvider final : public ITimeProvider {
 public:
-    static QDateTime nowUtc()
+    QDateTime nowUtc() override
     {
         return QDateTime::currentDateTimeUtc();
     }

@@ -1,18 +1,18 @@
 ﻿#include <QCoreApplication>
 #include "domain/capture/CaptureWorkflow.h"
 
-#include "shared/utils/TimeProvider.h"
-
 namespace snappaste {
 
 CaptureWorkflow::CaptureWorkflow(IScreenCaptureService& captureService,
                                  IImageStorage& imageStorage,
                                  IHistoryRepository& historyRepository,
-                                 ISettingsRepository& settingsRepository)
+                                 ISettingsRepository& settingsRepository,
+                                 ITimeProvider& timeProvider)
     : captureService_(captureService)
     , imageStorage_(imageStorage)
     , historyRepository_(historyRepository)
     , settingsRepository_(settingsRepository)
+    , timeProvider_(timeProvider)
 {
 }
 
@@ -72,7 +72,7 @@ Result<CaptureRecord> CaptureWorkflow::saveCapturedImage(const QImage& image, co
     record.height = image.height();
     record.devicePixelRatio = image.devicePixelRatio();
     record.format = settingsResult.value().imageFormat;
-    record.createdAt = TimeProvider::nowUtc();
+    record.createdAt = timeProvider_.nowUtc();
     record.sourceScreen = sourceScreen;
 
     return historyRepository_.add(record);

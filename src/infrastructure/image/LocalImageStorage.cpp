@@ -1,8 +1,6 @@
 ﻿#include <QCoreApplication>
 #include "infrastructure/image/LocalImageStorage.h"
 
-#include "infrastructure/filesystem/AppPaths.h"
-
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -11,9 +9,14 @@
 
 namespace snappaste {
 
+LocalImageStorage::LocalImageStorage(IAppPaths& appPaths)
+    : appPaths_(appPaths)
+{
+}
+
 Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
-                                                   const QString& directory,
-                                                   const QString& format)
+                                                    const QString& directory,
+                                                    const QString& format)
 {
     if (image.isNull()) {
         return Result<StoredImage>::failure(QCoreApplication::translate("AppErrors", "Image is empty."));
@@ -21,12 +24,12 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
 
     const auto normalizedFormat = format.toLower() == "jpg" ? QString("jpg") : QString("png");
     const auto baseName = nextBaseName();
-    if (!AppPaths::ensureDirectory(directory)) {
+    if (!appPaths_.ensureDirectory(directory)) {
         return Result<StoredImage>::failure(QCoreApplication::translate("AppErrors", "Failed to create capture directory."));
     }
 
     const auto capturePath = QDir(directory).filePath(baseName + "." + normalizedFormat);
-    const auto thumbnailPath = QDir(AppPaths::thumbnailDirectory()).filePath(baseName + ".jpg");
+    const auto thumbnailPath = QDir(appPaths_.thumbnailDirectory()).filePath(baseName + ".jpg");
 
     if (!image.save(capturePath, normalizedFormat.toUpper().toUtf8().constData())) {
         QFile::remove(capturePath);

@@ -1,8 +1,6 @@
 ﻿#include <QCoreApplication>
 #include "infrastructure/config/JsonSettingsRepository.h"
 
-#include "infrastructure/filesystem/AppPaths.h"
-
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -54,9 +52,14 @@ Hotkey readHotkeyFromObject(const QJsonObject& root, const QString& key, const H
 
 } // namespace
 
+JsonSettingsRepository::JsonSettingsRepository(IAppPaths& appPaths)
+    : appPaths_(appPaths)
+{
+}
+
 Result<AppSettings> JsonSettingsRepository::load()
 {
-    QFile file(AppPaths::configFilePath());
+    QFile file(appPaths_.configFilePath());
     if (!file.exists()) {
         auto settings = defaultSettingsInternal();
         const auto saveResult = save(settings);
@@ -107,7 +110,7 @@ Result<AppSettings> JsonSettingsRepository::load()
 
 Result<void> JsonSettingsRepository::save(const AppSettings& settings)
 {
-    const auto path = AppPaths::configFilePath();
+    const auto path = appPaths_.configFilePath();
 
     const auto hotkeyToJson = [](const Hotkey& source) {
         QJsonObject hotkey;
@@ -153,7 +156,7 @@ AppSettings JsonSettingsRepository::defaultSettings()
 AppSettings JsonSettingsRepository::defaultSettingsInternal() const
 {
     AppSettings settings;
-    settings.saveDirectory = AppPaths::defaultCaptureDirectory();
+    settings.saveDirectory = appPaths_.defaultCaptureDirectory();
     settings.imageFormat = "png";
     settings.themeMode = ThemeMode::System;
     settings.captureHotkey = Hotkey{false, false, false, 0x70};

@@ -12,9 +12,10 @@ DomainServices ServiceFactory::create(InfrastructureServices& infra)
     DomainServices svc;
 
     svc.captureWorkflow = std::make_unique<CaptureWorkflow>(
-        *infra.captureService, *infra.imageStorage, *infra.historyRepository, *infra.settingsRepository);
+        *infra.captureService, *infra.imageStorage, *infra.historyRepository, *infra.settingsRepository,
+        *infra.timeProvider);
     svc.pinnedImageService = std::make_unique<PinnedImageService>(
-        *infra.clipboardImageProvider, *infra.pinnedItemRepository);
+        *infra.clipboardImageProvider, *infra.pinnedItemRepository, *infra.timeProvider);
     svc.captureSelectionHistory = std::make_unique<CaptureSelectionHistory>();
 
     return svc;

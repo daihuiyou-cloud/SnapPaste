@@ -6,6 +6,7 @@
 #include "domain/settings/ISettingsRepository.h"
 #include "shared/result/Result.h"
 #include "shared/types/CaptureRecord.h"
+#include "shared/utils/ITimeProvider.h"
 
 #include <QImage>
 #include <QMutex>
@@ -18,7 +19,8 @@ public:
     CaptureWorkflow(IScreenCaptureService& captureService,
                     IImageStorage& imageStorage,
                     IHistoryRepository& historyRepository,
-                    ISettingsRepository& settingsRepository);
+                    ISettingsRepository& settingsRepository,
+                    ITimeProvider& timeProvider);
 
     Result<QImage> captureRegion(const QRect& region);
     Result<QImage> captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments);
@@ -32,6 +34,7 @@ private:
     IImageStorage& imageStorage_;
     IHistoryRepository& historyRepository_;
     ISettingsRepository& settingsRepository_;
+    ITimeProvider& timeProvider_;
 };
 
 } // namespace snappaste

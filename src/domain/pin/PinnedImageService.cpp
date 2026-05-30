@@ -2,16 +2,16 @@
 #include "domain/pin/PinnedImageService.h"
 #include "domain/pin/PinnedItem.h"
 
-#include "shared/utils/TimeProvider.h"
-
 #include <utility>
 
 namespace snappaste {
 
 PinnedImageService::PinnedImageService(IClipboardImageProvider& clipboardProvider,
-                                       IPinnedItemRepository& repository)
+                                       IPinnedItemRepository& repository,
+                                       ITimeProvider& timeProvider)
     : clipboardProvider_(clipboardProvider)
     , repository_(repository)
+    , timeProvider_(timeProvider)
 {
 }
 
@@ -25,7 +25,7 @@ Result<PinnedItem> PinnedImageService::createFromImage(QImage image, PinSource s
     item.image = std::move(image);
     item.source = source;
     item.state = defaultStateFor(item.image);
-    item.createdAt = TimeProvider::nowUtc();
+    item.createdAt = timeProvider_.nowUtc();
     item.updatedAt = item.createdAt;
 
     return repository_.add(item);

@@ -6,7 +6,7 @@ namespace snappaste {
 
 AppContext::AppContext()
     : eventHub_(std::make_unique<EventHub>())
-    , infra_(InfrastructureFactory::create(AppPaths::databaseFilePath()))
+    , infra_(InfrastructureFactory::create(std::make_unique<AppPaths>()))
     , domain_(ServiceFactory::create(infra_))
     , viewModels_(ViewModelFactory::create(infra_, domain_, *eventHub_))
 {
