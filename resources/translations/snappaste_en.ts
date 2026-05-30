@@ -301,222 +301,222 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="410"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="408"/>
         <source>Rect (R)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="410"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="408"/>
         <source>Rectangle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="411"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="409"/>
         <source>Ellipse (E)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="411"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="409"/>
         <source>Ellipse</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="412"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="410"/>
         <source>Arrow (A)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="412"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="410"/>
         <source>Arrow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="413"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="411"/>
         <source>Line (L)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="413"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="411"/>
         <source>Line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="414"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="412"/>
         <source>Pen (P)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="414"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="412"/>
         <source>Pen</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="415"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="413"/>
         <source>Text (T)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="415"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="413"/>
         <source>Text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="416"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="414"/>
         <source>Hi (H)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="416"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="414"/>
         <source>Highlight</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="417"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="415"/>
         <source>Num (N)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="417"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="415"/>
         <source>Numbered</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="418"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="416"/>
         <source>Mosaic (M)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="418"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="416"/>
         <source>Mosaic</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="419"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="417"/>
         <source>Eraser (X)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="419"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="417"/>
         <source>Eraser</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="420"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="418"/>
         <source>Select (V)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="420"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="418"/>
         <source>Select</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="421"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="419"/>
         <source>Crop (C)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="421"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="419"/>
         <source>Crop</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="555"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="553"/>
         <source>Outline</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="555"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="553"/>
         <source>Toggle text outline</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="556"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="554"/>
         <source>Fill</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="556"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="554"/>
         <source>Toggle fill for shapes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="557"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="555"/>
         <source>Blur</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="557"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="555"/>
         <source>Toggle mosaic blur mode</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="558"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="556"/>
         <source>Grid</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="558"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="556"/>
         <source>Toggle alignment grid</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="787"/>
         <source>Undo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="787"/>
         <source>Undo (Ctrl+Z)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="788"/>
         <source>Redo</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="793"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="788"/>
         <source>Redo (Ctrl+Y)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="789"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="794"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="789"/>
         <source>Copy (Ctrl+Shift+C)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="790"/>
         <source>Pin</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="795"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="790"/>
         <source>Pin (F3)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="796"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="791"/>
         <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="796"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="791"/>
         <source>Save (Ctrl+S)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="797"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
         <source>Export...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="797"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="792"/>
         <source>Export (Ctrl+Shift+S)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1045,7 +1045,7 @@ rgb(%2,%3,%4)
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="121"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="853"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="848"/>
         <source>Copied to clipboard</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1067,19 +1067,19 @@ rgb(%2,%3,%4)
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="142"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="869"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="864"/>
         <source>PNG (*.png);;JPEG (*.jpg *.jpeg)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="146"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="872"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="867"/>
         <source>Saved to %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="148"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="874"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="869"/>
         <source>Failed to save image</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1095,7 +1095,7 @@ rgb(%2,%3,%4)
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="165"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="865"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="860"/>
         <source>Saved</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1106,7 +1106,7 @@ rgb(%2,%3,%4)
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="175"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="859"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="854"/>
         <source>Image pinned</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1206,160 +1206,160 @@ rgb(%2,%3,%4)
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="467"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="465"/>
         <source>Color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="475"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="473"/>
         <source>Eyedropper</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="534"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="532"/>
         <source>Stroke: %1px</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="622"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="617"/>
         <source>Opacity</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="222"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="630"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="625"/>
         <source>Arrow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="635"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="630"/>
         <source>Tri</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="636"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="631"/>
         <source>Circle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="637"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="632"/>
         <source>Square</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="656"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="651"/>
         <source>Radius</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="658"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="653"/>
         <source>Off</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="666"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="661"/>
         <source>Font</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="672"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="667"/>
         <source>Decrease font size ( [ )</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="677"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="672"/>
         <source>Font size for Text / Numbered tools</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="684"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="679"/>
         <source>Increase font size ( ] )</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="713"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="708"/>
         <source>Zoom</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="719"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="714"/>
         <source>Zoom out</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="730"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="725"/>
         <source>Zoom in</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="736"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="731"/>
         <source>Reset zoom to 100%</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="868"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="863"/>
         <source>Save As</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="523"/>
         <source>S</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="523"/>
         <source>M</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="523"/>
         <source>L</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="624"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="619"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="741"/>
         <location filename="../../src/presentation/editor/EditorWindow.cpp" line="746"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="751"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="758"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="753"/>
         <source>%1%</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="658"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="701"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="653"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="696"/>
         <source>%1px</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="671"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="718"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="666"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="713"/>
         <source>-</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="676"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="671"/>
         <source>14px</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="683"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="729"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="678"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="724"/>
         <source>+</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="723"/>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="755"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="718"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="750"/>
         <source>100%</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="735"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="730"/>
         <source>1:1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="842"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="837"/>
         <source>(%1, %2) %3</source>
         <translation type="unfinished"></translation>
     </message>

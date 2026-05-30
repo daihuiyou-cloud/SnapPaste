@@ -269,7 +269,7 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
         };
         auto idx = static_cast<int>(tool);
         if (idx >= 0 && idx < static_cast<int>(sizeof(hints)/sizeof(hints[0]))) {
-            contextHint_->setText(tr(hints[idx]));
+            contextHint_->setText(QCoreApplication::translate("EditorWindow", hints[idx]));
         }
     }
     refreshPanelUi();
@@ -384,14 +384,13 @@ void EditorWindow::createToolPanel()
 
     struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tip; AnnotationTool tool; };
 
-    auto toolTipText = [this](const char* key) { return tr(key); };
     QVector<QToolButton*> toolButtons;
 
     auto makeToolBtn = [&](const ToolDef& d) -> QToolButton* {
         auto* btn = new QToolButton(content);
         btn->setIcon(d.iconFn());
-        btn->setText(tr(d.name));
-        btn->setToolTip(tr(d.tip));
+        btn->setText(QCoreApplication::translate("EditorWindow", d.name));
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", d.tip));
         btn->setCheckable(true);
         btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         btn->setIconSize(QSize(14, 14));
@@ -404,7 +403,6 @@ void EditorWindow::createToolPanel()
     // ==========================================
     // Tools
     // ==========================================
-    auto toolName = [this](const char* key) { return tr(key); };
 
     const ToolDef allTools[] = {
         {[]{ return iconForTool(AnnotationTool::Rectangle); }, QT_TRANSLATE_NOOP("EditorWindow", "Rect (R)"), QT_TRANSLATE_NOOP("EditorWindow", "Rectangle"), AnnotationTool::Rectangle},
@@ -558,16 +556,13 @@ void EditorWindow::createToolPanel()
         {QT_TRANSLATE_NOOP("EditorWindow", "Grid"), QT_TRANSLATE_NOOP("EditorWindow", "Toggle alignment grid"), false, &AnnotationCanvas::setGridEnabled},
     };
 
-    auto propText = [this](const char* key) { return tr(key); };
-    auto propTip = [this](const char* key) { return tr(key); };
-
     auto* chipRow = new QHBoxLayout();
     chipRow->setContentsMargins(0, 0, 0, 0);
     chipRow->setSpacing(4);
     for (const auto& p : props) {
         auto* btn = new QToolButton(content);
-        btn->setText(tr(p.text));
-        btn->setToolTip(tr(p.tip));
+        btn->setText(QCoreApplication::translate("EditorWindow", p.text));
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", p.tip));
         btn->setFixedHeight(22);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
@@ -806,8 +801,8 @@ void EditorWindow::createToolPanel()
     for (int i = 0; i < std::size(actionDefs); ++i) {
         auto* btn = new QToolButton(content);
         btn->setIcon(actionDefs[i].icon);
-        btn->setText(tr(actionDefs[i].text));
-        btn->setToolTip(tr(actionDefs[i].tip));
+        btn->setText(QCoreApplication::translate("EditorWindow", actionDefs[i].text));
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", actionDefs[i].tip));
         btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         btn->setIconSize(QSize(14, 14));
         btn->setStyleSheet(toolStyle);
