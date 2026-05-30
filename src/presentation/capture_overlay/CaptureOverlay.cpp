@@ -953,7 +953,7 @@ void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)
 
 void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize)
 {
-    const auto text = QString("%1 x %2").arg(regionSize.width()).arg(regionSize.height());
+    const auto text = tr("%1 x %2").arg(regionSize.width()).arg(regionSize.height());
     const auto metrics = painter.fontMetrics();
     const auto labelWidth = metrics.horizontalAdvance(text) + (kSizeLabelPaddingX * 2);
 
@@ -1067,13 +1067,13 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     if (sampledColor_.has_value()) {
         const auto color = sampledColor_.value();
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
-            QString("%1\nrgb(%2,%3,%4)\n%5,%6")
+            tr("%1\nrgb(%2,%3,%4)\n%5,%6")
                 .arg(color.name(QColor::HexRgb).toUpper())
                 .arg(color.red()).arg(color.green()).arg(color.blue())
                 .arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     } else {
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
-            QString("%1,%2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+            tr("%1,%2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     }
 }
 

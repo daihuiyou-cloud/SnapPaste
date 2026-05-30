@@ -157,9 +157,9 @@ void AnnotationCanvas::updateWindowTitle()
         if (modified_) title += "* ";
         title += tr("SnapPaste Editor");
         if (!image_.isNull()) {
-            title += QString(" - %1x%2").arg(image_.width()).arg(image_.height());
+            title += tr(" - %1x%2").arg(image_.width()).arg(image_.height());
         }
-        title += QString(" - %1%").arg(static_cast<int>(zoomFactor_ * 100));
+        title += tr(" - %1%").arg(static_cast<int>(zoomFactor_ * 100));
         int annCount = annotations_.size();
         if (annCount > 0) {
             title += tr(" - %1 ann").arg(annCount);

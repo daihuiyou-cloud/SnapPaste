@@ -44,7 +44,7 @@ void HistoryViewModel::refresh()
                               Qt::DecorationRole);
             }
         }
-        item->setToolTip(QString("%1\n%2x%3").arg(record.filePath).arg(record.width).arg(record.height));
+        item->setToolTip(tr("%1\n%2x%3").arg(record.filePath).arg(record.width).arg(record.height));
         model_.appendRow(item);
     }
 }

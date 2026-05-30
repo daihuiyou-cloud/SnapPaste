@@ -522,7 +522,7 @@ void EditorWindow::createToolPanel()
     layout->addSpacing(4);
 
     struct StrokePreset { QString label; int width; };
-    const StrokePreset strokes[] = {{"S", 2}, {"M", 4}, {"L", 8}};
+    const StrokePreset strokes[] = {{tr("S"), 2}, {tr("M"), 4}, {tr("L"), 8}};
     auto* strokeGroup = new QButtonGroup(content);
     strokeGroup->setExclusive(true);
     auto* widthRow = new QHBoxLayout();
@@ -621,7 +621,7 @@ void EditorWindow::createToolPanel()
 
     addSliderRow(tr("Opacity"), 0, 255, 255,
         [this](int v) { canvas_->setStrokeAlpha(v); },
-        [](int v) { return QString("%1%").arg(v * 100 / 255); });
+        [this](int v) { return tr("%1%").arg(v * 100 / 255); });
 
     // Arrow style
     auto* arrowRow = new QHBoxLayout();
@@ -655,7 +655,7 @@ void EditorWindow::createToolPanel()
 
     addSliderRow(tr("Radius"), 0, 40, 0,
         [this](int v) { canvas_->setCornerRadius(v); },
-        [](int v) { return v > 0 ? QString("%1px").arg(v) : tr("Off"); });
+        [this](int v) { return v > 0 ? tr("%1px").arg(v) : tr("Off"); });
 
     layout->addSpacing(4);
 
@@ -668,19 +668,19 @@ void EditorWindow::createToolPanel()
     fontLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
 
     auto* fontSizeDec = new QToolButton(content);
-    fontSizeDec->setText("-");
+    fontSizeDec->setText(tr("-"));
     fontSizeDec->setToolTip(tr("Decrease font size ( [ )"));
     fontSizeDec->setFixedSize(24, 24);
     fontSizeDec->setStyleSheet(selStyle);
 
-    auto* fontSizeVal = new QLabel("14px", content);
+    auto* fontSizeVal = new QLabel(tr("14px"), content);
     fontSizeVal->setToolTip(tr("Font size for Text / Numbered tools"));
     fontSizeVal->setAlignment(Qt::AlignCenter);
     fontSizeVal->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
     fontSizeVal->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     auto* fontSizeInc = new QToolButton(content);
-    fontSizeInc->setText("+");
+    fontSizeInc->setText(tr("+"));
     fontSizeInc->setToolTip(tr("Increase font size ( ] )"));
     fontSizeInc->setFixedSize(24, 24);
     fontSizeInc->setStyleSheet(selStyle);
@@ -698,7 +698,7 @@ void EditorWindow::createToolPanel()
         canvas_->setFontSize(canvas_->fontSize() + 2);
     });
     canvas_->setOnFontSizeChanged([fontSizeVal](int size) {
-        fontSizeVal->setText(QString("%1px").arg(size));
+        fontSizeVal->setText(tr("%1px").arg(size));
     });
 
     layout->addSpacing(6);
@@ -715,24 +715,24 @@ void EditorWindow::createToolPanel()
     zoomLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
 
     auto* zoomOut = new QToolButton(content);
-    zoomOut->setText("-");
+    zoomOut->setText(tr("-"));
     zoomOut->setToolTip(tr("Zoom out"));
     zoomOut->setFixedSize(24, 24);
     zoomOut->setStyleSheet(selStyle);
 
-    auto* zoomVal = new QLabel("100%", content);
+    auto* zoomVal = new QLabel(tr("100%"), content);
     zoomVal->setAlignment(Qt::AlignCenter);
     zoomVal->setStyleSheet("color: #bcbec6; font: 10px; padding: 0; background: transparent;");
     zoomVal->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     auto* zoomIn = new QToolButton(content);
-    zoomIn->setText("+");
+    zoomIn->setText(tr("+"));
     zoomIn->setToolTip(tr("Zoom in"));
     zoomIn->setFixedSize(24, 24);
     zoomIn->setStyleSheet(selStyle);
 
     auto* zoomReset = new QToolButton(content);
-    zoomReset->setText("1:1");
+    zoomReset->setText(tr("1:1"));
     zoomReset->setToolTip(tr("Reset zoom to 100%"));
     zoomReset->setFixedSize(32, 24);
     zoomReset->setStyleSheet(
@@ -743,19 +743,19 @@ void EditorWindow::createToolPanel()
     connect(zoomOut, &QToolButton::clicked, this, [this, zoomVal] {
         auto factor = canvas_->zoomFactor();
         canvas_->zoomAt(factor / 1.2, QPoint(canvas_->width() / 2, canvas_->height() / 2));
-        zoomVal->setText(QString("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
+        zoomVal->setText(tr("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
     });
     connect(zoomIn, &QToolButton::clicked, this, [this, zoomVal] {
         auto factor = canvas_->zoomFactor();
         canvas_->zoomAt(factor * 1.2, QPoint(canvas_->width() / 2, canvas_->height() / 2));
-        zoomVal->setText(QString("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
+        zoomVal->setText(tr("%1%").arg(static_cast<int>(canvas_->zoomFactor() * 100)));
     });
     connect(zoomReset, &QToolButton::clicked, this, [this, zoomVal] {
         canvas_->zoomAt(1.0, QPoint(canvas_->width() / 2, canvas_->height() / 2));
-        zoomVal->setText("100%");
+        zoomVal->setText(tr("100%"));
     });
-    canvas_->setOnZoomChanged([zoomVal](double factor) {
-        zoomVal->setText(QString("%1%").arg(static_cast<int>(factor * 100)));
+    canvas_->setOnZoomChanged([this, zoomVal](double factor) {
+        zoomVal->setText(tr("%1%").arg(static_cast<int>(factor * 100)));
     });
 
     zoomRow->addWidget(zoomLabel);
@@ -839,7 +839,7 @@ void EditorWindow::createToolPanel()
     // -- Pixel info --
     canvas_->setOnMouseInfoChanged([this](QPointF pos, QColor c) {
         if (pixelInfoLabel_)
-            pixelInfoLabel_->setText(QString("(%1, %2) %3")
+            pixelInfoLabel_->setText(tr("(%1, %2) %3")
                 .arg(static_cast<int>(pos.x())).arg(static_cast<int>(pos.y()))
                 .arg(c.name(QColor::HexRgb).toUpper()));
     });

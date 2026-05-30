@@ -790,6 +790,16 @@
         <source>Are you sure you want to clear all annotations?</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="160"/>
+        <source> - %1x%2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/AnnotationCanvas.cpp" line="162"/>
+        <source> - %1%</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>snappaste::Application</name>
@@ -971,6 +981,23 @@
     <message>
         <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="495"/>
         <source>Drag to select area  ·  Double-click to capture full screen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="956"/>
+        <source>%1 x %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="1070"/>
+        <source>%1
+rgb(%2,%3,%4)
+%5,%6</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/capture_overlay/CaptureOverlay.cpp" line="1076"/>
+        <source>%1,%2</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1264,6 +1291,68 @@
         <source>Save As</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <source>S</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <source>M</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="525"/>
+        <source>L</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="624"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="746"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="751"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="758"/>
+        <source>%1%</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="658"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="701"/>
+        <source>%1px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="671"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="718"/>
+        <source>-</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="676"/>
+        <source>14px</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="683"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="729"/>
+        <source>+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="723"/>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="755"/>
+        <source>100%</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="735"/>
+        <source>1:1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/editor/EditorWindow.cpp" line="842"/>
+        <source>(%1, %2) %3</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>snappaste::HistoryViewModel</name>
@@ -1271,6 +1360,12 @@
         <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="13"/>
         <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="31"/>
         <source>Capture History</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/viewmodels/HistoryViewModel.cpp" line="47"/>
+        <source>%1
+%2x%3</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1608,6 +1703,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="731"/>
+        <source>%1%</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="848"/>
         <source>Close	Esc</source>
         <translation type="unfinished"></translation>
@@ -1625,6 +1725,16 @@
     <message>
         <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="988"/>
         <source>Flipped vertically</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="722"/>
+        <source>T</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/pin_window/PinWindow.cpp" line="779"/>
+        <source>...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1789,6 +1899,16 @@
     <message>
         <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="304"/>
         <source>Error: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="150"/>
+        <source>png</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/presentation/settings/SettingsWidget.cpp" line="150"/>
+        <source>jpg</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

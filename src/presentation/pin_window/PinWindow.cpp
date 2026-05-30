@@ -719,7 +719,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     if (thumbnailMode_) {
         painter.setPen(QColor("#31c7a4"));
         painter.setFont(QFont("Microsoft YaHei UI", 9, QFont::Bold));
-        painter.drawText(rect().adjusted(8, 8, -8, -8), Qt::AlignTop | Qt::AlignLeft, "T");
+        painter.drawText(rect().adjusted(8, 8, -8, -8), Qt::AlignTop | Qt::AlignLeft, tr("T"));
     }
 
     const int zoomPct = static_cast<int>(std::round(item_.state.transform.scale * 100));
@@ -728,7 +728,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
         painter.setFont(QFont("Microsoft YaHei UI", 10));
         painter.drawText(rect().adjusted(8, 8, -8, -8),
             Qt::AlignTop | Qt::AlignRight,
-            QString("%1%").arg(zoomPct));
+            tr("%1%").arg(zoomPct));
     }
 
     if (item_.state.options.clickThrough) {
@@ -776,7 +776,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.drawRoundedRect(ob, 3, 3);
             painter.setPen(QColor("#bcbec6"));
             painter.setFont(QFont("Segoe UI", 10, QFont::Bold));
-            painter.drawText(ob, Qt::AlignCenter, "...");
+            painter.drawText(ob, Qt::AlignCenter, tr("..."));
         }
     }
 }

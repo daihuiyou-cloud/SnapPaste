@@ -147,7 +147,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
     auto* saveButton = new QPushButton(tr("Save Settings"), this);
     auto* restoreButton = new QPushButton(tr("Restore Defaults"), this);
 
-    imageFormatCombo_->addItems({"png", "jpg"});
+    imageFormatCombo_->addItems({tr("png"), tr("jpg")});
     themeCombo_->addItems({tr("System"), tr("Light"), tr("Dark")});
 
     struct UiLangEntry { QString label; QString tag; };
