@@ -1,7 +1,6 @@
 #include "app/Application.h"
 
 #include "app/AppStartup.h"
-#include "infrastructure/logging/Logger.h"
 #include "infrastructure/ocr/WindowsOcrService.h"
 #include "presentation/ocr/OcrResultWindow.h"
 
@@ -38,8 +37,9 @@ constexpr int kPinCascadeSlots = 8;
 
 } // namespace
 
-Application::Application(QApplication& qtApplication)
+Application::Application(QApplication& qtApplication, ILogger& logger)
     : QObject(&qtApplication)
+    , logger_(logger)
     , qtApplication_(qtApplication)
     , trayController_(this)
     , toastNotifier_(this)
@@ -49,9 +49,9 @@ Application::Application(QApplication& qtApplication)
 
 int Application::run()
 {
-    Logger::install();
+    logger_.install();
     applyCurrentTheme();
-    ocrService_ = std::make_unique<WindowsOcrService>();
+    ocrService_ = std::make_unique<WindowsOcrService>(logger_);
     if (cachedSettings_) {
         ocrService_->setLanguage(cachedSettings_->ocrLanguage);
     }
@@ -363,7 +363,7 @@ void Application::ensureSettingsCached()
     }
     const auto settingsResult = context_.settingsRepository().load();
     if (settingsResult.isError()) {
-        Logger::warning(settingsResult.error());
+        logger_.warning(settingsResult.error());
         return;
     }
     cachedSettings_ = settingsResult.value();
@@ -385,22 +385,22 @@ void Application::registerHotkey()
     context_.hotkeyService().unregisterAll();
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Capture, settings.captureHotkey)) {
         const auto message = tr("Failed to register capture hotkey: %1").arg(settings.captureHotkey.toDisplayString());
-        Logger::warning(message);
+        logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::Paste, settings.pasteHotkey)) {
         const auto message = tr("Failed to register paste hotkey: %1").arg(settings.pasteHotkey.toDisplayString());
-        Logger::warning(message);
+        logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
         const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
-        Logger::warning(message);
+        logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
     if (!context_.hotkeyService().registerHotkey(HotkeyAction::HideAllPins, settings.hidePinsHotkey)) {
         const auto message = tr("Failed to register hide-pins hotkey: %1").arg(settings.hidePinsHotkey.toDisplayString());
-        Logger::warning(message);
+        logger_.warning(message);
         trayController_.showMessage(tr("SnapPaste"), message);
     }
 }
@@ -415,14 +415,14 @@ void Application::applyCurrentTheme()
     const auto themeResult = AppStartup::applyTheme(
         qtApplication_, cachedSettings_.value(), context_.platformService());
     if (themeResult.isError()) {
-        Logger::warning(themeResult.error());
+        logger_.warning(themeResult.error());
     }
 }
 
 void Application::openPinWindow(PinnedItem item)
 {
     if (item.image.isNull()) {
-        Logger::warning("Ignoring empty pinned image.");
+        logger_.warning("Ignoring empty pinned image.");
         pendingPinPosition_.reset();
         pendingPinAvoidRegion_.reset();
         return;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/AppContext.h"
+#include "infrastructure/logging/ILogger.h"
 #include "presentation/capture_overlay/CaptureOverlay.h"
 #include "presentation/editor/EditorWindow.h"
 #include "presentation/main_window/MainWindow.h"
@@ -27,7 +28,7 @@ class Application final : public QObject {
     Q_OBJECT
 
 public:
-    explicit Application(QApplication& qtApplication);
+    explicit Application(QApplication& qtApplication, ILogger& logger);
 
     int run();
 
@@ -60,6 +61,7 @@ private:
     EditorWindow& editorWindow();
 
     QApplication& qtApplication_;
+    ILogger& logger_;
     AppContext context_;
     TrayController trayController_;
     ToastNotifier toastNotifier_;

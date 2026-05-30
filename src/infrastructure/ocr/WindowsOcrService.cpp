@@ -1,5 +1,4 @@
 #include "infrastructure/ocr/WindowsOcrService.h"
-#include "infrastructure/logging/Logger.h"
 
 #include <atomic>
 #include <climits>
@@ -139,17 +138,18 @@ winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring
 
 } // namespace
 
-WindowsOcrService::WindowsOcrService()
-    : apartmentInitialized_(false)
+WindowsOcrService::WindowsOcrService(ILogger& logger)
+    : logger_(logger)
+    , apartmentInitialized_(false)
 {
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     try {
         winrt::init_apartment(winrt::apartment_type::single_threaded);
         apartmentInitialized_ = true;
     } catch (const winrt::hresult_error& e) {
-        Logger::warning("Failed to initialize WinRT apartment: " + QString::fromWCharArray(e.message().c_str()));
+        logger_.warning("Failed to initialize WinRT apartment: " + QString::fromWCharArray(e.message().c_str()));
     } catch (const std::exception& e) {
-        Logger::warning("Failed to initialize WinRT apartment: " + QString::fromLatin1(e.what()));
+        logger_.warning("Failed to initialize WinRT apartment: " + QString::fromLatin1(e.what()));
     }
 #endif
 }
@@ -268,10 +268,10 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
         return {true, text, {}, source, blocks};
     } catch (const winrt::hresult_error& e) {
         auto msg = QString::fromWCharArray(e.message().c_str());
-        Logger::warning("OCR failed: " + msg);
+        logger_.warning("OCR failed: " + msg);
         return {false, {}, QObject::tr("OCR failed while processing the selected region."), {}, {}};
     } catch (const std::exception& e) {
-        Logger::warning("OCR failed: " + QString::fromLatin1(e.what()));
+        logger_.warning("OCR failed: " + QString::fromLatin1(e.what()));
         return {false, {}, QObject::tr("OCR failed while processing the selected region."), {}, {}};
     }
 #else

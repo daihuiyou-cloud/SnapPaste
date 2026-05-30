@@ -1,4 +1,5 @@
 #include "app/Application.h"
+#include "infrastructure/logging/Logger.h"
 #include "platform/IPlatformService.h"
 #include "platform/windows/WindowsPlatformService.h"
 #include "presentation/toast/ToastNotifier.h"
@@ -68,6 +69,7 @@ int main(int argc, char* argv[])
         return qtApplication.exec();
     }
 
-    snappaste::Application application(qtApplication);
+    snappaste::Logger logger;
+    snappaste::Application application(qtApplication, logger);
     return application.run();
 }

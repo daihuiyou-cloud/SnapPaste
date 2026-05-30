@@ -1,14 +1,14 @@
 #pragma once
 
-#include <QString>
+#include "infrastructure/logging/ILogger.h"
 
 namespace snappaste {
 
-class Logger final {
+class Logger final : public ILogger {
 public:
-    static void install();
-    static void info(const QString& message);
-    static void warning(const QString& message);
+    void install() override;
+    void info(const QString& message) override;
+    void warning(const QString& message) override;
 };
 
 } // namespace snappaste

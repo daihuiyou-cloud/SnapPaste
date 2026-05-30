@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/ocr/IOcrService.h"
+#include "infrastructure/logging/ILogger.h"
 
 #include <QMutex>
 #include <atomic>
@@ -9,7 +10,7 @@ namespace snappaste {
 
 class WindowsOcrService final : public IOcrService {
 public:
-    WindowsOcrService();
+    explicit WindowsOcrService(ILogger& logger);
     ~WindowsOcrService() override;
 
     OcrResult recognizeText(const QImage& image) override;
@@ -17,6 +18,7 @@ public:
     void cancel() override;
 
 private:
+    ILogger& logger_;
     QString language_;
     QMutex mutex_;
     bool apartmentInitialized_ = false;
