@@ -36,14 +36,8 @@ namespace snappaste {
 namespace {
 
 constexpr int kResizeMargin = 6;
-constexpr int kToolbarHeight = 28;
-constexpr int kToolbarBtnSize = 20;
-constexpr int kToolbarIconSize = 14;
-constexpr int kToolbarBtnPad = 4;
-constexpr int kToolbarButtonCount = 7;
 constexpr int kMinPinSize = 40;
 constexpr int kThumbnailMaxSize = 200;
-constexpr int kOverflowBtnSize = 18;
 constexpr int kSnapThreshold = 12;
 constexpr int kSnapMargin = 6;
 
@@ -223,31 +217,7 @@ QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
     return geometry;
 }
 
-QRect PinWindow::toolbarRect() const
-{
-    const auto w = width();
-    const auto tbWidth = kToolbarButtonCount * (kToolbarBtnSize + kToolbarBtnPad) + kToolbarBtnPad;
-    return QRect((w - tbWidth) / 2, kToolbarBtnPad, tbWidth, kToolbarHeight);
-}
 
-QVector<QRect> PinWindow::toolbarButtonRects() const
-{
-    const auto tb = toolbarRect();
-    QVector<QRect> rects;
-    rects.reserve(kToolbarButtonCount);
-    int x = tb.left() + kToolbarBtnPad;
-    for (int i = 0; i < kToolbarButtonCount; ++i) {
-        rects.append(QRect(x, tb.top() + (tb.height() - kToolbarBtnSize) / 2,
-                           kToolbarBtnSize, kToolbarBtnSize));
-        x += kToolbarBtnSize + kToolbarBtnPad;
-    }
-    return rects;
-}
-
-bool PinWindow::toolbarFits() const
-{
-    return width() >= toolbarRect().width() && height() >= toolbarRect().bottom() + kToolbarBtnPad;
-}
 
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
@@ -534,11 +504,11 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
     event->accept();
 }
 
-void PinWindow::updateToolbarHover(QMouseEvent* event)
+void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
-    bool onToolbar = false;
-    if ((hovered_ || controlsVisible_) && toolbarFits()) {
-        const auto btns = toolbarButtonRects();
+    if (!dragging_ && !resizing_) {
+        const int btn = (hovered_ || controlsVisible_) && PinToolbar::fits(width(), height())
+            ? PinToolbar::buttonAt(event->pos(), width()) : -1;
         static const char* kTooltipLabels[] = {
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Close"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Rotate Left"),
@@ -548,34 +518,22 @@ void PinWindow::updateToolbarHover(QMouseEvent* event)
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Click Through"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top")
         };
-        for (int i = 0; i < btns.size(); ++i) {
-            if (btns[i].contains(event->pos())) {
-                QToolTip::showText(event->globalPos(), tr(kTooltipLabels[i]), this);
-                onToolbar = true;
-                break;
-            }
+        if (btn >= 0) {
+            QToolTip::showText(event->globalPos(), tr(kTooltipLabels[btn]), this);
+        } else {
+            QToolTip::hideText();
         }
-    }
-    if (!onToolbar) {
-        QToolTip::hideText();
-    }
-    switch (resizeEdgeAt(event->pos())) {
-    case EdgeLeft:
-    case EdgeRight:     setCursor(Qt::SizeHorCursor); break;
-    case EdgeTop:
-    case EdgeBottom:    setCursor(Qt::SizeVerCursor); break;
-    case EdgeTopLeft:
-    case EdgeBottomRight: setCursor(Qt::SizeFDiagCursor); break;
-    case EdgeTopRight:
-    case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
-    case EdgeNone:      setCursor(Qt::ArrowCursor); break;
-    }
-}
-
-void PinWindow::mouseMoveEvent(QMouseEvent* event)
-{
-    if (!dragging_ && !resizing_) {
-        updateToolbarHover(event);
+        switch (resizeEdgeAt(event->pos())) {
+        case EdgeLeft:
+        case EdgeRight:     setCursor(Qt::SizeHorCursor); break;
+        case EdgeTop:
+        case EdgeBottom:    setCursor(Qt::SizeVerCursor); break;
+        case EdgeTopLeft:
+        case EdgeBottomRight: setCursor(Qt::SizeFDiagCursor); break;
+        case EdgeTopRight:
+        case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
+        case EdgeNone:      setCursor(Qt::ArrowCursor); break;
+        }
     }
 
     if (dragDropping_) {
@@ -657,26 +615,60 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
     }
 
     if (hovered_ || controlsVisible_) {
-        if (toolbarFits()) {
-            const auto btns = toolbarButtonRects();
-            for (int i = 0; i < btns.size(); ++i) {
-                if (btns[i].contains(pos)) {
-                    switch (i) {
-                    case 0: requestClose(); break;
-                    case 1: rotateBy(-90); break;
-                    case 2: rotateBy(90); break;
-                    case 3: flipH(); break;
-                    case 4: flipV(); break;
-                    case 5: toggleClickThrough(); break;
-                    case 6: toggleAlwaysOnTop(); break;
-                    }
-                    event->accept();
-                    return;
+        if (PinToolbar::fits(width(), height())) {
+            const int btn = PinToolbar::buttonAt(pos, width());
+            if (btn >= 0) {
+                switch (btn) {
+                case 0: requestClose(); break;
+                case 1: rotateBy(-90); break;
+                case 2: rotateBy(90); break;
+                case 3: flipH(); break;
+                case 4: flipV(); break;
+                case 5: toggleClickThrough(); break;
+                case 6: toggleAlwaysOnTop(); break;
                 }
+                event->accept();
+                return;
             }
-        } else if (QRect(width() - kOverflowBtnSize - 4, height() - kOverflowBtnSize - 4,
-                         kOverflowBtnSize, kOverflowBtnSize).contains(pos)) {
-            showOverflowMenu(event->globalPos());
+        } else if (PinToolbar::overflowRect(width(), height()).contains(pos)) {
+            QMenu menu(this);
+            auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
+            auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
+            menu.addSeparator();
+            auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
+            auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
+            auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
+            auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
+            menu.addSeparator();
+            auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
+            alwaysOnTopAction->setCheckable(true);
+            alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
+            auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
+            clickThroughAction->setCheckable(true);
+            clickThroughAction->setChecked(item_.state.options.clickThrough);
+            menu.addSeparator();
+            auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close\tEsc"));
+
+            const auto* action = menu.exec(event->globalPos());
+            if (action == copyAction) {
+                emit copyRequested(renderedImage());
+            } else if (action == saveAction) {
+                emit saveRequested(renderedImage());
+            } else if (action == rotateLeftAction) {
+                rotateBy(-90);
+            } else if (action == rotateRightAction) {
+                rotateBy(90);
+            } else if (action == flipHAction) {
+                flipH();
+            } else if (action == flipVAction) {
+                flipV();
+            } else if (action == alwaysOnTopAction) {
+                toggleAlwaysOnTop();
+            } else if (action == clickThroughAction) {
+                toggleClickThrough();
+            } else if (action == closeAction) {
+                requestClose();
+            }
             event->accept();
             return;
         }
@@ -747,30 +739,10 @@ void PinWindow::paintEvent(QPaintEvent* event)
         painter.setPen(QPen(QColor(255, 255, 255, 110), 1));
         painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
 
-        if (toolbarFits()) {
-            const auto tb = toolbarRect();
-            painter.setBrush(QColor(20, 26, 33, 200));
-            painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(tb, 4, 4);
-            const auto btns = toolbarButtonRects();
-            const IconName icons[] = {
-                IconName::Close,
-                IconName::RotateLeft,
-                IconName::RotateRight,
-                IconName::FlipHorizontal,
-                IconName::FlipVertical,
-                IconName::ClickThrough,
-                IconName::Pin
-            };
-            for (int i = 0; i < btns.size(); ++i) {
-                painter.fillRect(btns[i], QColor(255, 255, 255, 24));
-                const auto pixmap = IconProvider::icon(icons[i]).pixmap(kToolbarIconSize, kToolbarIconSize);
-                const auto iconTopLeft = btns[i].center() - QPoint(kToolbarIconSize / 2, kToolbarIconSize / 2);
-                painter.drawPixmap(iconTopLeft, pixmap);
-            }
+        if (PinToolbar::fits(width(), height())) {
+            PinToolbar::draw(painter, width(), height());
         } else {
-            const QRect ob(width() - kOverflowBtnSize - 4, height() - kOverflowBtnSize - 4,
-                           kOverflowBtnSize, kOverflowBtnSize);
+            const auto ob = PinToolbar::overflowRect(width(), height());
             painter.setBrush(QColor(20, 26, 33, 200));
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(ob, 3, 3);
@@ -825,48 +797,6 @@ void PinWindow::wheelEvent(QWheelEvent* event)
         emitStateChanged();
     }
     event->accept();
-}
-
-void PinWindow::showOverflowMenu(const QPoint& pos)
-{
-    QMenu menu(this);
-    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
-    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
-    menu.addSeparator();
-    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
-    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
-    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
-    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
-    menu.addSeparator();
-    auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
-    alwaysOnTopAction->setCheckable(true);
-    alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
-    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
-    clickThroughAction->setCheckable(true);
-    clickThroughAction->setChecked(item_.state.options.clickThrough);
-    menu.addSeparator();
-    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close\tEsc"));
-
-    const auto* action = menu.exec(pos);
-    if (action == copyAction) {
-        emit copyRequested(renderedImage());
-    } else if (action == saveAction) {
-        emit saveRequested(renderedImage());
-    } else if (action == rotateLeftAction) {
-        rotateBy(-90);
-    } else if (action == rotateRightAction) {
-        rotateBy(90);
-    } else if (action == flipHAction) {
-        flipH();
-    } else if (action == flipVAction) {
-        flipV();
-    } else if (action == alwaysOnTopAction) {
-        toggleAlwaysOnTop();
-    } else if (action == clickThroughAction) {
-        toggleClickThrough();
-    } else if (action == closeAction) {
-        requestClose();
-    }
 }
 
 void PinWindow::applyState()

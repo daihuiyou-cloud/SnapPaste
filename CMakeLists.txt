@@ -75,6 +75,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/infrastructure/ocr/WindowsOcrService.cpp
     src/presentation/ocr/OcrResultWindow.cpp
     src/presentation/pin_window/PinWindow.cpp
+    src/presentation/pin_window/PinToolbar.h
+    src/presentation/pin_window/PinToolbar.cpp
 )
 
 add_library(SnapPasteCore STATIC ${SNAPPASTE_CORE_SOURCES})

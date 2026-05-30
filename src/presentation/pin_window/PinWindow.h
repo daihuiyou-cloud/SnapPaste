@@ -2,6 +2,7 @@
 
 #include "domain/pin/PinnedItem.h"
 #include "platform/windows/window/WindowInteractionService.h"
+#include "presentation/pin_window/PinToolbar.h"
 
 #include <QPropertyAnimation>
 #include <QRect>
@@ -54,9 +55,7 @@ private:
     void applyWindowFlags();
     void emitStateChanged();
     void requestClose();
-    void showOverflowMenu(const QPoint& pos);
     void pushUndoState();
-    void updateToolbarHover(QMouseEvent* event);
     void undoTransform();
     void rotateBy(int degrees);
     void setScale(double scale);
@@ -71,9 +70,6 @@ private:
     ResizeEdge resizeEdgeAt(const QPoint& pos) const;
     QRect constrainedResizeGeometry(const QPoint& globalPos) const;
     void applyResizeToScale();
-    QRect toolbarRect() const;
-    QVector<QRect> toolbarButtonRects() const;
-    bool toolbarFits() const;
 
     PinnedItem item_;
     WindowInteractionService windowInteraction_;
