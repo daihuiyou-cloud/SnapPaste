@@ -15,6 +15,7 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets Sql LinguistTools)
 set(SNAPPASTE_CORE_SOURCES
     src/shared/events/EventHub.h
     src/shared/screen/ScreenSegmentUtil.h
+    src/shared/screen/ScreenSegmentUtil.cpp
 
     src/app/Application.cpp
     src/app/AppContext.cpp
