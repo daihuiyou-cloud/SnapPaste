@@ -2,6 +2,8 @@
 #include "app/InfrastructureFactory.h"
 #include "app/ServiceFactory.h"
 
+#include "infrastructure/config/JsonSettingsRepository.h"
+#include "infrastructure/persistence/SqliteHistoryRepository.h"
 #include "presentation/viewmodels/CaptureViewModel.h"
 #include "presentation/viewmodels/HistoryViewModel.h"
 #include "presentation/viewmodels/PinViewModel.h"
@@ -9,6 +11,8 @@
 #include "shared/events/EventHub.h"
 
 namespace snappaste {
+
+ViewModelServices::~ViewModelServices() = default;
 
 ViewModelServices ViewModelFactory::create(InfrastructureServices& infra,
                                            DomainServices& domain,

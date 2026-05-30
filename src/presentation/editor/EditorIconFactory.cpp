@@ -1,5 +1,4 @@
 #include "presentation/editor/EditorIconFactory.h"
-#include "presentation/icons/IconProvider.h"
 
 #include <QPainter>
 #include <QPixmap>
@@ -110,18 +109,18 @@ QIcon makeEyedropperIcon()
 
 } // namespace
 
-QIcon iconForTool(AnnotationTool tool)
+QIcon iconForTool(AnnotationTool tool, IIconProvider& iconProvider)
 {
     switch (tool) {
-    case AnnotationTool::Rectangle: return IconProvider::icon(IconName::Rectangle);
+    case AnnotationTool::Rectangle: return iconProvider.icon(IconName::Rectangle);
     case AnnotationTool::Ellipse: return makeEllipseIcon();
-    case AnnotationTool::Arrow: return IconProvider::icon(IconName::Arrow);
-    case AnnotationTool::Line: return IconProvider::icon(IconName::Line);
-    case AnnotationTool::Pen: return IconProvider::icon(IconName::Pen);
-    case AnnotationTool::Text: return IconProvider::icon(IconName::Text);
+    case AnnotationTool::Arrow: return iconProvider.icon(IconName::Arrow);
+    case AnnotationTool::Line: return iconProvider.icon(IconName::Line);
+    case AnnotationTool::Pen: return iconProvider.icon(IconName::Pen);
+    case AnnotationTool::Text: return iconProvider.icon(IconName::Text);
     case AnnotationTool::Highlight: return makeHighlightIcon();
     case AnnotationTool::Numbered: return makeNumberedIcon();
-    case AnnotationTool::Mosaic: return IconProvider::icon(IconName::Mosaic);
+    case AnnotationTool::Mosaic: return iconProvider.icon(IconName::Mosaic);
     case AnnotationTool::Eraser: return makeEraserIcon();
     case AnnotationTool::Select: return makeSelectIcon();
     case AnnotationTool::Crop: return makeCropIcon();

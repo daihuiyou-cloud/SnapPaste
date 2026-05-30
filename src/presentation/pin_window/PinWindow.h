@@ -2,6 +2,7 @@
 
 #include "domain/pin/PinnedItem.h"
 #include "platform/windows/window/WindowInteractionService.h"
+#include "presentation/icons/IIconProvider.h"
 #include "presentation/pin_window/PinToolbar.h"
 
 #include <QPropertyAnimation>
@@ -15,7 +16,7 @@ class PinWindow final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit PinWindow(PinnedItem item, QWidget* parent = nullptr);
+    explicit PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* parent = nullptr);
 
     qint64 id() const noexcept;
     const PinnedImageState& state() const noexcept;
@@ -72,6 +73,7 @@ private:
     void applyResizeToScale();
 
     PinnedItem item_;
+    IIconProvider& iconProvider_;
     WindowInteractionService windowInteraction_;
     QPoint dragOffset_;
     bool dragging_ = false;

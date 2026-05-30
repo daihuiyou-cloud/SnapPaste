@@ -18,11 +18,13 @@ namespace snappaste {
 class AppContext final {
 public:
     AppContext();
+    ~AppContext();
 
     EventHub& eventHub() noexcept;
     ISettingsRepository& settingsRepository() noexcept;
     IHotkeyService& hotkeyService() noexcept;
     IPlatformService& platformService() noexcept;
+    IIconProvider& iconProvider() noexcept;
 
     CaptureViewModel& captureViewModel() noexcept;
     HistoryViewModel& historyViewModel() noexcept;

@@ -1,6 +1,11 @@
 #include "app/AppContext.h"
 
+#include "infrastructure/config/JsonSettingsRepository.h"
 #include "infrastructure/filesystem/AppPaths.h"
+#include "platform/windows/capture/QtScreenPixelSampler.h"
+#include "platform/windows/capture/WinScreenRegionDetector.h"
+#include "platform/windows/hotkey/WinHotkeyService.h"
+#include "shared/events/EventHub.h"
 
 namespace snappaste {
 
@@ -11,6 +16,8 @@ AppContext::AppContext()
     , viewModels_(ViewModelFactory::create(infra_, domain_, *eventHub_))
 {
 }
+
+AppContext::~AppContext() = default;
 
 EventHub& AppContext::eventHub() noexcept
 {
@@ -30,6 +37,11 @@ IHotkeyService& AppContext::hotkeyService() noexcept
 IPlatformService& AppContext::platformService() noexcept
 {
     return *infra_.platformService;
+}
+
+IIconProvider& AppContext::iconProvider() noexcept
+{
+    return *infra_.iconProvider;
 }
 
 CaptureViewModel& AppContext::captureViewModel() noexcept

@@ -1,37 +1,12 @@
 #pragma once
 
-#include <QIcon>
+#include "presentation/icons/IIconProvider.h"
 
 namespace snappaste {
 
-enum class IconName {
-    App,
-    Capture,
-    Pin,
-    Copy,
-    Save,
-    Edit,
-    Close,
-    RotateLeft,
-    RotateRight,
-    FlipHorizontal,
-    FlipVertical,
-    Opacity,
-    ClickThrough,
-    Rectangle,
-    Arrow,
-    Line,
-    Pen,
-    Text,
-    Mosaic,
-    Undo,
-    Redo,
-    Export
-};
-
-class IconProvider final {
+class IconProvider final : public IIconProvider {
 public:
-    static QIcon icon(IconName name);
+    QIcon icon(IconName name) override;
 };
 
 } // namespace snappaste

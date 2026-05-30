@@ -1,7 +1,5 @@
 #include "presentation/pin_window/PinWindow.h"
 
-#include "presentation/icons/IconProvider.h"
-
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -43,9 +41,10 @@ constexpr int kSnapMargin = 6;
 
 } // namespace
 
-PinWindow::PinWindow(PinnedItem item, QWidget* parent)
+PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* parent)
     : QWidget(parent)
     , item_(std::move(item))
+    , iconProvider_(iconProvider)
 {
     item_.image.setDevicePixelRatio(item_.state.devicePixelRatio);
     applyWindowFlags();
@@ -222,26 +221,26 @@ QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
     QMenu menu(this);
-    auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
-    auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
+    auto* copyAction = menu.addAction(iconProvider_.icon(IconName::Copy), tr("Copy\tCtrl+C"));
+    auto* saveAction = menu.addAction(iconProvider_.icon(IconName::Save), tr("Save\tCtrl+S"));
     auto* saveAsAction = menu.addAction(tr("Save As...\tCtrl+Shift+S"));
     auto* copyColorAction = menu.addAction(tr("Copy Color"));
     menu.addSeparator();
-    auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
-    auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
-    auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
-    auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
+    auto* rotateLeftAction = menu.addAction(iconProvider_.icon(IconName::RotateLeft), tr("Rotate Left"));
+    auto* rotateRightAction = menu.addAction(iconProvider_.icon(IconName::RotateRight), tr("Rotate Right"));
+    auto* flipHAction = menu.addAction(iconProvider_.icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
+    auto* flipVAction = menu.addAction(iconProvider_.icon(IconName::FlipVertical), tr("Flip Vertical"));
     auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
     alwaysOnTopAction->setCheckable(true);
     alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
-    auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
+    auto* clickThroughAction = menu.addAction(iconProvider_.icon(IconName::ClickThrough), tr("Click Through"));
     clickThroughAction->setCheckable(true);
     clickThroughAction->setChecked(item_.state.options.clickThrough);
     menu.addSeparator();
     auto* actualSizeAction = menu.addAction(tr("Actual Size (1:1)\tCtrl+0"));
     auto* fitScreenAction = menu.addAction(tr("Fit to Screen\tCtrl+9"));
     menu.addSeparator();
-    auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close"));
+    auto* closeAction = menu.addAction(iconProvider_.icon(IconName::Close), tr("Close"));
 
     const auto* action = menu.exec(event->globalPos());
     if (action == copyAction) {
@@ -632,22 +631,22 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
             }
         } else if (PinToolbar::overflowRect(width(), height()).contains(pos)) {
             QMenu menu(this);
-            auto* copyAction = menu.addAction(IconProvider::icon(IconName::Copy), tr("Copy\tCtrl+C"));
-            auto* saveAction = menu.addAction(IconProvider::icon(IconName::Save), tr("Save\tCtrl+S"));
+            auto* copyAction = menu.addAction(iconProvider_.icon(IconName::Copy), tr("Copy\tCtrl+C"));
+            auto* saveAction = menu.addAction(iconProvider_.icon(IconName::Save), tr("Save\tCtrl+S"));
             menu.addSeparator();
-            auto* rotateLeftAction = menu.addAction(IconProvider::icon(IconName::RotateLeft), tr("Rotate Left"));
-            auto* rotateRightAction = menu.addAction(IconProvider::icon(IconName::RotateRight), tr("Rotate Right"));
-            auto* flipHAction = menu.addAction(IconProvider::icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
-            auto* flipVAction = menu.addAction(IconProvider::icon(IconName::FlipVertical), tr("Flip Vertical"));
+            auto* rotateLeftAction = menu.addAction(iconProvider_.icon(IconName::RotateLeft), tr("Rotate Left"));
+            auto* rotateRightAction = menu.addAction(iconProvider_.icon(IconName::RotateRight), tr("Rotate Right"));
+            auto* flipHAction = menu.addAction(iconProvider_.icon(IconName::FlipHorizontal), tr("Flip Horizontal"));
+            auto* flipVAction = menu.addAction(iconProvider_.icon(IconName::FlipVertical), tr("Flip Vertical"));
             menu.addSeparator();
             auto* alwaysOnTopAction = menu.addAction(tr("Always on Top\tA"));
             alwaysOnTopAction->setCheckable(true);
             alwaysOnTopAction->setChecked(item_.state.options.alwaysOnTop);
-            auto* clickThroughAction = menu.addAction(IconProvider::icon(IconName::ClickThrough), tr("Click Through"));
+            auto* clickThroughAction = menu.addAction(iconProvider_.icon(IconName::ClickThrough), tr("Click Through"));
             clickThroughAction->setCheckable(true);
             clickThroughAction->setChecked(item_.state.options.clickThrough);
             menu.addSeparator();
-            auto* closeAction = menu.addAction(IconProvider::icon(IconName::Close), tr("Close\tEsc"));
+            auto* closeAction = menu.addAction(iconProvider_.icon(IconName::Close), tr("Close\tEsc"));
 
             const auto* action = menu.exec(event->globalPos());
             if (action == copyAction) {
@@ -740,7 +739,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
         painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
 
         if (PinToolbar::fits(width(), height())) {
-            PinToolbar::draw(painter, width(), height());
+            PinToolbar::draw(painter, width(), height(), iconProvider_);
         } else {
             const auto ob = PinToolbar::overflowRect(width(), height());
             painter.setBrush(QColor(20, 26, 33, 200));

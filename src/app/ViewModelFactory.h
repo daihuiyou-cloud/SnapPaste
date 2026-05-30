@@ -13,6 +13,10 @@ class SettingsViewModel;
 class PinViewModel;
 
 struct ViewModelServices {
+    ViewModelServices() = default;
+    ~ViewModelServices();
+    ViewModelServices(ViewModelServices&&) = default;
+    ViewModelServices& operator=(ViewModelServices&&) = default;
     std::unique_ptr<CaptureViewModel> captureViewModel;
     std::unique_ptr<HistoryViewModel> historyViewModel;
     std::unique_ptr<SettingsViewModel> settingsViewModel;

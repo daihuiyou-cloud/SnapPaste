@@ -4,8 +4,17 @@
 #include "domain/capture/CaptureWorkflow.h"
 #include "domain/capture/CaptureSelectionHistory.h"
 #include "domain/pin/PinnedImageService.h"
+#include "infrastructure/clipboard/ClipboardImageProvider.h"
+#include "infrastructure/config/JsonSettingsRepository.h"
+#include "infrastructure/image/LocalImageStorage.h"
+#include "infrastructure/persistence/SqliteHistoryRepository.h"
+#include "infrastructure/persistence/SqlitePinnedItemRepository.h"
+#include "platform/windows/capture/DxgiScreenCaptureService.h"
+#include "shared/utils/TimeProvider.h"
 
 namespace snappaste {
+
+DomainServices::~DomainServices() = default;
 
 DomainServices ServiceFactory::create(InfrastructureServices& infra)
 {

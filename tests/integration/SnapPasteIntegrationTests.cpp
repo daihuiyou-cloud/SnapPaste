@@ -25,6 +25,30 @@
 
 using namespace snappaste;
 
+// ---------------------------------------------------------------------------
+// Fake implementations for testing
+// ---------------------------------------------------------------------------
+
+class FakeAppPaths final : public IAppPaths {
+public:
+    QString dataDirectory() override { return {}; }
+    QString configFilePath() override { return {}; }
+    QString databaseFilePath() override { return {}; }
+    QString defaultCaptureDirectory() override { return {}; }
+    QString thumbnailDirectory() override { return {}; }
+    bool ensureDirectory(const QString& path) override { return true; }
+};
+
+class FakeIconProvider final : public IIconProvider {
+public:
+    QIcon icon(IconName name) override { return {}; }
+};
+
+class FakeTimeProvider final : public ITimeProvider {
+public:
+    QDateTime nowUtc() override { return QDateTime::currentDateTimeUtc(); }
+};
+
 class SnapPasteIntegrationTests final : public QObject {
     Q_OBJECT
 
@@ -41,7 +65,8 @@ private slots:
         blocker.close();
         ScopedEnvVar env("SNAPPASTE_DATA_DIR", blockerPath);
 
-        JsonSettingsRepository repository;
+        FakeAppPaths appPaths;
+        JsonSettingsRepository repository(appPaths);
         AppSettings settings;
         settings.saveDirectory = temporaryDir.path();
         settings.imageFormat = "png";
@@ -93,7 +118,8 @@ private slots:
         SqliteConnection conn(temporaryDir.filePath("history.sqlite"));
         FakeClipboardImageProvider clipboardProvider;
         SqlitePinnedItemRepository repository(conn);
-        PinnedImageService service(clipboardProvider, repository);
+        FakeTimeProvider timeProvider;
+        PinnedImageService service(clipboardProvider, repository, timeProvider);
 
         QImage image(80, 60, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::red);
@@ -150,7 +176,8 @@ private slots:
         SqliteConnection conn(temporaryDir.filePath("history.sqlite"));
         FakeClipboardImageProvider clipboardProvider;
         SqlitePinnedItemRepository repository(conn);
-        PinnedImageService service(clipboardProvider, repository);
+        FakeTimeProvider timeProvider;
+        PinnedImageService service(clipboardProvider, repository, timeProvider);
 
         QImage image(32, 32, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::blue);
@@ -188,7 +215,8 @@ private slots:
         item.state.transform.scale = 1.0;
         item.state.options.visible = true;
 
-        PinWindow window(item);
+        FakeIconProvider iconProvider;
+        PinWindow window(item, iconProvider);
 
         QVERIFY(!window.isVisible());
     }
@@ -204,7 +232,8 @@ private slots:
         item.state.transform.scale = 1.0;
         item.state.options.visible = true;
 
-        PinWindow window(item);
+        FakeIconProvider iconProvider;
+        PinWindow window(item, iconProvider);
         QSignalSpy copySpy(&window, &PinWindow::copyRequested);
         QSignalSpy saveSpy(&window, &PinWindow::saveRequested);
 
@@ -231,7 +260,8 @@ private slots:
         item.state.options.alwaysOnTop = true;
         item.state.options.visible = true;
 
-        PinWindow window(item);
+        FakeIconProvider iconProvider;
+        PinWindow window(item, iconProvider);
         QSignalSpy stateSpy(&window, &PinWindow::stateChanged);
         QVERIFY(window.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
 
@@ -254,7 +284,8 @@ private slots:
         item.state.transform.scale = 1.0;
         item.state.options.visible = true;
 
-        auto window = std::make_unique<PinWindow>(item);
+        FakeIconProvider iconProvider;
+        auto window = std::make_unique<PinWindow>(item, iconProvider);
         auto* rawWindow = window.get();
         QObject::connect(rawWindow, &PinWindow::closeRequested, rawWindow, [&window](qint64) {
             window.reset();
@@ -277,7 +308,8 @@ private slots:
         item.state.transform.scale = 1.0;
         item.state.options.visible = true;
 
-        auto window = std::make_unique<PinWindow>(item);
+        FakeIconProvider iconProvider;
+        auto window = std::make_unique<PinWindow>(item, iconProvider);
         auto* rawWindow = window.get();
         QObject::connect(rawWindow, &PinWindow::closeRequested, rawWindow, [&window](qint64) {
             window.reset();
@@ -309,7 +341,8 @@ private slots:
         item.state.transform.scale = 1.0;
         item.state.options.visible = true;
 
-        auto window = std::make_unique<PinWindow>(item);
+        FakeIconProvider iconProvider;
+        auto window = std::make_unique<PinWindow>(item, iconProvider);
         auto* rawWindow = window.get();
         QObject::connect(rawWindow, &PinWindow::closeRequested, rawWindow, [&window](qint64) {
             window.reset();
@@ -328,7 +361,8 @@ private slots:
         SqliteConnection conn(temporaryDir.filePath("history.sqlite"));
         FakeClipboardImageProvider clipboardProvider;
         SqlitePinnedItemRepository repository(conn);
-        PinnedImageService service(clipboardProvider, repository);
+        FakeTimeProvider timeProvider;
+        PinnedImageService service(clipboardProvider, repository, timeProvider);
 
         const auto result = service.createFromClipboard();
 
@@ -341,7 +375,8 @@ private slots:
         QVERIFY(temporaryDir.isValid());
         ScopedEnvVar env("SNAPPASTE_DATA_DIR", temporaryDir.path());
 
-        LocalImageStorage storage;
+        FakeAppPaths appPaths;
+        LocalImageStorage storage(appPaths);
         QImage image(8, 8, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::green);
 
@@ -369,7 +404,8 @@ private slots:
         FakeScreenRegionDetector regionDetector;
         FakeScreenPixelSampler pixelSampler;
         CaptureSelectionHistory history;
-        CaptureOverlay overlay(regionDetector, pixelSampler, history);
+        FakeIconProvider iconProvider;
+        CaptureOverlay overlay(iconProvider, regionDetector, pixelSampler, history);
         overlay.setGeometry(QRect(0, 0, 800, 600));
 
         regionDetector.regions = {QRect(0, 0, 800, 600)};
@@ -398,7 +434,8 @@ private slots:
         FakeScreenRegionDetector regionDetector;
         FakeScreenPixelSampler pixelSampler;
         CaptureSelectionHistory history;
-        CaptureOverlay overlay(regionDetector, pixelSampler, history);
+        FakeIconProvider iconProvider;
+        CaptureOverlay overlay(iconProvider, regionDetector, pixelSampler, history);
         overlay.setGeometry(QRect(0, 0, 800, 600));
 
         const QPoint start(100, 100);

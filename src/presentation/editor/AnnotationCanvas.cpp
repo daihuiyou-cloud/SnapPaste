@@ -116,7 +116,7 @@ bool AnnotationCanvas::isModified() const { return modified_; }
 void AnnotationCanvas::markModified()
 {
     modified_ = true;
-    cacheValid_ = false;
+    renderer_.invalidateCache();
     if (onModified_) onModified_();
     updateWindowTitle();
     update();
@@ -433,10 +433,7 @@ bool AnnotationCanvas::handlePickingColorPress(QMouseEvent* event)
     const auto pos = toImage(event->pos());
     QRect logicalImageRect(QPoint(0, 0), image_.size() / image_.devicePixelRatio());
     if (logicalImageRect.contains(pos)) {
-        QImage composited = image_.copy();
-        QPainter p(&composited);
-        drawAnnotations(&p, image_, false);
-        p.end();
+        QImage composited = renderer_.renderToImage(image_, annotations_, fontSize_);
         const auto dpr = image_.devicePixelRatio();
         QPoint physicalPos(static_cast<int>(pos.x() * dpr),
                            static_cast<int>(pos.y() * dpr));

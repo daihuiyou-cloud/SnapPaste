@@ -1,30 +1,29 @@
 #include "presentation/tray/TrayController.h"
 
-#include "presentation/icons/IconProvider.h"
-
 #include <QAction>
 #include <QMenu>
 #include <QMessageBox>
 
 namespace snappaste {
 
-TrayController::TrayController(QObject* parent)
+TrayController::TrayController(IIconProvider& iconProvider, QObject* parent)
     : QObject(parent)
+    , iconProvider_(iconProvider)
     , trayIcon_(this)
     , menu_(std::make_unique<QMenu>())
 {
-    auto* captureAction = menu_->addAction(IconProvider::icon(IconName::Capture), tr("Capture"));
+    auto* captureAction = menu_->addAction(iconProvider_.icon(IconName::Capture), tr("Capture"));
     auto* openFileAction = menu_->addAction(tr("Open Image..."));
-    auto* showAction = menu_->addAction(IconProvider::icon(IconName::App), tr("Open SnapPaste"));
+    auto* showAction = menu_->addAction(iconProvider_.icon(IconName::App), tr("Open SnapPaste"));
     auto* hidePinsAction = menu_->addAction(tr("Hide Pins"));
     auto* showPinsAction = menu_->addAction(tr("Show Pins"));
     auto* closeAllPinsAction = menu_->addAction(tr("Close All Pins"));
     menu_->addSeparator();
-    auto* quitAction = menu_->addAction(IconProvider::icon(IconName::Close), tr("Quit"));
+    auto* quitAction = menu_->addAction(iconProvider_.icon(IconName::Close), tr("Quit"));
 
     trayIcon_.setContextMenu(menu_.get());
     trayIcon_.setToolTip(tr("SnapPaste"));
-    trayIcon_.setIcon(IconProvider::icon(IconName::App));
+    trayIcon_.setIcon(iconProvider_.icon(IconName::App));
 
     connect(captureAction, &QAction::triggered, this, &TrayController::captureRequested);
     connect(openFileAction, &QAction::triggered, this, &TrayController::openFileRequested);

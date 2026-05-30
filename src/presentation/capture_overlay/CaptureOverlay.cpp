@@ -35,15 +35,17 @@ const QColor kCandidateFillColor(47, 191, 159, 22);
 
 } // namespace
 
-CaptureOverlay::CaptureOverlay(IScreenRegionDetector& regionDetector,
+CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
+                               IScreenRegionDetector& regionDetector,
                                IScreenPixelSampler& pixelSampler,
                                CaptureSelectionHistory& selectionHistory,
                                QWidget* parent)
     : QWidget(parent)
+    , iconProvider_(iconProvider)
     , regionDetector_(regionDetector)
     , pixelSampler_(pixelSampler)
     , selectionHistory_(selectionHistory)
-    , actionBar_(new CaptureActionBar(this))
+    , actionBar_(new CaptureActionBar(iconProvider_, this))
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);

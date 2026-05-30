@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/editor/Annotation.h"
+#include "presentation/icons/IIconProvider.h"
 
 #include <functional>
 
@@ -20,7 +21,7 @@ class EditorWindow final : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit EditorWindow(QWidget* parent = nullptr);
+    explicit EditorWindow(IIconProvider& iconProvider, QWidget* parent = nullptr);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -43,6 +44,7 @@ private:
 
     void refreshPanelUi();
 
+    IIconProvider& iconProvider_;
     AnnotationCanvas* canvas_ = nullptr;
     QToolButton* colorBtn_ = nullptr;
     QLabel* contextHint_ = nullptr;

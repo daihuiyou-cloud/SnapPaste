@@ -12,9 +12,12 @@
 #include "platform/windows/capture/WinScreenRegionDetector.h"
 #include "platform/windows/hotkey/WinHotkeyService.h"
 #include "infrastructure/filesystem/AppPaths.h"
+#include "presentation/icons/IconProvider.h"
 #include "shared/utils/TimeProvider.h"
 
 namespace snappaste {
+
+InfrastructureServices::~InfrastructureServices() = default;
 
 InfrastructureServices InfrastructureFactory::create(std::unique_ptr<IAppPaths> appPaths)
 {
@@ -33,6 +36,7 @@ InfrastructureServices InfrastructureFactory::create(std::unique_ptr<IAppPaths> 
     svc.imageStorage = std::make_unique<LocalImageStorage>(*svc.appPaths);
     svc.hotkeyService = std::make_unique<WinHotkeyService>();
     svc.timeProvider = std::make_unique<TimeProvider>();
+    svc.iconProvider = std::make_unique<IconProvider>();
 
     return svc;
 }

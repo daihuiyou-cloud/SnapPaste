@@ -3,6 +3,11 @@
 #include "app/AppStartup.h"
 #include "infrastructure/ocr/WindowsOcrService.h"
 #include "presentation/ocr/OcrResultWindow.h"
+#include "presentation/viewmodels/CaptureViewModel.h"
+#include "presentation/viewmodels/HistoryViewModel.h"
+#include "presentation/viewmodels/PinViewModel.h"
+#include "presentation/viewmodels/SettingsViewModel.h"
+#include "shared/events/EventHub.h"
 
 #include <climits>
 
@@ -41,7 +46,7 @@ Application::Application(QApplication& qtApplication, ILogger& logger)
     : QObject(&qtApplication)
     , logger_(logger)
     , qtApplication_(qtApplication)
-    , trayController_(this)
+    , trayController_(context_.iconProvider(), this)
     , toastNotifier_(this)
 {
     QApplication::setQuitOnLastWindowClosed(false);
@@ -435,7 +440,7 @@ void Application::openPinWindow(PinnedItem item)
         pendingPinAvoidRegion_.reset();
     }
 
-    auto pinWindow = std::make_unique<PinWindow>(item);
+    auto pinWindow = std::make_unique<PinWindow>(item, context_.iconProvider());
     auto* window = pinWindow.get();
     pinWindows_[item.id] = std::move(pinWindow);
 
@@ -519,6 +524,7 @@ CaptureOverlay& Application::overlay()
 {
     if (!overlay_) {
         overlay_ = std::make_unique<CaptureOverlay>(
+            context_.iconProvider(),
             context_.screenRegionDetector(),
             context_.screenPixelSampler(),
             context_.captureSelectionHistory());
@@ -538,7 +544,7 @@ CaptureOverlay& Application::overlay()
 EditorWindow& Application::editorWindow()
 {
     if (!editorWindow_) {
-        editorWindow_ = std::make_unique<EditorWindow>();
+        editorWindow_ = std::make_unique<EditorWindow>(context_.iconProvider());
         connect(editorWindow_.get(), &EditorWindow::imageEdited,
                 &context_.captureViewModel(), &CaptureViewModel::setCurrentImage);
         connect(editorWindow_.get(), &EditorWindow::saveRequested,

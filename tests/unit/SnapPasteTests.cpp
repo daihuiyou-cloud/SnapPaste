@@ -14,6 +14,20 @@
 
 using namespace snappaste;
 
+// ---------------------------------------------------------------------------
+// Fake implementations for testing
+// ---------------------------------------------------------------------------
+
+class FakeIconProvider final : public IIconProvider {
+public:
+    QIcon icon(IconName name) override { return {}; }
+};
+
+class FakeTimeProvider final : public ITimeProvider {
+public:
+    QDateTime nowUtc() override { return QDateTime::currentDateTimeUtc(); }
+};
+
 class SnapPasteUnitTests final : public QObject {
     Q_OBJECT
 
@@ -107,7 +121,8 @@ private slots:
 
     void captureActionBarKeyboardShortcutsEmitActions()
     {
-        CaptureActionBar actionBar;
+        FakeIconProvider iconProvider;
+        CaptureActionBar actionBar(iconProvider);
         QSignalSpy copySpy(&actionBar, &CaptureActionBar::copyRequested);
         QSignalSpy pinSpy(&actionBar, &CaptureActionBar::pinRequested);
         QSignalSpy saveSpy(&actionBar, &CaptureActionBar::saveRequested);
@@ -142,7 +157,8 @@ private slots:
         FakeImageStorage imageStorage;
         FakeHistoryRepository historyRepository;
         FakeSettingsRepository settingsRepository;
-        CaptureWorkflow workflow(captureService, imageStorage, historyRepository, settingsRepository);
+        FakeTimeProvider timeProvider;
+        CaptureWorkflow workflow(captureService, imageStorage, historyRepository, settingsRepository, timeProvider);
 
         QVector<ScreenCaptureSegment> segments;
         ScreenCaptureSegment left;
@@ -176,7 +192,8 @@ private slots:
         settingsRepository.settings.saveDirectory = "captures";
         settingsRepository.settings.imageFormat = "png";
         EventHub eventHub;
-        CaptureWorkflow workflow(captureService, imageStorage, historyRepository, settingsRepository);
+        FakeTimeProvider timeProvider;
+        CaptureWorkflow workflow(captureService, imageStorage, historyRepository, settingsRepository, timeProvider);
         CaptureViewModel viewModel(workflow, eventHub);
 
         QImage current(12, 8, QImage::Format_RGB32);

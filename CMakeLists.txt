@@ -50,7 +50,6 @@ set(SNAPPASTE_CORE_SOURCES
     src/platform/windows/WindowsPlatformService.h
     src/platform/windows/WindowsPlatformService.cpp
     src/platform/windows/hotkey/WinHotkeyService.cpp
-    src/platform/windows/shell/WindowsShellService.cpp
     src/platform/windows/window/WindowInteractionService.cpp
 
     src/presentation/capture_actions/CaptureActionBar.cpp

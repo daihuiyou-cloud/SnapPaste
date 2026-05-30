@@ -1,5 +1,4 @@
 #include "presentation/pin_window/PinToolbar.h"
-#include "presentation/icons/IconProvider.h"
 
 #include <QPainter>
 
@@ -37,7 +36,7 @@ bool PinToolbar::fits(int parentWidth, int parentHeight)
     return parentWidth >= tb.width() && parentHeight >= tb.bottom() + 4;
 }
 
-void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight)
+void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider)
 {
     Q_UNUSED(parentHeight)
 
@@ -59,7 +58,7 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight)
 
     for (int i = 0; i < btns.size(); ++i) {
         painter.fillRect(btns[i], QColor(255, 255, 255, 24));
-        const auto pixmap = IconProvider::icon(icons[i]).pixmap(kIconSize, kIconSize);
+        const auto pixmap = iconProvider.icon(icons[i]).pixmap(kIconSize, kIconSize);
         const auto iconTopLeft = btns[i].center() - QPoint(kIconSize / 2, kIconSize / 2);
         painter.drawPixmap(iconTopLeft, pixmap);
     }

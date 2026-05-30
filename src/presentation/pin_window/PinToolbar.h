@@ -1,5 +1,7 @@
 #pragma once
 
+#include "presentation/icons/IIconProvider.h"
+
 #include <QPoint>
 #include <QRect>
 #include <QVector>
@@ -20,7 +22,7 @@ struct PinToolbar {
     static QVector<QRect> buttonRects(int parentWidth);
     static QRect overflowRect(int parentWidth, int parentHeight);
     static bool fits(int parentWidth, int parentHeight);
-    static void draw(QPainter& painter, int parentWidth, int parentHeight);
+    static void draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider);
     static int buttonAt(const QPoint& pos, int parentWidth);
 };
 

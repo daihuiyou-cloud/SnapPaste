@@ -5,7 +5,6 @@
 #include "presentation/editor/AnnotationCanvas.h"
 #include "presentation/editor/EditorIconFactory.h"
 #include "presentation/editor/EditorWindow.h"
-#include "presentation/icons/IconProvider.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -82,8 +81,9 @@ QScrollBar::corner { background: transparent; }
 } // namespace
 
 
-EditorWindow::EditorWindow(QWidget* parent)
+EditorWindow::EditorWindow(IIconProvider& iconProvider, QWidget* parent)
     : QMainWindow(parent)
+    , iconProvider_(iconProvider)
     , canvas_(new AnnotationCanvas(this))
 {
     connect(canvas_, &AnnotationCanvas::toolChanged, this, &EditorWindow::onToolChanged);
@@ -215,7 +215,7 @@ void EditorWindow::refreshPanelUi()
     auto recent = canvas_->recentTools();
     for (int i = 0; i < recentToolBtns_.size(); ++i) {
         if (i < recent.size()) {
-            recentToolBtns_[i]->setIcon(iconForTool(recent[i]));
+            recentToolBtns_[i]->setIcon(iconForTool(recent[i], iconProvider_));
             recentToolBtns_[i]->setToolTip([&]{
                 switch (recent[i]) {
                     case AnnotationTool::Rectangle: return tr("Rect"); case AnnotationTool::Ellipse: return tr("Ellipse");
@@ -405,18 +405,18 @@ void EditorWindow::createToolPanel()
     // ==========================================
 
     const ToolDef allTools[] = {
-        {[]{ return iconForTool(AnnotationTool::Rectangle); }, QT_TRANSLATE_NOOP("EditorWindow", "Rect (R)"), QT_TRANSLATE_NOOP("EditorWindow", "Rectangle"), AnnotationTool::Rectangle},
-        {[]{ return iconForTool(AnnotationTool::Ellipse); }, QT_TRANSLATE_NOOP("EditorWindow", "Ellipse (E)"), QT_TRANSLATE_NOOP("EditorWindow", "Ellipse"), AnnotationTool::Ellipse},
-        {[]{ return iconForTool(AnnotationTool::Arrow); }, QT_TRANSLATE_NOOP("EditorWindow", "Arrow (A)"), QT_TRANSLATE_NOOP("EditorWindow", "Arrow"), AnnotationTool::Arrow},
-        {[]{ return iconForTool(AnnotationTool::Line); }, QT_TRANSLATE_NOOP("EditorWindow", "Line (L)"), QT_TRANSLATE_NOOP("EditorWindow", "Line"), AnnotationTool::Line},
-        {[]{ return iconForTool(AnnotationTool::Pen); }, QT_TRANSLATE_NOOP("EditorWindow", "Pen (P)"), QT_TRANSLATE_NOOP("EditorWindow", "Pen"), AnnotationTool::Pen},
-        {[]{ return iconForTool(AnnotationTool::Text); }, QT_TRANSLATE_NOOP("EditorWindow", "Text (T)"), QT_TRANSLATE_NOOP("EditorWindow", "Text"), AnnotationTool::Text},
-        {[]{ return iconForTool(AnnotationTool::Highlight); }, QT_TRANSLATE_NOOP("EditorWindow", "Hi (H)"), QT_TRANSLATE_NOOP("EditorWindow", "Highlight"), AnnotationTool::Highlight},
-        {[]{ return iconForTool(AnnotationTool::Numbered); }, QT_TRANSLATE_NOOP("EditorWindow", "Num (N)"), QT_TRANSLATE_NOOP("EditorWindow", "Numbered"), AnnotationTool::Numbered},
-        {[]{ return iconForTool(AnnotationTool::Mosaic); }, QT_TRANSLATE_NOOP("EditorWindow", "Mosaic (M)"), QT_TRANSLATE_NOOP("EditorWindow", "Mosaic"), AnnotationTool::Mosaic},
-        {[]{ return iconForTool(AnnotationTool::Eraser); }, QT_TRANSLATE_NOOP("EditorWindow", "Eraser (X)"), QT_TRANSLATE_NOOP("EditorWindow", "Eraser"), AnnotationTool::Eraser},
-        {[]{ return iconForTool(AnnotationTool::Select); }, QT_TRANSLATE_NOOP("EditorWindow", "Select (V)"), QT_TRANSLATE_NOOP("EditorWindow", "Select"), AnnotationTool::Select},
-        {[]{ return iconForTool(AnnotationTool::Crop); }, QT_TRANSLATE_NOOP("EditorWindow", "Crop (C)"), QT_TRANSLATE_NOOP("EditorWindow", "Crop"), AnnotationTool::Crop},
+        {[this]{ return iconForTool(AnnotationTool::Rectangle, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Rect (R)"), QT_TRANSLATE_NOOP("EditorWindow", "Rectangle"), AnnotationTool::Rectangle},
+        {[this]{ return iconForTool(AnnotationTool::Ellipse, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Ellipse (E)"), QT_TRANSLATE_NOOP("EditorWindow", "Ellipse"), AnnotationTool::Ellipse},
+        {[this]{ return iconForTool(AnnotationTool::Arrow, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Arrow (A)"), QT_TRANSLATE_NOOP("EditorWindow", "Arrow"), AnnotationTool::Arrow},
+        {[this]{ return iconForTool(AnnotationTool::Line, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Line (L)"), QT_TRANSLATE_NOOP("EditorWindow", "Line"), AnnotationTool::Line},
+        {[this]{ return iconForTool(AnnotationTool::Pen, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Pen (P)"), QT_TRANSLATE_NOOP("EditorWindow", "Pen"), AnnotationTool::Pen},
+        {[this]{ return iconForTool(AnnotationTool::Text, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Text (T)"), QT_TRANSLATE_NOOP("EditorWindow", "Text"), AnnotationTool::Text},
+        {[this]{ return iconForTool(AnnotationTool::Highlight, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Hi (H)"), QT_TRANSLATE_NOOP("EditorWindow", "Highlight"), AnnotationTool::Highlight},
+        {[this]{ return iconForTool(AnnotationTool::Numbered, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Num (N)"), QT_TRANSLATE_NOOP("EditorWindow", "Numbered"), AnnotationTool::Numbered},
+        {[this]{ return iconForTool(AnnotationTool::Mosaic, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Mosaic (M)"), QT_TRANSLATE_NOOP("EditorWindow", "Mosaic"), AnnotationTool::Mosaic},
+        {[this]{ return iconForTool(AnnotationTool::Eraser, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Eraser (X)"), QT_TRANSLATE_NOOP("EditorWindow", "Eraser"), AnnotationTool::Eraser},
+        {[this]{ return iconForTool(AnnotationTool::Select, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Select (V)"), QT_TRANSLATE_NOOP("EditorWindow", "Select"), AnnotationTool::Select},
+        {[this]{ return iconForTool(AnnotationTool::Crop, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Crop (C)"), QT_TRANSLATE_NOOP("EditorWindow", "Crop"), AnnotationTool::Crop},
     };
 
     auto* toolGrid = new QGridLayout();
@@ -470,7 +470,7 @@ void EditorWindow::createToolPanel()
     updateColorWell(QColor("#ff3b30"));
 
     auto* colorMenu = new QMenu(colorBtn_);
-    eyeAction_ = new QAction(IconProvider::icon(IconName::Edit), tr("Eyedropper"), colorMenu);
+    eyeAction_ = new QAction(iconProvider_.icon(IconName::Edit), tr("Eyedropper"), colorMenu);
     eyeAction_->setCheckable(true);
     connect(eyeAction_, &QAction::triggered, this, [this] {
         canvas_->setPickingColor(eyeAction_->isChecked());
@@ -784,12 +784,12 @@ void EditorWindow::createToolPanel()
     struct ActionDef { QIcon icon; const char* text; const char* tip; QToolButton** ptr; };
     undoBtn_ = nullptr; redoBtn_ = nullptr;
     const ActionDef actionDefs[] = {
-        {IconProvider::icon(IconName::Undo), QT_TRANSLATE_NOOP("EditorWindow", "Undo"), QT_TRANSLATE_NOOP("EditorWindow", "Undo (Ctrl+Z)"), &undoBtn_},
-        {IconProvider::icon(IconName::Redo), QT_TRANSLATE_NOOP("EditorWindow", "Redo"), QT_TRANSLATE_NOOP("EditorWindow", "Redo (Ctrl+Y)"), &redoBtn_},
-        {IconProvider::icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), nullptr},
-        {IconProvider::icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), nullptr},
-        {IconProvider::icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), nullptr},
-        {IconProvider::icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), nullptr},
+        {iconProvider_.icon(IconName::Undo), QT_TRANSLATE_NOOP("EditorWindow", "Undo"), QT_TRANSLATE_NOOP("EditorWindow", "Undo (Ctrl+Z)"), &undoBtn_},
+        {iconProvider_.icon(IconName::Redo), QT_TRANSLATE_NOOP("EditorWindow", "Redo"), QT_TRANSLATE_NOOP("EditorWindow", "Redo (Ctrl+Y)"), &redoBtn_},
+        {iconProvider_.icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), nullptr},
+        {iconProvider_.icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), nullptr},
+        {iconProvider_.icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), nullptr},
+        {iconProvider_.icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), nullptr},
     };
 
     auto* actionsGrid = new QGridLayout();

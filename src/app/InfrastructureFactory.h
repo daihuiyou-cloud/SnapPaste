@@ -2,6 +2,7 @@
 
 #include "infrastructure/filesystem/IAppPaths.h"
 #include "platform/IPlatformService.h"
+#include "presentation/icons/IIconProvider.h"
 
 #include <memory>
 #include <QString>
@@ -21,6 +22,10 @@ class LocalImageStorage;
 class WinHotkeyService;
 
 struct InfrastructureServices {
+    InfrastructureServices() = default;
+    ~InfrastructureServices();
+    InfrastructureServices(InfrastructureServices&&) = default;
+    InfrastructureServices& operator=(InfrastructureServices&&) = default;
     std::unique_ptr<SqliteConnection> databaseConnection;
     std::unique_ptr<JsonSettingsRepository> settingsRepository;
     std::unique_ptr<SqliteHistoryRepository> historyRepository;
@@ -34,6 +39,7 @@ struct InfrastructureServices {
     std::unique_ptr<IPlatformService> platformService;
     std::unique_ptr<TimeProvider> timeProvider;
     std::unique_ptr<IAppPaths> appPaths;
+    std::unique_ptr<IIconProvider> iconProvider;
 };
 
 class InfrastructureFactory final {

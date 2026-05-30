@@ -1,7 +1,5 @@
 #include "presentation/capture_actions/CaptureActionBar.h"
 
-#include "presentation/icons/IconProvider.h"
-
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -25,11 +23,11 @@ struct ActionDef {
     QString label;
 };
 
-QToolButton* createActionButton(const ActionDef& def, QWidget* parent)
+QToolButton* createActionButton(const ActionDef& def, IIconProvider& iconProvider, QWidget* parent)
 {
     auto* btn = new QToolButton(parent);
     btn->setObjectName("CaptureActionButton");
-    btn->setIcon(IconProvider::icon(def.icon));
+    btn->setIcon(iconProvider.icon(def.icon));
     btn->setIconSize(QSize(kActionIconSize, kActionIconSize));
     btn->setText(def.label);
     btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -61,8 +59,9 @@ int clamped(int value, int minimum, int maximum)
 
 } // namespace
 
-CaptureActionBar::CaptureActionBar(QWidget* parent)
+CaptureActionBar::CaptureActionBar(IIconProvider& iconProvider, QWidget* parent)
     : QWidget(parent)
+    , iconProvider_(iconProvider)
 {
     setObjectName("CaptureActionBar");
     if (parent == nullptr) {
@@ -84,12 +83,12 @@ CaptureActionBar::CaptureActionBar(QWidget* parent)
     layout->setContentsMargins(kActionBarPadding, kActionBarPadding, kActionBarPadding, kActionBarPadding);
     layout->setSpacing(kActionBarSpacing);
 
-    auto* copyBtn = createActionButton(actions[0], this);
-    auto* pinBtn = createActionButton(actions[1], this);
-    auto* saveBtn = createActionButton(actions[2], this);
-    auto* editBtn = createActionButton(actions[3], this);
-    auto* ocrBtn = createActionButton(actions[4], this);
-    auto* closeBtn = createActionButton(actions[5], this);
+    auto* copyBtn = createActionButton(actions[0], iconProvider_, this);
+    auto* pinBtn = createActionButton(actions[1], iconProvider_, this);
+    auto* saveBtn = createActionButton(actions[2], iconProvider_, this);
+    auto* editBtn = createActionButton(actions[3], iconProvider_, this);
+    auto* ocrBtn = createActionButton(actions[4], iconProvider_, this);
+    auto* closeBtn = createActionButton(actions[5], iconProvider_, this);
 
     layout->addWidget(copyBtn);
     layout->addWidget(pinBtn);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "presentation/capture_overlay/OverlayStateMachine.h"
+#include "presentation/icons/IIconProvider.h"
 
 #include <QColor>
 #include <QElapsedTimer>
@@ -24,7 +25,8 @@ class CaptureOverlay final : public QWidget {
     Q_OBJECT
 
 public:
-    CaptureOverlay(IScreenRegionDetector& regionDetector,
+    CaptureOverlay(IIconProvider& iconProvider,
+                   IScreenRegionDetector& regionDetector,
                    IScreenPixelSampler& pixelSampler,
                    CaptureSelectionHistory& selectionHistory,
                    QWidget* parent = nullptr);
@@ -65,6 +67,7 @@ private:
     Handle hitTest(const QPoint& globalPosition) const;
     void refreshSmartCandidates(const QPoint& globalPosition);
     void clearSmartCandidates();
+    void pushSelectionUndo();
     void undoSelection();
     void selectCandidate(int index);
     void cycleCandidate(int step);
@@ -89,6 +92,7 @@ private:
     void drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize);
     void drawMagnifier(QPainter& painter);
 
+    IIconProvider& iconProvider_;
     IScreenRegionDetector& regionDetector_;
     IScreenPixelSampler& pixelSampler_;
     CaptureSelectionHistory& selectionHistory_;
