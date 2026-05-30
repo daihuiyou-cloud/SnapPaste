@@ -1,7 +1,8 @@
 #pragma once
 
-#include "domain/settings/SettingsService.h"
+#include "domain/settings/ISettingsRepository.h"
 #include "shared/events/EventHub.h"
+#include "shared/result/Result.h"
 #include "shared/types/Hotkey.h"
 
 #include <QObject>
@@ -12,7 +13,7 @@ class SettingsViewModel final : public QObject {
     Q_OBJECT
 
 public:
-    SettingsViewModel(SettingsService& service, EventHub& eventHub, QObject* parent = nullptr);
+    SettingsViewModel(ISettingsRepository& repository, EventHub& eventHub, QObject* parent = nullptr);
 
     AppSettings settings() const;
 
@@ -30,7 +31,9 @@ public:
     static ThemeMode themeFromIndex(int index);
 
 private:
-    SettingsService& service_;
+    Result<void> saveWithValidation(const AppSettings& settings);
+
+    ISettingsRepository& repository_;
     EventHub& eventHub_;
     AppSettings settings_;
 };

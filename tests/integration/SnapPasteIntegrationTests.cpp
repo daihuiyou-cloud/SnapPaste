@@ -1,7 +1,7 @@
 #include "domain/capture/CaptureSelectionHistory.h"
 #include "domain/capture/CaptureWorkflow.h"
 #include "domain/pin/PinnedImageService.h"
-#include "domain/settings/SettingsService.h"
+
 #include "infrastructure/config/JsonSettingsRepository.h"
 #include "infrastructure/image/LocalImageStorage.h"
 #include "infrastructure/persistence/SqliteConnection.h"

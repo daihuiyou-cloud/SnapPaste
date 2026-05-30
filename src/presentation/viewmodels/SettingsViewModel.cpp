@@ -1,10 +1,12 @@
 #include "presentation/viewmodels/SettingsViewModel.h"
 
+#include <QCoreApplication>
+
 namespace snappaste {
 
-SettingsViewModel::SettingsViewModel(SettingsService& service, EventHub& eventHub, QObject* parent)
+SettingsViewModel::SettingsViewModel(ISettingsRepository& repository, EventHub& eventHub, QObject* parent)
     : QObject(parent)
-    , service_(service)
+    , repository_(repository)
     , eventHub_(eventHub)
 {
 }
@@ -16,7 +18,7 @@ AppSettings SettingsViewModel::settings() const
 
 void SettingsViewModel::load()
 {
-    const auto result = service_.load();
+    const auto result = repository_.load();
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
@@ -31,7 +33,7 @@ void SettingsViewModel::save(const AppSettings& settings)
     auto newSettings = settings;
     newSettings.imageFormat = newSettings.imageFormat.toLower();
 
-    const auto result = service_.save(newSettings);
+    const auto result = saveWithValidation(newSettings);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
@@ -44,8 +46,8 @@ void SettingsViewModel::save(const AppSettings& settings)
 
 void SettingsViewModel::restoreDefaults()
 {
-    settings_ = service_.defaultSettings();
-    const auto result = service_.save(settings_);
+    settings_ = repository_.defaultSettings();
+    const auto result = saveWithValidation(settings_);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
@@ -65,6 +67,17 @@ ThemeMode SettingsViewModel::themeFromIndex(int index)
     default:
         return ThemeMode::System;
     }
+}
+
+Result<void> SettingsViewModel::saveWithValidation(const AppSettings& settings)
+{
+    if (settings.saveDirectory.trimmed().isEmpty()) {
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Save directory cannot be empty."));
+    }
+    if (settings.imageFormat != "png" && settings.imageFormat != "jpg") {
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Unsupported image format."));
+    }
+    return repository_.save(settings);
 }
 
 } // namespace snappaste

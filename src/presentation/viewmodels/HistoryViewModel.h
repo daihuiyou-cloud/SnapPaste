@@ -1,6 +1,7 @@
 #pragma once
 
-#include "domain/history/HistoryService.h"
+#include "domain/history/IHistoryRepository.h"
+#include "shared/result/Result.h"
 
 #include <QStandardItemModel>
 
@@ -10,7 +11,7 @@ class HistoryViewModel final : public QObject {
     Q_OBJECT
 
 public:
-    explicit HistoryViewModel(HistoryService& service, QObject* parent = nullptr);
+    explicit HistoryViewModel(IHistoryRepository& repository, QObject* parent = nullptr);
 
     QStandardItemModel* model() noexcept;
     double devicePixelRatio(const QString& filePath) const;
@@ -23,7 +24,10 @@ signals:
     void errorOccurred(const QString& message);
 
 private:
-    HistoryService& service_;
+    Result<QVector<CaptureRecord>> recentCaptures(int limit);
+    Result<void> deleteCapture(qint64 id);
+
+    IHistoryRepository& repository_;
     QStandardItemModel model_;
     QVector<CaptureRecord> records_;
 };

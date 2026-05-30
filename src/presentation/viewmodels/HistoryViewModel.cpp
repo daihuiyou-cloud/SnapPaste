@@ -1,14 +1,15 @@
 #include "presentation/viewmodels/HistoryViewModel.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QPixmap>
 #include <QStandardItem>
 
 namespace snappaste {
 
-HistoryViewModel::HistoryViewModel(HistoryService& service, QObject* parent)
+HistoryViewModel::HistoryViewModel(IHistoryRepository& repository, QObject* parent)
     : QObject(parent)
-    , service_(service)
+    , repository_(repository)
 {
     model_.setHorizontalHeaderLabels({tr("Capture History")});
 }
@@ -20,7 +21,7 @@ QStandardItemModel* HistoryViewModel::model() noexcept
 
 void HistoryViewModel::refresh()
 {
-    const auto result = service_.recentCaptures(100);
+    const auto result = recentCaptures(100);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
@@ -63,13 +64,29 @@ void HistoryViewModel::deleteByRow(int row)
         return;
     }
 
-    const auto result = service_.deleteCapture(records_.at(row).id);
+    const auto result = deleteCapture(records_.at(row).id);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
     }
 
     refresh();
+}
+
+Result<QVector<CaptureRecord>> HistoryViewModel::recentCaptures(int limit)
+{
+    if (limit <= 0) {
+        return Result<QVector<CaptureRecord>>::success({});
+    }
+    return repository_.recent(limit);
+}
+
+Result<void> HistoryViewModel::deleteCapture(qint64 id)
+{
+    if (id <= 0) {
+        return Result<void>::failure(QCoreApplication::translate("AppErrors", "Invalid capture id."));
+    }
+    return repository_.markDeleted(id);
 }
 
 } // namespace snappaste

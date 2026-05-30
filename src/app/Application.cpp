@@ -361,7 +361,7 @@ void Application::ensureSettingsCached()
     if (cachedSettings_.has_value()) {
         return;
     }
-    const auto settingsResult = context_.settingsService().load();
+    const auto settingsResult = context_.settingsRepository().load();
     if (settingsResult.isError()) {
         Logger::warning(settingsResult.error());
         return;
@@ -413,7 +413,7 @@ void Application::applyCurrentTheme()
     }
 
     const auto themeResult = AppStartup::applyTheme(
-        qtApplication_, cachedSettings_.value(), context_.darkModeDetector());
+        qtApplication_, cachedSettings_.value(), context_.platformService());
     if (themeResult.isError()) {
         Logger::warning(themeResult.error());
     }

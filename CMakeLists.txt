@@ -20,12 +20,17 @@ set(SNAPPASTE_CORE_SOURCES
     src/app/Application.cpp
     src/app/AppContext.cpp
     src/app/AppStartup.cpp
+    src/app/InfrastructureFactory.h
+    src/app/InfrastructureFactory.cpp
+    src/app/ServiceFactory.h
+    src/app/ServiceFactory.cpp
+    src/app/ViewModelFactory.h
+    src/app/ViewModelFactory.cpp
 
     src/domain/capture/CaptureWorkflow.cpp
     src/domain/capture/CaptureSelectionHistory.cpp
-    src/domain/history/HistoryService.cpp
     src/domain/pin/PinnedImageService.cpp
-    src/domain/settings/SettingsService.cpp
+
 
     src/infrastructure/clipboard/ClipboardImageProvider.cpp
     src/infrastructure/config/JsonSettingsRepository.cpp
@@ -41,8 +46,9 @@ set(SNAPPASTE_CORE_SOURCES
     src/platform/windows/capture/GdiScreenCaptureService.cpp
     src/platform/windows/capture/QtScreenPixelSampler.cpp
     src/platform/windows/capture/WinScreenRegionDetector.cpp
-    src/platform/windows/darkmode/DarkModeDetector.cpp
-    src/platform/windows/dpi/HighDpiManager.cpp
+    src/platform/IPlatformService.h
+    src/platform/windows/WindowsPlatformService.h
+    src/platform/windows/WindowsPlatformService.cpp
     src/platform/windows/hotkey/WinHotkeyService.cpp
     src/platform/windows/shell/WindowsShellService.cpp
     src/platform/windows/window/WindowInteractionService.cpp
@@ -50,6 +56,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/capture_actions/CaptureActionBar.cpp
     src/presentation/capture_overlay/CaptureOverlay.cpp
     src/presentation/capture_overlay/CaptureOverlayGeometry.cpp
+    src/presentation/capture_overlay/OverlayStateMachine.h
+    src/presentation/capture_overlay/OverlayStateMachine.cpp
     src/presentation/editor/AnnotationCanvas.cpp
     src/presentation/editor/EditorIconFactory.cpp
     src/presentation/editor/EditorWindow.cpp

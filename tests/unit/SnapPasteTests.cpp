@@ -1,7 +1,7 @@
 #include "domain/capture/CaptureSelectionHistory.h"
 #include "domain/capture/CaptureWorkflow.h"
 #include "domain/pin/PinnedItem.h"
-#include "domain/settings/SettingsService.h"
+#include "presentation/viewmodels/SettingsViewModel.h"
 #include "presentation/capture_actions/CaptureActionBar.h"
 #include "presentation/viewmodels/CaptureViewModel.h"
 #include "shared/events/EventHub.h"
@@ -21,15 +21,15 @@ private slots:
     void settingsServiceRejectsEmptyDirectory()
     {
         FakeSettingsRepository repository;
-        SettingsService service(repository);
+        EventHub eventHub;
+        SettingsViewModel viewModel(repository, eventHub);
 
         AppSettings settings;
         settings.saveDirectory = "";
         settings.imageFormat = "png";
 
-        const auto result = service.save(settings);
+        viewModel.save(settings);
 
-        QVERIFY(result.isError());
         QVERIFY(!repository.saved);
     }
 

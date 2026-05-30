@@ -1,5 +1,6 @@
 #include "app/Application.h"
-#include "platform/windows/dpi/HighDpiManager.h"
+#include "platform/IPlatformService.h"
+#include "platform/windows/WindowsPlatformService.h"
 #include "presentation/toast/ToastNotifier.h"
 
 #include <QApplication>
@@ -49,7 +50,8 @@ static void installTranslators()
 
 int main(int argc, char* argv[])
 {
-    snappaste::HighDpiManager::configureBeforeApplication();
+    snappaste::WindowsPlatformService platformService;
+    platformService.configureHighDpi();
 
     QApplication qtApplication(argc, argv);
     QCoreApplication::setOrganizationName("SnapPaste");

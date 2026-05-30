@@ -1,10 +1,11 @@
 #pragma once
 
+#include "presentation/capture_overlay/OverlayStateMachine.h"
+
 #include <QColor>
 #include <QElapsedTimer>
 #include <QPoint>
 #include <QRect>
-#include <QVector>
 #include <QWidget>
 
 #include <functional>
@@ -50,29 +51,8 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    enum class State {
-        Idle,
-        CandidatePressed,
-        Selecting,
-        Moving,
-        Resizing,
-        Ready,
-        ActionPending,
-        Cancelled
-    };
-
-    enum class Handle {
-        None,
-        Inside,
-        TopLeft,
-        Top,
-        TopRight,
-        Right,
-        BottomRight,
-        Bottom,
-        BottomLeft,
-        Left
-    };
+    using State = OverlayStateMachine::State;
+    using Handle = OverlayStateMachine::Handle;
 
     QRect selectedRegion() const noexcept;
     QRect localSelectedRegion() const;
@@ -85,7 +65,6 @@ private:
     Handle hitTest(const QPoint& globalPosition) const;
     void refreshSmartCandidates(const QPoint& globalPosition);
     void clearSmartCandidates();
-    void pushSelectionUndo();
     void undoSelection();
     void selectCandidate(int index);
     void cycleCandidate(int step);
@@ -117,21 +96,22 @@ private:
     QPoint current_;
     QRect selection_;
     QVector<QRect> smartCandidates_;
-    int smartCandidateIndex_ = -1;
-    QRect dragStartSelection_;
     QPoint dragStart_;
-    QVector<QRect> selectionUndoStack_;
-    static constexpr int kMaxSelectionUndo = 20;
+    QRect dragStartSelection_;
     QPoint pressGlobal_;
     QRect pressedCandidate_;
+    int smartCandidateIndex_ = -1;
+    QVector<QRect> selectionUndoStack_;
+    static constexpr int kMaxSelectionUndo = 20;
+    State state_ = State::Idle;
+    Handle activeHandle_ = Handle::None;
+    OverlayStateMachine stateMachine_;
     QPoint lastMouseGlobal_;
     std::optional<QColor> sampledColor_;
     bool spaceRepositioning_ = false;
     QPoint spaceRepositionAnchor_;
     QPoint spaceRepositionStartOrigin_;
     QPoint spaceRepositionStartCurrent_;
-    State state_ = State::Idle;
-    Handle activeHandle_ = Handle::None;
     CaptureActionBar* actionBar_ = nullptr;
     QPropertyAnimation* fadeAnimation_ = nullptr;
     QElapsedTimer frameLimiter_;

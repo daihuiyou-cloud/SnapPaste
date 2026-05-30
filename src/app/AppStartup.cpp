@@ -1,17 +1,15 @@
 ﻿#include <QCoreApplication>
 #include "app/AppStartup.h"
 
-#include "platform/windows/darkmode/DarkModeDetector.h"
-
 #include <QFile>
 
 namespace snappaste {
 
 Result<void> AppStartup::applyTheme(QApplication& application,
                                     const AppSettings& settings,
-                                    const DarkModeDetector& darkModeDetector)
+                                    const IPlatformService& platformService)
 {
-    QFile file(themePath(settings, darkModeDetector));
+    QFile file(themePath(settings, platformService));
     if (!file.open(QIODevice::ReadOnly)) {
         return Result<void>::failure(QCoreApplication::translate("AppErrors", "Failed to load theme resource."));
     }
@@ -20,7 +18,7 @@ Result<void> AppStartup::applyTheme(QApplication& application,
     return Result<void>::success();
 }
 
-QString AppStartup::themePath(const AppSettings& settings, const DarkModeDetector& darkModeDetector)
+QString AppStartup::themePath(const AppSettings& settings, const IPlatformService& platformService)
 {
     if (settings.themeMode == ThemeMode::Dark) {
         return ":/themes/dark.qss";
@@ -28,7 +26,7 @@ QString AppStartup::themePath(const AppSettings& settings, const DarkModeDetecto
     if (settings.themeMode == ThemeMode::Light) {
         return ":/themes/light.qss";
     }
-    return darkModeDetector.isSystemDarkMode() ? ":/themes/dark.qss" : ":/themes/light.qss";
+    return platformService.isSystemDarkMode() ? ":/themes/dark.qss" : ":/themes/light.qss";
 }
 
 } // namespace snappaste
