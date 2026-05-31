@@ -13,6 +13,7 @@
 #include <QCloseEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontComboBox>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
@@ -262,6 +263,13 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
     if (fontWidget_) {
         bool show = tool == AnnotationTool::Text || tool == AnnotationTool::Numbered;
         fontWidget_->setVisible(show);
+    }
+    if (cropWidget_) {
+        bool show = tool == AnnotationTool::Crop;
+        cropWidget_->setVisible(show);
+        if (show) {
+            canvas_->setTool(AnnotationTool::Crop);
+        }
     }
     refreshPanelUi();
 }
@@ -663,11 +671,100 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
-    // Font size (contextual - Text / Numbered only)
+    // Font properties (contextual - Text / Numbered only)
     fontWidget_ = new QWidget(content);
-    auto* fontRow = new QHBoxLayout(fontWidget_);
-    fontRow->setContentsMargins(0, 0, 0, 0);
-    fontRow->setSpacing(4);
+    auto* fontLayout = new QVBoxLayout(fontWidget_);
+    fontLayout->setContentsMargins(0, 0, 0, 0);
+    fontLayout->setSpacing(4);
+
+    // Row 1: Font family combo
+    auto* fontCombo = new QFontComboBox(content);
+    fontCombo->setCurrentFont(QFont(canvas_->fontFamily()));
+    fontCombo->setToolTip(tr("Font family"));
+    fontCombo->setStyleSheet(
+        "QFontComboBox { font: 9px; color: #bcbec6; background: rgba(255,255,255,0.04);"
+        "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
+        "QFontComboBox:hover { border-color: #2fbf9f; }"
+        "QFontComboBox::drop-down { border: none; width: 16px; }"
+        "QFontComboBox QAbstractItemView { font: 9px; }");
+    fontCombo->setFixedHeight(22);
+    connect(fontCombo, &QFontComboBox::currentFontChanged, this, [this](const QFont& f) {
+        canvas_->setFontFamily(f.family());
+    });
+    fontLayout->addWidget(fontCombo);
+
+    // Row 2: Bold / Italic / Underline + alignment
+    auto* fontStyleRow = new QHBoxLayout();
+    fontStyleRow->setContentsMargins(0, 0, 0, 0);
+    fontStyleRow->setSpacing(4);
+
+    auto makeFontToggle = [content, &selStyle](const QString& text, const QString& tip, bool checked) -> QToolButton* {
+        auto* btn = new QToolButton(content);
+        btn->setText(text);
+        btn->setToolTip(tip);
+        btn->setCheckable(true);
+        btn->setChecked(checked);
+        btn->setFixedSize(28, 24);
+        btn->setStyleSheet(selStyle);
+        return btn;
+    };
+
+    auto* boldBtn = makeFontToggle(tr("B"), tr("Bold"), canvas_->bold());
+    auto* italicBtn = makeFontToggle(tr("I"), tr("Italic"), canvas_->italic());
+    auto* underlineBtn = makeFontToggle(tr("U"), tr("Underline"), canvas_->underline());
+    connect(boldBtn, &QToolButton::clicked, this, [this](bool checked) { canvas_->setBold(checked); });
+    connect(italicBtn, &QToolButton::clicked, this, [this](bool checked) { canvas_->setItalic(checked); });
+    connect(underlineBtn, &QToolButton::clicked, this, [this](bool checked) { canvas_->setUnderline(checked); });
+
+    fontStyleRow->addWidget(boldBtn);
+    fontStyleRow->addWidget(italicBtn);
+    fontStyleRow->addWidget(underlineBtn);
+
+    fontStyleRow->addStretch();
+
+    auto makeAlignToggle = [content, &selStyle](const QString& text, const QString& tip) -> QToolButton* {
+        auto* btn = new QToolButton(content);
+        btn->setText(text);
+        btn->setToolTip(tip);
+        btn->setCheckable(true);
+        btn->setFixedSize(28, 24);
+        btn->setStyleSheet(selStyle);
+        return btn;
+    };
+
+    auto* alignLeft = makeAlignToggle(QStringLiteral("\u2261"), tr("Align left"));
+    auto* alignCenter = makeAlignToggle(QStringLiteral("\u2261"), tr("Align center"));
+    auto* alignRight = makeAlignToggle(QStringLiteral("\u2261"), tr("Align right"));
+    auto* alignGroup = new QButtonGroup(content);
+    alignGroup->setExclusive(true);
+    alignGroup->addButton(alignLeft, 0);
+    alignGroup->addButton(alignCenter, 1);
+    alignGroup->addButton(alignRight, 2);
+    int curAlign = canvas_->textAlignment();
+    if (curAlign < 0) curAlign = 0;
+    if (curAlign == Qt::AlignCenter) curAlign = 1;
+    else if (curAlign == (Qt::AlignRight | Qt::AlignTop)) curAlign = 2;
+    else curAlign = 0;
+    alignGroup->button(curAlign)->setChecked(true);
+    connect(alignGroup, qOverload<int>(&QButtonGroup::buttonClicked), this, [this](int id) {
+        int align = -1;
+        switch (id) {
+        case 0: align = Qt::AlignLeft | Qt::AlignTop; break;
+        case 1: align = Qt::AlignHCenter | Qt::AlignTop; break;
+        case 2: align = Qt::AlignRight | Qt::AlignTop; break;
+        }
+        canvas_->setTextAlignment(align);
+    });
+
+    fontStyleRow->addWidget(alignLeft);
+    fontStyleRow->addWidget(alignCenter);
+    fontStyleRow->addWidget(alignRight);
+    fontLayout->addLayout(fontStyleRow);
+
+    // Row 3: Font size [-]
+    auto* fontSizeRow = new QHBoxLayout();
+    fontSizeRow->setContentsMargins(0, 0, 0, 0);
+    fontSizeRow->setSpacing(4);
 
     auto* fontLabel = new QLabel(tr("Font"), content);
     fontLabel->setFixedWidth(34);
@@ -691,10 +788,11 @@ void EditorWindow::createToolPanel()
     fontSizeInc->setFixedSize(24, 24);
     fontSizeInc->setStyleSheet(selStyle);
 
-    fontRow->addWidget(fontLabel);
-    fontRow->addWidget(fontSizeDec);
-    fontRow->addWidget(fontSizeVal);
-    fontRow->addWidget(fontSizeInc);
+    fontSizeRow->addWidget(fontLabel);
+    fontSizeRow->addWidget(fontSizeDec);
+    fontSizeRow->addWidget(fontSizeVal);
+    fontSizeRow->addWidget(fontSizeInc);
+    fontLayout->addLayout(fontSizeRow);
 
     connect(fontSizeDec, &QToolButton::clicked, this, [this] {
         canvas_->setFontSize(qMax(8, canvas_->fontSize() - 2));
@@ -706,8 +804,71 @@ void EditorWindow::createToolPanel()
         fontSizeVal->setText(tr("%1px").arg(size));
     });
 
+    // Sync UI when text properties change programmatically
+    canvas_->setOnTextPropertiesChanged([this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup]() {
+        fontCombo->setCurrentFont(QFont(canvas_->fontFamily()));
+        boldBtn->setChecked(canvas_->bold());
+        italicBtn->setChecked(canvas_->italic());
+        underlineBtn->setChecked(canvas_->underline());
+        int align = canvas_->textAlignment();
+        int id = 0;
+        if (align == (Qt::AlignHCenter | Qt::AlignTop)) id = 1;
+        else if (align == (Qt::AlignRight | Qt::AlignTop)) id = 2;
+        auto* btn = alignGroup->button(id);
+        if (btn) btn->setChecked(true);
+    });
+
     fontWidget_->setVisible(false);
     layout->addWidget(fontWidget_);
+
+    layout->addSpacing(6);
+
+    // Crop options (contextual - Crop tool only)
+    cropWidget_ = new QWidget(content);
+    auto* cropLayout = new QVBoxLayout(cropWidget_);
+    cropLayout->setContentsMargins(0, 0, 0, 0);
+    cropLayout->setSpacing(4);
+
+    auto* cropLabel = new QLabel(tr("Aspect Ratio"), content);
+    cropLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    cropLayout->addWidget(cropLabel);
+
+    struct RatioDef { const char* text; double value; };
+    const RatioDef ratios[] = {
+        {QT_TRANSLATE_NOOP("EditorWindow", "Free"), 0.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "1:1"), 1.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "16:9"), 16.0 / 9.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "4:3"), 4.0 / 3.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "3:2"), 3.0 / 2.0},
+    };
+    auto* ratioGroup = new QButtonGroup(content);
+    ratioGroup->setExclusive(true);
+    auto* ratioRow = new QHBoxLayout();
+    ratioRow->setContentsMargins(0, 0, 0, 0);
+    ratioRow->setSpacing(4);
+    for (int i = 0; i < std::size(ratios); ++i) {
+        auto* btn = new QToolButton(content);
+        auto label = QCoreApplication::translate("EditorWindow", ratios[i].text);
+        btn->setText(label);
+        btn->setCheckable(true);
+        btn->setFixedHeight(22);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        btn->setStyleSheet(chipStyle);
+        if (i == 0) btn->setChecked(true);
+        ratioGroup->addButton(btn, i);
+        connect(btn, &QToolButton::clicked, this, [this, val = ratios[i].value, label] {
+            canvas_->setCropAspectRatio(val);
+            if (val > 0.0)
+                statusBar()->showMessage(tr("Crop ratio locked: %1").arg(label), 3000);
+            else
+                statusBar()->showMessage(tr("Crop ratio: Free"), 3000);
+        });
+        ratioRow->addWidget(btn);
+    }
+    cropLayout->addLayout(ratioRow);
+
+    cropWidget_->setVisible(false);
+    layout->addWidget(cropWidget_);
 
     layout->addSpacing(6);
 

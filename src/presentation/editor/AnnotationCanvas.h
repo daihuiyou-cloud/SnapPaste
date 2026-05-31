@@ -45,6 +45,23 @@ public:
     int fontSize() const;
     void setFontSize(int size);
     void setOnFontSizeChanged(std::function<void(int)> cb);
+
+    QString fontFamily() const;
+    void setFontFamily(const QString& family);
+    bool bold() const;
+    void setBold(bool b);
+    bool italic() const;
+    void setItalic(bool i);
+    bool underline() const;
+    void setUnderline(bool u);
+    int textAlignment() const;
+    void setTextAlignment(int align);
+    void setOnTextPropertiesChanged(std::function<void()> cb);
+
+    double cropAspectRatio() const;
+    void setCropAspectRatio(double ratio);
+    void setOnCropAspectRatioChanged(std::function<void(double)> cb);
+
     double zoomFactor() const;
     QSize imageSize() const;
     QColor color() const;
@@ -156,6 +173,12 @@ private:
     int fontSize_ = 14;
     bool filled_ = false;
     bool textOutlineEnabled_ = true;
+    QString currentFontFamily_ = QStringLiteral("Microsoft YaHei UI");
+    bool bold_ = false;
+    bool italic_ = false;
+    bool underline_ = false;
+    int textAlignment_ = -1;
+    double cropAspectRatio_ = 0.0;
     QVector<QColor> customColors_;
     int strokeAlpha_ = 255;
     ArrowStyle arrowStyle_ = ArrowStyle::DefaultArrow;
@@ -171,6 +194,8 @@ private:
     std::function<void(int)> onArrowStyleChanged_;
     std::function<void(int)> onCornerRadiusChanged_;
     std::function<void(QPointF, QColor)> onMouseInfoChanged_;
+    std::function<void()> onTextPropertiesChanged_;
+    std::function<void(double)> onCropAspectRatioChanged_;
     std::function<void()> onModified_;
 };
 

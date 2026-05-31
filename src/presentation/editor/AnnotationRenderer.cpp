@@ -49,7 +49,11 @@ void AnnotationRenderer::drawTextEditCursor(QPainter& painter,
     if (editingTextIndex >= 0 && editingTextIndex < annotations.size()) {
         const auto& a = annotations[editingTextIndex];
         if (a.tool == AnnotationTool::Text) {
-            QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize);
+            QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+                       a.textFontSize > 0 ? a.textFontSize : fontSize);
+            font.setBold(a.bold);
+            font.setItalic(a.italic);
+            font.setUnderline(a.underline);
             painter.setFont(font);
             int textWidth = painter.fontMetrics().horizontalAdvance(a.text);
             int cx = a.bounds.left() + 4 + textWidth;
@@ -229,9 +233,14 @@ void AnnotationRenderer::drawPenAnnotation(QPainter* painter, const Annotation& 
 
 void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize)
 {
-    QFont font("Microsoft YaHei UI", annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
+    QFont font(annotation.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : annotation.fontFamily,
+               annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
+    font.setBold(annotation.bold);
+    font.setItalic(annotation.italic);
+    font.setUnderline(annotation.underline);
     painter->setFont(font);
-    const auto flags = Qt::AlignLeft | Qt::AlignTop;
+    int align = (annotation.textAlignment >= 0) ? annotation.textAlignment : (Qt::AlignLeft | Qt::AlignTop);
+    const auto flags = align | Qt::TextWordWrap;
     if (annotation.textOutline) {
         painter->setPen(QColor(255, 255, 255, 220));
         for (int dy = -1; dy <= 1; dy++) {

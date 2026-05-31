@@ -38,13 +38,18 @@ struct Annotation final {
     QString text;
     QColor color = QColor("#ff3b30");
     int strokeWidth = 3;
-    int blurRadius = 0; // 0=pixel-block mosaic, >0=gaussian blur radius
+    int blurRadius = 0;
     int number = 0;
     int textFontSize = 14;
     bool filled = false;
     bool textOutline = false;
     ArrowStyle arrowStyle = ArrowStyle::DefaultArrow;
-    int cornerRadius = 0;  // 0=sharp, >0 for rounded rect corners
+    int cornerRadius = 0;
+    QString fontFamily = QStringLiteral("Microsoft YaHei UI");
+    bool bold = false;
+    bool italic = false;
+    bool underline = false;
+    int textAlignment = -1; // -1 = default (AlignLeft|AlignTop), otherwise Qt::AlignmentFlag
 };
 
 } // namespace snappaste

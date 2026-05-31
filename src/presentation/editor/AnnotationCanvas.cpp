@@ -37,6 +37,7 @@ AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     setMinimumSize(640, 360);
     QSettings settings;
     fontSize_ = settings.value("editor/fontSize", 14).toInt();
+    currentFontFamily_ = settings.value("editor/fontFamily", QStringLiteral("Microsoft YaHei UI")).toString();
     const auto saved = settings.value("editor/recentColors").toList();
     for (const auto& v : saved) {
         QColor c(v.toString());
@@ -239,14 +240,25 @@ void AnnotationCanvas::updateTextBounds(int index)
     if (index < 0 || index >= annotations_.size()) return;
     auto& a = annotations_[index];
     if (a.tool != AnnotationTool::Text) return;
-    QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+    QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+               a.textFontSize > 0 ? a.textFontSize : fontSize_);
+    font.setBold(a.bold);
+    font.setItalic(a.italic);
+    font.setUnderline(a.underline);
     QFontMetrics fm(font);
-    const auto textRect = fm.boundingRect(QRect(0, 0, 4096, 4096), Qt::AlignLeft | Qt::AlignTop, a.text);
-    QRect newBounds(a.bounds.topLeft(), QSize(qMax(textRect.width() + 8, 20), qMax(textRect.height() + 8, 20)));
+    int wrapWidth = qMax(a.bounds.width() - 8, 20);
+    auto textRect = fm.boundingRect(QRect(0, 0, wrapWidth, 4096), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, a.text);
+    int newH = qMax(textRect.height() + 8, fm.height() + 8);
+    int newW = a.bounds.width();
+    if (a.text.isEmpty()) {
+        newW = qMax(fm.horizontalAdvance(QStringLiteral("    ")) + 8, 60);
+    }
+    QRect newBounds(a.bounds.topLeft(), QSize(newW, newH));
     auto logicalW = image_.width() / image_.devicePixelRatio();
     if (newBounds.right() > logicalW) {
         newBounds.moveRight(logicalW - 4);
     }
+    if (newBounds.left() < 0) newBounds.moveLeft(0);
     a.bounds = newBounds;
 }
 
@@ -265,6 +277,84 @@ void AnnotationCanvas::setFontSize(int size)
     }
 }
 void AnnotationCanvas::setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
+
+QString AnnotationCanvas::fontFamily() const { return currentFontFamily_; }
+void AnnotationCanvas::setFontFamily(const QString& family)
+{
+    if (family != currentFontFamily_) {
+        currentFontFamily_ = family;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].fontFamily = family;
+            updateTextBounds(editingTextIndex_);
+        }
+        update();
+        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        QSettings().setValue("editor/fontFamily", family);
+    }
+}
+bool AnnotationCanvas::bold() const { return bold_; }
+void AnnotationCanvas::setBold(bool b)
+{
+    if (b != bold_) {
+        bold_ = b;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].bold = b;
+            updateTextBounds(editingTextIndex_);
+        }
+        update();
+        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+    }
+}
+bool AnnotationCanvas::italic() const { return italic_; }
+void AnnotationCanvas::setItalic(bool i)
+{
+    if (i != italic_) {
+        italic_ = i;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].italic = i;
+            updateTextBounds(editingTextIndex_);
+        }
+        update();
+        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+    }
+}
+bool AnnotationCanvas::underline() const { return underline_; }
+void AnnotationCanvas::setUnderline(bool u)
+{
+    if (u != underline_) {
+        underline_ = u;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].underline = u;
+            updateTextBounds(editingTextIndex_);
+        }
+        update();
+        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+    }
+}
+int AnnotationCanvas::textAlignment() const { return textAlignment_; }
+void AnnotationCanvas::setTextAlignment(int align)
+{
+    if (align != textAlignment_) {
+        textAlignment_ = align;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].textAlignment = align;
+            updateTextBounds(editingTextIndex_);
+        }
+        update();
+        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+    }
+}
+void AnnotationCanvas::setOnTextPropertiesChanged(std::function<void()> cb) { onTextPropertiesChanged_ = std::move(cb); }
+
+double AnnotationCanvas::cropAspectRatio() const { return cropAspectRatio_; }
+void AnnotationCanvas::setCropAspectRatio(double ratio)
+{
+    cropAspectRatio_ = std::max(0.0, ratio);
+    if (onCropAspectRatioChanged_) onCropAspectRatioChanged_(cropAspectRatio_);
+    update();
+}
+void AnnotationCanvas::setOnCropAspectRatioChanged(std::function<void(double)> cb) { onCropAspectRatioChanged_ = std::move(cb); }
+
 double AnnotationCanvas::zoomFactor() const { return zoomFactor_; }
 QSize AnnotationCanvas::imageSize() const { return image_.size(); }
 QColor AnnotationCanvas::color() const { return currentColor_; }
@@ -559,12 +649,17 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
             return true;
         }
     }
-    QFont font("Microsoft YaHei UI", fontSize_);
+    QFont font(currentFontFamily_.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : currentFontFamily_, fontSize_);
+    font.setBold(bold_);
+    font.setItalic(italic_);
+    font.setUnderline(underline_);
     QFontMetrics fm(font);
-    QRect bounds(pos.x(), pos.y(), 28, fm.height() + 8);
+    int defaultWidth = qMax(fm.horizontalAdvance(QStringLiteral("    ")) + 8, 60);
+    QRect bounds(pos.x(), pos.y(), defaultWidth, fm.height() + 8);
     auto logicalW = image_.width() / image_.devicePixelRatio();
     if (bounds.right() > logicalW) {
-        bounds.moveRight(logicalW - 4);
+        bounds.setRight(logicalW - 4);
+        bounds.setWidth(qMin(bounds.width(), static_cast<int>(logicalW - bounds.left() - 4)));
     }
     pushUndo();
     redoStack_.clear();
@@ -577,6 +672,11 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
     ann.strokeWidth = 2;
     ann.textFontSize = fontSize_;
     ann.textOutline = textOutlineEnabled_;
+    ann.fontFamily = currentFontFamily_;
+    ann.bold = bold_;
+    ann.italic = italic_;
+    ann.underline = underline_;
+    ann.textAlignment = textAlignment_;
     annotations_.push_back(std::move(ann));
     selectedIndex_ = annotations_.size() - 1;
     editingTextIndex_ = selectedIndex_;
@@ -618,6 +718,11 @@ void AnnotationCanvas::startDrawingAnnotation(const QPoint& pos)
     draft_.arrowStyle = arrowStyle_;
     draft_.cornerRadius = cornerRadius_;
     draft_.textFontSize = fontSize_;
+    draft_.fontFamily = currentFontFamily_;
+    draft_.bold = bold_;
+    draft_.italic = italic_;
+    draft_.underline = underline_;
+    draft_.textAlignment = textAlignment_;
     draft_.bounds = QRect(start_, current_);
     draft_.points = {start_};
     update();
@@ -781,7 +886,19 @@ void AnnotationCanvas::updateDrawingStroke(QMouseEvent* event)
     }
 
     auto rawPos = toImage(event->pos());
-    if (!(rawPos == start_) && event->modifiers().testFlag(Qt::ShiftModifier)) {
+    if (!(rawPos == start_) && cropAspectRatio_ > 0.0 && draft_.tool == AnnotationTool::Crop) {
+        auto dx = rawPos.x() - start_.x();
+        auto dy = rawPos.y() - start_.y();
+        double adx = std::abs(dx);
+        double ady = std::abs(dy);
+        double nh = adx / cropAspectRatio_;
+        if (nh > ady) {
+            rawPos.setY(start_.y() + (dy >= 0 ? static_cast<int>(nh) : -static_cast<int>(nh)));
+        } else {
+            double nw = ady * cropAspectRatio_;
+            rawPos.setX(start_.x() + (dx >= 0 ? static_cast<int>(nw) : -static_cast<int>(nw)));
+        }
+    } else if (!(rawPos == start_) && event->modifiers().testFlag(Qt::ShiftModifier)) {
         if (draft_.tool == AnnotationTool::Rectangle || draft_.tool == AnnotationTool::Ellipse) {
             auto dx = rawPos.x() - start_.x();
             auto dy = rawPos.y() - start_.y();
@@ -1355,7 +1472,11 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         const auto& img = image_;
         switch (query) {
         case Qt::ImCursorRectangle: {
-            QFont font("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+                       a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            font.setBold(a.bold);
+            font.setItalic(a.italic);
+            font.setUnderline(a.underline);
             QFontMetrics fm(font);
             int textWidth = fm.horizontalAdvance(a.text + preeditString_);
             int cx = static_cast<int>((a.bounds.left() + 4 + textWidth) * zoomFactor_);
@@ -1365,8 +1486,14 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         }
         case Qt::ImEnabled:
             return true;
-        case Qt::ImFont:
-            return QFont("Microsoft YaHei UI", a.textFontSize > 0 ? a.textFontSize : fontSize_);
+        case Qt::ImFont: {
+            QFont f(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+                    a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            f.setBold(a.bold);
+            f.setItalic(a.italic);
+            f.setUnderline(a.underline);
+            return f;
+        }
         case Qt::ImCursorPosition:
             return a.text.length() + preeditString_.length();
         case Qt::ImSurroundingText:

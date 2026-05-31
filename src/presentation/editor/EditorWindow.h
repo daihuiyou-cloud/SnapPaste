@@ -60,6 +60,7 @@ private:
     QWidget* arrowWidget_ = nullptr;
     QWidget* radiusWidget_ = nullptr;
     QWidget* fontWidget_ = nullptr;
+    QWidget* cropWidget_ = nullptr;
     QAction* eyeAction_ = nullptr;
     std::function<void(AnnotationTool)> updateToolActions_;
 };

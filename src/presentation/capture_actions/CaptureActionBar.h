@@ -26,6 +26,7 @@ signals:
     void cancelRequested();
 
 private:
+    void keyPressEvent(QKeyEvent* event) override;
     IIconProvider& iconProvider_;
 };
 
