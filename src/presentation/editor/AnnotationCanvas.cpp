@@ -275,6 +275,10 @@ int AnnotationCanvas::strokeAlpha() const { return strokeAlpha_; }
 void AnnotationCanvas::setStrokeAlpha(int alpha)
 {
     strokeAlpha_ = std::clamp(alpha, 0, 255);
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        annotations_[selectedIndex_].color.setAlpha(strokeAlpha_);
+        markModified();
+    }
     if (onStrokeAlphaChanged_) onStrokeAlphaChanged_(strokeAlpha_);
     update();
 }
