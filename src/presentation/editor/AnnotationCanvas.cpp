@@ -733,7 +733,10 @@ void AnnotationCanvas::handleMoveSelect(QMouseEvent* event)
             case 3: a.bounds.setSize(newSize); break;
             }
         }
-        if (a.tool == AnnotationTool::Pen) {
+        if (a.tool == AnnotationTool::Pen
+            || a.tool == AnnotationTool::Arrow
+            || a.tool == AnnotationTool::Line
+            || a.tool == AnnotationTool::Mosaic) {
             if (resizeStartBounds_.width() > 0 && resizeStartBounds_.height() > 0) {
                 const auto sx = a.bounds.width() / static_cast<double>(resizeStartBounds_.width());
                 const auto sy = a.bounds.height() / static_cast<double>(resizeStartBounds_.height());
@@ -754,7 +757,10 @@ void AnnotationCanvas::handleMoveSelect(QMouseEvent* event)
         const auto newPos = imagePos + moveOffset_;
         const auto delta = newPos - annotations_.at(selectedIndex_).bounds.topLeft();
         annotations_[selectedIndex_].bounds.translate(delta);
-        if (annotations_[selectedIndex_].tool == AnnotationTool::Pen) {
+        if (annotations_[selectedIndex_].tool == AnnotationTool::Pen
+            || annotations_[selectedIndex_].tool == AnnotationTool::Arrow
+            || annotations_[selectedIndex_].tool == AnnotationTool::Line
+            || annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
             for (auto& pt : annotations_[selectedIndex_].points) {
                 pt += delta;
             }
@@ -975,6 +981,7 @@ void AnnotationCanvas::handleDuplicateKey()
     preeditString_.clear();
     auto dup = annotations_.at(selectedIndex_);
     dup.bounds.translate(10, 10);
+    for (auto& pt : dup.points) pt += QPoint(10, 10);
     pushUndo();
     redoStack_.clear();
     annotations_.push_back(std::move(dup));
@@ -1005,7 +1012,10 @@ void AnnotationCanvas::handleNudgeKey(int key)
     else if (key == Qt::Key_Left) delta.setX(-step);
     else if (key == Qt::Key_Right) delta.setX(step);
     annotations_[selectedIndex_].bounds.translate(delta);
-    if (annotations_[selectedIndex_].tool == AnnotationTool::Pen) {
+    if (annotations_[selectedIndex_].tool == AnnotationTool::Pen
+        || annotations_[selectedIndex_].tool == AnnotationTool::Arrow
+        || annotations_[selectedIndex_].tool == AnnotationTool::Line
+        || annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
         for (auto& pt : annotations_[selectedIndex_].points) pt += delta;
     }
     markModified();
@@ -1195,6 +1205,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         redoStack_.clear();
         auto dup = annotations_.at(selectedIndex_);
         dup.bounds.translate(10, 10);
+        for (auto& pt : dup.points) pt += QPoint(10, 10);
         annotations_.push_back(std::move(dup));
         selectedIndex_ = annotations_.size() - 1;
         markModified();
