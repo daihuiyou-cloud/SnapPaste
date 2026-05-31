@@ -25,9 +25,7 @@ signals:
     void ocrRequested();
     void cancelRequested();
 
-protected:
-    void keyPressEvent(QKeyEvent* event) override;
-
+private:
     IIconProvider& iconProvider_;
 };
 

@@ -12,6 +12,7 @@
 #include <QMainWindow>
 #include <QSlider>
 #include <QToolButton>
+#include <QVBoxLayout>
 
 namespace snappaste {
 
@@ -44,6 +45,9 @@ private:
 
     void refreshPanelUi();
 
+    void buildToolSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& toolButtons);
+    void buildActionSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& actionButtons);
+
     IIconProvider& iconProvider_;
     AnnotationCanvas* canvas_ = nullptr;
     QToolButton* colorBtn_ = nullptr;
@@ -52,7 +56,10 @@ private:
     QLabel* pixelInfoLabel_ = nullptr;
     QToolButton* undoBtn_ = nullptr;
     QToolButton* redoBtn_ = nullptr;
-    QVector<QToolButton*> recentToolBtns_;
+    QWidget* propsWidget_ = nullptr;
+    QWidget* arrowWidget_ = nullptr;
+    QWidget* radiusWidget_ = nullptr;
+    QWidget* fontWidget_ = nullptr;
     QAction* eyeAction_ = nullptr;
     std::function<void(AnnotationTool)> updateToolActions_;
 };

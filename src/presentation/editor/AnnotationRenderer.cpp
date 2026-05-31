@@ -25,7 +25,6 @@ void AnnotationRenderer::drawCheckerboard(QPainter& painter, const QImage& sourc
 
 void AnnotationRenderer::drawGridOverlay(QPainter& painter, const QRect& imageRect, double zoomFactor)
 {
-    Q_UNUSED(imageRect)
     auto w = imageRect.width();
     auto h = imageRect.height();
     int step = static_cast<int>(50 * zoomFactor);
@@ -82,11 +81,11 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
     }
     auto dims = draft.bounds.size();
     QString label = QStringLiteral("%1 \u00D7 %2").arg(dims.width()).arg(dims.height());
+    painter.save();
     painter.setPen(Qt::NoPen);
     auto textRect = painter.fontMetrics().boundingRect(label);
-    auto labelPos = currentPos;
-    labelPos = QPoint(static_cast<int>(labelPos.x() * zoomFactor),
-                      static_cast<int>(labelPos.y() * zoomFactor));
+    auto labelPos = QPoint(static_cast<int>(currentPos.x() * zoomFactor),
+                           static_cast<int>(currentPos.y() * zoomFactor));
     labelPos += QPoint(12, -textRect.height() - 8);
     textRect = QRect(labelPos.x() - 4, labelPos.y() - 2,
                      textRect.width() + 8, textRect.height() + 4);
@@ -94,6 +93,7 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
     painter.drawRoundedRect(textRect, 3, 3);
     painter.setPen(Qt::white);
     painter.drawText(textRect, Qt::AlignCenter, label);
+    painter.restore();
 }
 
 void AnnotationRenderer::drawAnnotations(QPainter& painter,
@@ -286,7 +286,9 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
 
 void AnnotationRenderer::drawHighlightAnnotation(QPainter* painter, const Annotation& annotation)
 {
-    painter->fillRect(annotation.bounds, QColor(annotation.color.red(), annotation.color.green(), annotation.color.blue(), 100));
+    QColor c = annotation.color;
+    c.setAlpha(c.alpha() / 2);
+    painter->fillRect(annotation.bounds, c);
 }
 
 void AnnotationRenderer::drawNumberedAnnotation(QPainter* painter, const Annotation& annotation)

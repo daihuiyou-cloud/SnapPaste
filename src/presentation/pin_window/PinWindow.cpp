@@ -462,6 +462,7 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
                 setScale(static_cast<double>(kThumbnailMaxSize) / maxDim);
             }
         } else {
+            pushUndoState();
             item_.state.position = fullPosition_;
             item_.state.transform.scale = fullScale_;
             item_.state = normalizedState(item_.state);

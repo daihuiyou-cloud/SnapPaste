@@ -94,6 +94,7 @@ void CaptureOverlay::showEvent(QShowEvent* event)
 {
     Q_UNUSED(event)
 
+    spaceRepositioning_ = false;
     const auto bounds = desktopBounds();
     if (bounds.isValid() && geometry() != bounds) {
         setGeometry(bounds);
@@ -745,6 +746,10 @@ void CaptureOverlay::confirmWithFade(std::function<void()> onFinished)
 
 void CaptureOverlay::confirmSelection(void (CaptureOverlay::*signalEmitter)(const QRect&))
 {
+    if (state_ == State::ActionPending || state_ == State::Cancelled) {
+        return;
+    }
+
     const auto region = selectedRegion();
     if (!region.isValid()) {
         return;
@@ -834,6 +839,7 @@ void CaptureOverlay::cancel()
     if (state_ == State::ActionPending || state_ == State::Cancelled) {
         return;
     }
+    spaceRepositioning_ = false;
     state_ = State::Cancelled;
     clearSmartCandidates();
     actionBar_->hide();
@@ -846,6 +852,7 @@ void CaptureOverlay::cancel()
 
 void CaptureOverlay::finishReady()
 {
+    spaceRepositioning_ = false;
     const auto rawSelection = selection_.normalized();
     if (!availableGeometry().intersects(rawSelection) || rawSelection.width() <= kMinSelectionSize || rawSelection.height() <= kMinSelectionSize) {
         cancel();

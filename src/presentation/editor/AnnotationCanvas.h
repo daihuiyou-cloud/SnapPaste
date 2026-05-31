@@ -115,7 +115,7 @@ private:
     void handleMoveSelect(QMouseEvent* event);
     void updateDrawingStroke(QMouseEvent* event);
 
-    void handleTextEditingKey(QKeyEvent* event);
+    bool handleTextEditingKey(QKeyEvent* event);
     void handleZoomFit();
     void handleAnnotationDeleteKey();
     void handleDuplicateKey();
@@ -132,7 +132,7 @@ private:
     QVector<QVector<Annotation>> redoStack_;
     AnnotationTool currentTool_ = AnnotationTool::Rectangle;
     QColor currentColor_{"#ff3b30"};
-    int currentStrokeWidth_ = 3;
+    int currentStrokeWidth_ = 4;
     int selectedIndex_ = -1;
     int editingTextIndex_ = -1;
     QString preeditString_;

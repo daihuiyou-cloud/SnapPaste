@@ -86,8 +86,6 @@ EditorWindow::EditorWindow(IIconProvider& iconProvider, QWidget* parent)
     , iconProvider_(iconProvider)
     , canvas_(new AnnotationCanvas(this))
 {
-    connect(canvas_, &AnnotationCanvas::toolChanged, this, &EditorWindow::onToolChanged);
-
     setWindowTitle(tr("SnapPaste Editor"));
     resize(980, 680);
 
@@ -98,6 +96,7 @@ EditorWindow::EditorWindow(IIconProvider& iconProvider, QWidget* parent)
     setCentralWidget(scrollArea);
 
     createToolPanel();
+    connect(canvas_, &AnnotationCanvas::toolChanged, this, &EditorWindow::onToolChanged);
     setupActions();
 }
 
@@ -211,27 +210,6 @@ void EditorWindow::setImage(const QImage& image)
 
 void EditorWindow::refreshPanelUi()
 {
-    // Recent tools
-    auto recent = canvas_->recentTools();
-    for (int i = 0; i < recentToolBtns_.size(); ++i) {
-        if (i < recent.size()) {
-            recentToolBtns_[i]->setIcon(iconForTool(recent[i], iconProvider_));
-            recentToolBtns_[i]->setToolTip([&]{
-                switch (recent[i]) {
-                    case AnnotationTool::Rectangle: return tr("Rect"); case AnnotationTool::Ellipse: return tr("Ellipse");
-                    case AnnotationTool::Arrow: return tr("Arrow"); case AnnotationTool::Line: return tr("Line");
-                    case AnnotationTool::Pen: return tr("Pen"); case AnnotationTool::Text: return tr("Text");
-                    case AnnotationTool::Highlight: return tr("Highlight"); case AnnotationTool::Numbered: return tr("Numbered");
-                    case AnnotationTool::Mosaic: return tr("Mosaic"); case AnnotationTool::Eraser: return tr("Eraser");
-                    case AnnotationTool::Select: return tr("Select"); case AnnotationTool::Crop: return tr("Crop");
-                    default: return QString();
-                }
-            }());
-            recentToolBtns_[i]->setVisible(true);
-        } else {
-            recentToolBtns_[i]->setVisible(false);
-        }
-    }
     // Undo/Redo counts
     if (undoBtn_) {
         QString text = undoBtn_->text();
@@ -253,24 +231,37 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
         updateToolActions_(tool);
     }
     if (contextHint_) {
-        static const char* hints[] = {
-            QT_TRANSLATE_NOOP("EditorWindow", "Click or drag to select"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to draw a rectangle"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to draw an arrow"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to draw a line"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Freehand drawing"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Click to place text"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to apply mosaic blur"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to draw an ellipse"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag to highlight an area"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Click or drag to erase"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Click to place numbered circle"),
-            QT_TRANSLATE_NOOP("EditorWindow", "Drag crop handles to trim"),
-        };
-        auto idx = static_cast<int>(tool);
-        if (idx >= 0 && idx < static_cast<int>(sizeof(hints)/sizeof(hints[0]))) {
-            contextHint_->setText(QCoreApplication::translate("EditorWindow", hints[idx]));
+        QString hint;
+        switch (tool) {
+            case AnnotationTool::Select:    hint = tr("Click or drag to select"); break;
+            case AnnotationTool::Rectangle: hint = tr("Drag to draw a rectangle"); break;
+            case AnnotationTool::Arrow:     hint = tr("Drag to draw an arrow"); break;
+            case AnnotationTool::Line:      hint = tr("Drag to draw a line"); break;
+            case AnnotationTool::Pen:       hint = tr("Freehand drawing"); break;
+            case AnnotationTool::Text:      hint = tr("Click to place text"); break;
+            case AnnotationTool::Mosaic:    hint = tr("Drag to apply mosaic blur"); break;
+            case AnnotationTool::Ellipse:   hint = tr("Drag to draw an ellipse"); break;
+            case AnnotationTool::Highlight: hint = tr("Drag to highlight an area"); break;
+            case AnnotationTool::Eraser:    hint = tr("Click or drag to erase"); break;
+            case AnnotationTool::Numbered:  hint = tr("Click to place numbered circle"); break;
+            case AnnotationTool::Crop:      hint = tr("Drag crop handles to trim"); break;
         }
+        contextHint_->setText(hint);
+    }
+    if (propsWidget_) {
+        bool show = tool == AnnotationTool::Rectangle || tool == AnnotationTool::Ellipse
+                 || tool == AnnotationTool::Text || tool == AnnotationTool::Mosaic;
+        propsWidget_->setVisible(show);
+    }
+    if (arrowWidget_) {
+        arrowWidget_->setVisible(tool == AnnotationTool::Arrow);
+    }
+    if (radiusWidget_) {
+        radiusWidget_->setVisible(tool == AnnotationTool::Rectangle);
+    }
+    if (fontWidget_) {
+        bool show = tool == AnnotationTool::Text || tool == AnnotationTool::Numbered;
+        fontWidget_->setVisible(show);
     }
     refreshPanelUi();
 }
@@ -335,6 +326,92 @@ void EditorWindow::rebuildColorMenu()
     colorBtn_->menu()->insertSeparator(eyeAction_);
 }
 
+void EditorWindow::buildToolSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& toolButtons)
+{
+    struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tip; AnnotationTool tool; };
+
+    auto makeToolBtn = [this, content, &toolStyle](const ToolDef& d) -> QToolButton* {
+        auto* btn = new QToolButton(content);
+        btn->setIcon(d.iconFn());
+        btn->setText(QCoreApplication::translate("EditorWindow", d.name));
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", d.tip));
+        btn->setCheckable(true);
+        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(toolStyle);
+        btn->setFixedHeight(24);
+        btn->setProperty("tool", static_cast<int>(d.tool));
+        return btn;
+    };
+
+    const ToolDef allTools[] = {
+        {[this]{ return iconForTool(AnnotationTool::Rectangle, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Rect (R)"), QT_TRANSLATE_NOOP("EditorWindow", "Rectangle"), AnnotationTool::Rectangle},
+        {[this]{ return iconForTool(AnnotationTool::Ellipse, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Ellipse (E)"), QT_TRANSLATE_NOOP("EditorWindow", "Ellipse"), AnnotationTool::Ellipse},
+        {[this]{ return iconForTool(AnnotationTool::Arrow, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Arrow (A)"), QT_TRANSLATE_NOOP("EditorWindow", "Arrow"), AnnotationTool::Arrow},
+        {[this]{ return iconForTool(AnnotationTool::Line, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Line (L)"), QT_TRANSLATE_NOOP("EditorWindow", "Line"), AnnotationTool::Line},
+        {[this]{ return iconForTool(AnnotationTool::Pen, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Pen (P)"), QT_TRANSLATE_NOOP("EditorWindow", "Pen"), AnnotationTool::Pen},
+        {[this]{ return iconForTool(AnnotationTool::Text, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Text (T)"), QT_TRANSLATE_NOOP("EditorWindow", "Text"), AnnotationTool::Text},
+        {[this]{ return iconForTool(AnnotationTool::Highlight, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Hi (H)"), QT_TRANSLATE_NOOP("EditorWindow", "Highlight"), AnnotationTool::Highlight},
+        {[this]{ return iconForTool(AnnotationTool::Numbered, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Num (N)"), QT_TRANSLATE_NOOP("EditorWindow", "Numbered"), AnnotationTool::Numbered},
+        {[this]{ return iconForTool(AnnotationTool::Mosaic, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Mosaic (M)"), QT_TRANSLATE_NOOP("EditorWindow", "Mosaic"), AnnotationTool::Mosaic},
+        {[this]{ return iconForTool(AnnotationTool::Eraser, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Eraser (X)"), QT_TRANSLATE_NOOP("EditorWindow", "Eraser"), AnnotationTool::Eraser},
+        {[this]{ return iconForTool(AnnotationTool::Select, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Select (V)"), QT_TRANSLATE_NOOP("EditorWindow", "Select"), AnnotationTool::Select},
+        {[this]{ return iconForTool(AnnotationTool::Crop, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Crop (C)"), QT_TRANSLATE_NOOP("EditorWindow", "Crop"), AnnotationTool::Crop},
+    };
+
+    auto* toolGrid = new QGridLayout();
+    toolGrid->setSpacing(2);
+    toolGrid->setContentsMargins(0, 0, 0, 0);
+    for (int i = 0; i < 12; ++i) {
+        auto* btn = makeToolBtn(allTools[i]);
+        toolGrid->addWidget(btn, i / 2, i % 2);
+        toolButtons.push_back(btn);
+    }
+    layout->addLayout(toolGrid);
+
+    for (auto* btn : toolButtons) {
+        connect(btn, &QToolButton::clicked, this, [this, tool = static_cast<AnnotationTool>(btn->property("tool").toInt())] {
+            canvas_->setTool(tool);
+            canvas_->setFocus();
+        });
+    }
+}
+
+void EditorWindow::buildActionSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& actionButtons)
+{
+    struct ActionDef { QIcon icon; const char* text; const char* tip; QToolButton** ptr; };
+    undoBtn_ = nullptr; redoBtn_ = nullptr;
+    const ActionDef actionDefs[] = {
+        {iconProvider_.icon(IconName::Undo), QT_TRANSLATE_NOOP("EditorWindow", "Undo"), QT_TRANSLATE_NOOP("EditorWindow", "Undo (Ctrl+Z)"), &undoBtn_},
+        {iconProvider_.icon(IconName::Redo), QT_TRANSLATE_NOOP("EditorWindow", "Redo"), QT_TRANSLATE_NOOP("EditorWindow", "Redo (Ctrl+Y)"), &redoBtn_},
+        {iconProvider_.icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), nullptr},
+        {iconProvider_.icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), nullptr},
+        {iconProvider_.icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), nullptr},
+        {iconProvider_.icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), nullptr},
+    };
+
+    auto* actionsGrid = new QGridLayout();
+    actionsGrid->setContentsMargins(0, 0, 0, 0);
+    actionsGrid->setSpacing(2);
+
+    actionButtons.reserve(std::size(actionDefs));
+    for (int i = 0; i < std::size(actionDefs); ++i) {
+        auto* btn = new QToolButton(content);
+        btn->setIcon(actionDefs[i].icon);
+        btn->setText(QCoreApplication::translate("EditorWindow", actionDefs[i].text));
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", actionDefs[i].tip));
+        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(toolStyle);
+        btn->setFixedHeight(24);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        actionsGrid->addWidget(btn, i / 2, i % 2);
+        actionButtons.push_back(btn);
+        if (actionDefs[i].ptr) *actionDefs[i].ptr = btn;
+    }
+    layout->addLayout(actionsGrid);
+}
+
 void EditorWindow::createToolPanel()
 {
     auto* dock = new QDockWidget(tr("Tools"), this);
@@ -375,83 +452,15 @@ void EditorWindow::createToolPanel()
         "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
         "QToolButton:checked { background: #2fbf9f; color: #fff; border-color: #2fbf9f; }";
 
-    auto addHr = [&]() {
+    auto addHr = [content, layout]() {
         auto* line = new QFrame(content);
         line->setFrameShape(QFrame::HLine);
         line->setStyleSheet("QFrame { color: rgba(255,255,255,0.06); max-height: 1px; }");
         layout->addWidget(line);
     };
 
-    struct ToolDef { std::function<QIcon()> iconFn; const char* name; const char* tip; AnnotationTool tool; };
-
     QVector<QToolButton*> toolButtons;
-
-    auto makeToolBtn = [&](const ToolDef& d) -> QToolButton* {
-        auto* btn = new QToolButton(content);
-        btn->setIcon(d.iconFn());
-        btn->setText(QCoreApplication::translate("EditorWindow", d.name));
-        btn->setToolTip(QCoreApplication::translate("EditorWindow", d.tip));
-        btn->setCheckable(true);
-        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(toolStyle);
-        btn->setFixedHeight(24);
-        btn->setProperty("tool", static_cast<int>(d.tool));
-        return btn;
-    };
-
-    // ==========================================
-    // Tools
-    // ==========================================
-
-    const ToolDef allTools[] = {
-        {[this]{ return iconForTool(AnnotationTool::Rectangle, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Rect (R)"), QT_TRANSLATE_NOOP("EditorWindow", "Rectangle"), AnnotationTool::Rectangle},
-        {[this]{ return iconForTool(AnnotationTool::Ellipse, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Ellipse (E)"), QT_TRANSLATE_NOOP("EditorWindow", "Ellipse"), AnnotationTool::Ellipse},
-        {[this]{ return iconForTool(AnnotationTool::Arrow, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Arrow (A)"), QT_TRANSLATE_NOOP("EditorWindow", "Arrow"), AnnotationTool::Arrow},
-        {[this]{ return iconForTool(AnnotationTool::Line, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Line (L)"), QT_TRANSLATE_NOOP("EditorWindow", "Line"), AnnotationTool::Line},
-        {[this]{ return iconForTool(AnnotationTool::Pen, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Pen (P)"), QT_TRANSLATE_NOOP("EditorWindow", "Pen"), AnnotationTool::Pen},
-        {[this]{ return iconForTool(AnnotationTool::Text, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Text (T)"), QT_TRANSLATE_NOOP("EditorWindow", "Text"), AnnotationTool::Text},
-        {[this]{ return iconForTool(AnnotationTool::Highlight, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Hi (H)"), QT_TRANSLATE_NOOP("EditorWindow", "Highlight"), AnnotationTool::Highlight},
-        {[this]{ return iconForTool(AnnotationTool::Numbered, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Num (N)"), QT_TRANSLATE_NOOP("EditorWindow", "Numbered"), AnnotationTool::Numbered},
-        {[this]{ return iconForTool(AnnotationTool::Mosaic, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Mosaic (M)"), QT_TRANSLATE_NOOP("EditorWindow", "Mosaic"), AnnotationTool::Mosaic},
-        {[this]{ return iconForTool(AnnotationTool::Eraser, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Eraser (X)"), QT_TRANSLATE_NOOP("EditorWindow", "Eraser"), AnnotationTool::Eraser},
-        {[this]{ return iconForTool(AnnotationTool::Select, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Select (V)"), QT_TRANSLATE_NOOP("EditorWindow", "Select"), AnnotationTool::Select},
-        {[this]{ return iconForTool(AnnotationTool::Crop, iconProvider_); }, QT_TRANSLATE_NOOP("EditorWindow", "Crop (C)"), QT_TRANSLATE_NOOP("EditorWindow", "Crop"), AnnotationTool::Crop},
-    };
-
-    auto* toolGrid = new QGridLayout();
-    toolGrid->setSpacing(2);
-    toolGrid->setContentsMargins(0, 0, 0, 0);
-    for (int i = 0; i < 12; ++i) {
-        auto* btn = makeToolBtn(allTools[i]);
-        toolGrid->addWidget(btn, i / 2, i % 2);
-        toolButtons.push_back(btn);
-    }
-
-    // -- Recent tools --
-    auto* recentRow = new QHBoxLayout();
-    recentRow->setContentsMargins(0, 0, 0, 0);
-    recentRow->setSpacing(2);
-    QVector<QToolButton*> recentBtns;
-    for (int i = 0; i < 4; ++i) {
-        auto* btn = new QToolButton(content);
-        btn->setFixedSize(22, 22);
-        btn->setVisible(false);
-        btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(
-            "QToolButton { border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; }"
-            "QToolButton:hover { border-color: #2fbf9f; background: rgba(47,191,159,0.1); }");
-        connect(btn, &QToolButton::clicked, this, [this, i] {
-            auto recent = canvas_->recentTools();
-            if (i < recent.size()) canvas_->setTool(recent[i]);
-        });
-        recentBtns.push_back(btn);
-        recentRow->addWidget(btn);
-    }
-    recentToolBtns_ = recentBtns;
-    layout->addLayout(recentRow);
-
-    layout->addLayout(toolGrid);
+    buildToolSection(layout, content, toolStyle, toolButtons);
 
     layout->addSpacing(8);
     addHr();
@@ -485,39 +494,10 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
-    // -- Color swatches + Stroke preview --
-    auto* swatchRow = new QHBoxLayout();
-    swatchRow->setContentsMargins(0, 0, 0, 0);
-    swatchRow->setSpacing(2);
-    const QColor fixedColors[] = {
-        QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
-        QColor("#34c759"), QColor("#007aff"), QColor("#000000")
-    };
     auto* preview = new StrokePreview(content);
     auto refreshPreview = [this, preview]() {
         preview->showStroke(canvas_->color(), canvas_->strokeWidth());
     };
-    for (const auto& c : fixedColors) {
-        auto* swatch = new QToolButton(content);
-        QPixmap px(14, 14);
-        px.fill(c);
-        swatch->setIcon(QIcon(px));
-        swatch->setIconSize(QSize(14, 14));
-        swatch->setFixedSize(18, 18);
-        swatch->setToolTip(c.name(QColor::HexRgb).toUpper());
-        swatch->setStyleSheet(
-            "QToolButton { border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; padding: 0; }"
-            "QToolButton:hover { border-color: #2fbf9f; }");
-        connect(swatch, &QToolButton::clicked, this, [this, c, refreshPreview] {
-            canvas_->setColor(c);
-            updateColorWell(c);
-            refreshPreview();
-        });
-        swatchRow->addWidget(swatch);
-    }
-    layout->addLayout(swatchRow);
-
-    layout->addSpacing(4);
 
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{tr("S"), 2}, {tr("M"), 4}, {tr("L"), 8}};
@@ -539,6 +519,7 @@ void EditorWindow::createToolPanel()
         connect(btn, &QToolButton::clicked, this, [this, s, refreshPreview] {
             canvas_->setStrokeWidth(s.width);
             refreshPreview();
+            canvas_->setFocus();
         });
         widthRow->addWidget(btn);
     }
@@ -573,7 +554,9 @@ void EditorWindow::createToolPanel()
         });
         chipRow->addWidget(btn);
     }
-    layout->addLayout(chipRow);
+    propsWidget_ = new QWidget(content);
+    propsWidget_->setLayout(chipRow);
+    layout->addWidget(propsWidget_);
 
     layout->addSpacing(4);
 
@@ -584,7 +567,8 @@ void EditorWindow::createToolPanel()
     const QString sliderSub = "QSlider::sub-page:horizontal { background: #2fbf9f; border-radius: 1px; }";
     const QString sliderStyle = sliderGroove + sliderHandle + sliderSub;
 
-    auto addSliderRow = [&](const QString& label, int min, int max, int def,
+    auto addSliderRow = [this, content, layout, &sliderLabelStyle, &sliderValStyle, &sliderStyle](
+                            const QString& label, int min, int max, int def,
                             std::function<void(int)> onChanged,
                             std::function<QString(int)> fmt) -> QSlider*
     {
@@ -618,8 +602,9 @@ void EditorWindow::createToolPanel()
         [this](int v) { canvas_->setStrokeAlpha(v); },
         [this](int v) { return tr("%1%").arg(v * 100 / 255); });
 
-    // Arrow style
-    auto* arrowRow = new QHBoxLayout();
+    // Arrow style (contextual - Arrow tool only)
+    arrowWidget_ = new QWidget(content);
+    auto* arrowRow = new QHBoxLayout(arrowWidget_);
     arrowRow->setContentsMargins(0, 0, 0, 0);
     arrowRow->setSpacing(4);
     auto* arrowLbl = new QLabel(tr("Arrow"), content);
@@ -627,9 +612,9 @@ void EditorWindow::createToolPanel()
     arrowLbl->setStyleSheet(sliderLabelStyle);
     arrowRow->addWidget(arrowLbl);
     struct ArrowDef { const char* text; int value; };
-    const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Tri"), 0},
-                                  {QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Circle"), 1},
-                                  {QT_TRANSLATE_NOOP("snappaste::EditorWindow", "Square"), 2}};
+    const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("EditorWindow", "Tri"), 0},
+                                  {QT_TRANSLATE_NOOP("EditorWindow", "Circle"), 1},
+                                  {QT_TRANSLATE_NOOP("EditorWindow", "Square"), 2}};
     auto* arrowGroup = new QButtonGroup(content);
     arrowGroup->setExclusive(true);
     for (const auto& ad : arrowDefs) {
@@ -646,15 +631,41 @@ void EditorWindow::createToolPanel()
         });
         arrowRow->addWidget(btn);
     }
-    layout->addLayout(arrowRow);
+    arrowWidget_->setVisible(false);
+    layout->addWidget(arrowWidget_);
 
-    addSliderRow(tr("Radius"), 0, 40, 0,
-        [this](int v) { canvas_->setCornerRadius(v); },
-        [this](int v) { return v > 0 ? tr("%1px").arg(v) : tr("Off"); });
+    // Corner radius (contextual - Rectangle only)
+    radiusWidget_ = new QWidget(content);
+    auto* radiusRow = new QHBoxLayout(radiusWidget_);
+    radiusRow->setContentsMargins(0, 0, 0, 0);
+    radiusRow->setSpacing(4);
+    auto* radiusLbl = new QLabel(tr("Radius"), content);
+    radiusLbl->setFixedWidth(34);
+    radiusLbl->setStyleSheet(sliderLabelStyle);
+    auto* radiusSlider = new QSlider(Qt::Horizontal, content);
+    radiusSlider->setRange(0, 40);
+    radiusSlider->setValue(0);
+    radiusSlider->setFixedHeight(18);
+    radiusSlider->setStyleSheet(sliderStyle);
+    auto* radiusVal = new QLabel(tr("Off"), content);
+    radiusVal->setFixedWidth(30);
+    radiusVal->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    radiusVal->setStyleSheet(sliderValStyle);
+    connect(radiusSlider, &QSlider::valueChanged, this, [this, radiusVal](int v) {
+        canvas_->setCornerRadius(v);
+        radiusVal->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
+    });
+    radiusRow->addWidget(radiusLbl);
+    radiusRow->addWidget(radiusSlider);
+    radiusRow->addWidget(radiusVal);
+    radiusWidget_->setVisible(false);
+    layout->addWidget(radiusWidget_);
 
     layout->addSpacing(4);
 
-    auto* fontRow = new QHBoxLayout();
+    // Font size (contextual - Text / Numbered only)
+    fontWidget_ = new QWidget(content);
+    auto* fontRow = new QHBoxLayout(fontWidget_);
     fontRow->setContentsMargins(0, 0, 0, 0);
     fontRow->setSpacing(4);
 
@@ -684,10 +695,9 @@ void EditorWindow::createToolPanel()
     fontRow->addWidget(fontSizeDec);
     fontRow->addWidget(fontSizeVal);
     fontRow->addWidget(fontSizeInc);
-    layout->addLayout(fontRow);
 
     connect(fontSizeDec, &QToolButton::clicked, this, [this] {
-        canvas_->setFontSize(canvas_->fontSize() - 2);
+        canvas_->setFontSize(qMax(8, canvas_->fontSize() - 2));
     });
     connect(fontSizeInc, &QToolButton::clicked, this, [this] {
         canvas_->setFontSize(canvas_->fontSize() + 2);
@@ -695,6 +705,9 @@ void EditorWindow::createToolPanel()
     canvas_->setOnFontSizeChanged([fontSizeVal](int size) {
         fontSizeVal->setText(tr("%1px").arg(size));
     });
+
+    fontWidget_->setVisible(false);
+    layout->addWidget(fontWidget_);
 
     layout->addSpacing(6);
 
@@ -778,41 +791,8 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
-    // ==========================================
-    // Actions (2-column grid)
-    // ==========================================
-    struct ActionDef { QIcon icon; const char* text; const char* tip; QToolButton** ptr; };
-    undoBtn_ = nullptr; redoBtn_ = nullptr;
-    const ActionDef actionDefs[] = {
-        {iconProvider_.icon(IconName::Undo), QT_TRANSLATE_NOOP("EditorWindow", "Undo"), QT_TRANSLATE_NOOP("EditorWindow", "Undo (Ctrl+Z)"), &undoBtn_},
-        {iconProvider_.icon(IconName::Redo), QT_TRANSLATE_NOOP("EditorWindow", "Redo"), QT_TRANSLATE_NOOP("EditorWindow", "Redo (Ctrl+Y)"), &redoBtn_},
-        {iconProvider_.icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), nullptr},
-        {iconProvider_.icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), nullptr},
-        {iconProvider_.icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), nullptr},
-        {iconProvider_.icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), nullptr},
-    };
-
-    auto* actionsGrid = new QGridLayout();
-    actionsGrid->setContentsMargins(0, 0, 0, 0);
-    actionsGrid->setSpacing(2);
-
     QVector<QToolButton*> actionButtons;
-    actionButtons.reserve(std::size(actionDefs));
-    for (int i = 0; i < std::size(actionDefs); ++i) {
-        auto* btn = new QToolButton(content);
-        btn->setIcon(actionDefs[i].icon);
-        btn->setText(QCoreApplication::translate("EditorWindow", actionDefs[i].text));
-        btn->setToolTip(QCoreApplication::translate("EditorWindow", actionDefs[i].tip));
-        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(toolStyle);
-        btn->setFixedHeight(24);
-        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        actionsGrid->addWidget(btn, i / 2, i % 2);
-        actionButtons.push_back(btn);
-        if (actionDefs[i].ptr) *actionDefs[i].ptr = btn;
-    }
-    layout->addLayout(actionsGrid);
+    buildActionSection(layout, content, toolStyle, actionButtons);
 
     // -- updateToolActions callback --
     updateToolActions_ = [toolButtons](AnnotationTool tool) {
@@ -823,13 +803,8 @@ void EditorWindow::createToolPanel()
     refreshPanelUi();
 
     // -- Connections --
-    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); });
-    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); });
-    for (auto* btn : toolButtons) {
-        connect(btn, &QToolButton::clicked, this, [this, tool = static_cast<AnnotationTool>(btn->property("tool").toInt())] {
-            canvas_->setTool(tool);
-        });
-    }
+    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); canvas_->setFocus(); });
+    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); canvas_->setFocus(); });
 
     // -- Pixel info --
     canvas_->setOnMouseInfoChanged([this](QPointF pos, QColor c) {
@@ -846,18 +821,21 @@ void EditorWindow::createToolPanel()
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();
         statusBar()->showMessage(tr("Copied to clipboard"), 3000);
+        canvas_->setFocus();
     });
     connect(actionButtons[3], &QToolButton::clicked, this, [this] {
         auto img = canvas_->renderedImage();
         emit imageEdited(img);
         emit pinRequested(img);
         statusBar()->showMessage(tr("Image pinned"), 3000);
+        canvas_->setFocus();
     });
     connect(actionButtons[4], &QToolButton::clicked, this, [this] {
         canvas_->clearModified();
         emit imageEdited(canvas_->renderedImage());
         emit saveRequested();
         statusBar()->showMessage(tr("Saved"), 3000);
+        canvas_->setFocus();
     });
     connect(actionButtons[5], &QToolButton::clicked, this, [this] {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
@@ -869,6 +847,7 @@ void EditorWindow::createToolPanel()
                 statusBar()->showMessage(tr("Failed to save image"), 5000);
             }
         }
+        canvas_->setFocus();
     });
 
     scrollArea->setWidget(content);

@@ -283,17 +283,20 @@ void OcrResultWindow::rebuildCache()
 
     double scale = 1.0;
     int margin = 20;
+    auto dpr = source_.devicePixelRatio();
+    double logicalW = source_.width() / dpr;
+    double logicalH = source_.height() / dpr;
 
     int availW = qMax(100, imageScrollArea_->viewport()->width() - margin * 2);
     int availH = qMax(100, imageScrollArea_->viewport()->height() - margin * 2);
 
-    if (source_.width() > availW || source_.height() > availH) {
-        scale = qMin(static_cast<double>(availW) / source_.width(),
-                     static_cast<double>(availH) / source_.height());
+    if (logicalW > availW || logicalH > availH) {
+        scale = qMin(static_cast<double>(availW) / logicalW,
+                     static_cast<double>(availH) / logicalH);
     }
 
-    int destW = static_cast<int>(source_.width() * scale);
-    int destH = static_cast<int>(source_.height() * scale);
+    int destW = static_cast<int>(logicalW * scale);
+    int destH = static_cast<int>(logicalH * scale);
 
     basePixmap_ = QPixmap(destW + margin * 2, destH + margin * 2);
     basePixmap_.fill(Qt::transparent);
@@ -465,17 +468,7 @@ void OcrResultWindow::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton && dragging_) {
         dragging_ = false;
-        // If barely moved, treat as toggle maximize
-        if (!dragMaximizeCheck_.isNull()) {
-            QPoint delta = event->globalPos() - dragMaximizeCheck_;
-            if (delta.manhattanLength() <= 4) {
-                if (maximized_) {
-                    showNormal();
-                } else {
-                    showMaximized();
-                }
-            }
-        }
+        dragMaximizeCheck_ = QPoint();
         return;
     }
     QWidget::mouseReleaseEvent(event);
@@ -570,10 +563,10 @@ QString OcrResultWindow::selectedText() const
         return fullText_;
     }
     QStringList parts;
-    auto it = selectedIndices_.constBegin();
-    while (it != selectedIndices_.constEnd()) {
-        parts << blocks_[*it].text;
-        ++it;
+    for (int i = 0; i < blocks_.size(); ++i) {
+        if (selectedIndices_.contains(i)) {
+            parts << blocks_[i].text;
+        }
     }
     return parts.join('\n');
 }

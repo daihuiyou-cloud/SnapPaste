@@ -144,35 +144,4 @@ QPoint CaptureActionBar::anchoredPosition(const QRect& region, const QSize& barS
     return QPoint(x, y);
 }
 
-void CaptureActionBar::keyPressEvent(QKeyEvent* event)
-{
-    switch (event->key()) {
-    case Qt::Key_Return:
-    case Qt::Key_Enter:
-        emit copyRequested();
-        return;
-    case Qt::Key_F3:
-        emit pinRequested();
-        return;
-    case Qt::Key_S:
-        if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            emit saveRequested();
-            return;
-        }
-        break;
-    case Qt::Key_Space:
-        emit editRequested();
-        return;
-    case Qt::Key_O:
-        emit ocrRequested();
-        return;
-    case Qt::Key_Escape:
-        emit cancelRequested();
-        return;
-    default:
-        break;
-    }
-    QWidget::keyPressEvent(event);
-}
-
 } // namespace snappaste
