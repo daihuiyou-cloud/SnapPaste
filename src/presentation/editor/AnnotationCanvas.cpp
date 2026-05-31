@@ -812,6 +812,9 @@ void AnnotationCanvas::updateDrawingStroke(QMouseEvent* event)
         draft_.points.push_back(current_);
         const int margin = currentStrokeWidth_ * 4 + 4;
         update(QRect(oldCurrent, current_).normalized().adjusted(-margin, -margin, margin, margin));
+    } else if (draft_.tool == AnnotationTool::Arrow || draft_.tool == AnnotationTool::Line) {
+        draft_.points = {start_, current_};
+        update();
     } else {
         update();
     }
