@@ -710,6 +710,7 @@ void AnnotationCanvas::handleMovePan(QMouseEvent* event)
 
 void AnnotationCanvas::handleMoveSelect(QMouseEvent* event)
 {
+    renderer_.invalidateCache();
     if (resizing_) {
         auto& a = annotations_[selectedIndex_];
         auto b = resizeStartBounds_;
@@ -995,6 +996,8 @@ void AnnotationCanvas::handleLayerReorderKey(int direction)
 
 void AnnotationCanvas::handleNudgeKey(int key)
 {
+    pushUndo();
+    redoStack_.clear();
     int step = (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) ? 10 : 1;
     QPoint delta(0, 0);
     if (key == Qt::Key_Up) delta.setY(-step);
