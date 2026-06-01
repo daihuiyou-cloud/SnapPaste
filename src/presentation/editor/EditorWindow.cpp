@@ -576,6 +576,7 @@ void EditorWindow::createToolPanel()
                 fillMenu->addAction(a);
                 connect(a, &QAction::triggered, this, [this, c] {
                     canvas_->setFillColor(c);
+                    canvas_->setFilled(true);
                     updateFillColorWell(c);
                 });
             }
@@ -591,6 +592,7 @@ void EditorWindow::createToolPanel()
             fillMenu->addAction(a);
             connect(a, &QAction::triggered, this, [this, c] {
                 canvas_->setFillColor(c);
+                canvas_->setFilled(true);
                 updateFillColorWell(c);
             });
         }
@@ -601,6 +603,7 @@ void EditorWindow::createToolPanel()
             auto color = QColorDialog::getColor(canvas_->fillColor().isValid() ? canvas_->fillColor() : Qt::white, this, tr("Choose Fill Color"));
             if (color.isValid()) {
                 canvas_->setFillColor(color);
+                canvas_->setFilled(true);
                 canvas_->addRecentColor(color);
                 updateFillColorWell(color);
             }
@@ -610,6 +613,7 @@ void EditorWindow::createToolPanel()
         fillMenu->addAction(noFillAction);
         connect(noFillAction, &QAction::triggered, this, [this] {
             canvas_->setFillColor(QColor());
+            canvas_->setFilled(false);
             updateFillColorWell(QColor());
         });
     });

@@ -198,7 +198,9 @@ void AnnotationRenderer::drawArrowAnnotation(QPainter* painter, const Annotation
     painter->drawLine(from, to);
     const double arrowSize = 6.0 + annotation.strokeWidth * 2.0;
     const auto angle = std::atan2(to.y() - from.y(), to.x() - from.x());
-    painter->setBrush(annotation.color);
+    QColor headFill = annotation.fillColor.isValid() && annotation.filled ? annotation.fillColor
+                     : annotation.filled ? annotation.color : annotation.color;
+    painter->setBrush(headFill);
     painter->setPen(Qt::NoPen);
     if (annotation.arrowStyle == ArrowStyle::CircleArrow) {
         auto cx = to.x() - arrowSize * 0.5 * std::cos(angle);
