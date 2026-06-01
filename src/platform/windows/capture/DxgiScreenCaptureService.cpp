@@ -499,20 +499,26 @@ Result<void> DxgiScreenCaptureService::ensureD3dDevice()
 Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegment& segment)
 {
     std::scoped_lock lock(mutex_);
-    auto deviceResult = ensureD3dDevice();
-    if (deviceResult.isOk()) {
-        constexpr int kMaxDxgiRetries = 3;
-        for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
-            auto result = captureSegmentWithDxgi(segment, *d3dDevice_.Get(), *d3dContext_.Get());
-            if (result.isOk()) {
-                return result;
-            }
-            if (attempt < kMaxDxgiRetries - 1) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
-            }
+    constexpr int kMaxDxgiRetries = 3;
+    for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
+        // Recreate device on each retry to handle DXGI_ERROR_DEVICE_REMOVED/RESET.
+        // Transient failures are rare, so the cost of recreation is negligible.
+        d3dDeviceValid_ = false;
+        d3dDevice_.Reset();
+        d3dContext_.Reset();
+        auto deviceResult = ensureD3dDevice();
+        if (deviceResult.isError()) {
+            break;
+        }
+        auto result = captureSegmentWithDxgi(segment, *d3dDevice_.Get(), *d3dContext_.Get());
+        if (result.isOk()) {
+            return result;
+        }
+        if (attempt < kMaxDxgiRetries - 1) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
         }
     }
-    return Result<QImage>::failure(deviceResult.error());
+    return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to capture screen with DXGI."));
 }
 
 } // namespace snappaste

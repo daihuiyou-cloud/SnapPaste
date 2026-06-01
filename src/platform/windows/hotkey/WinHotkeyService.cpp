@@ -32,9 +32,9 @@ bool WinHotkeyService::registerHotkey(HotkeyAction action, const Hotkey& hotkey)
 {
 #ifdef Q_OS_WIN
     const auto id = idFor(action);
+    unregisterHotkey(action);
     const auto registered = RegisterHotKey(nullptr, id, modifiersFor(hotkey), static_cast<UINT>(hotkey.key)) != FALSE;
     if (registered) {
-        unregisterHotkey(action);
         registeredActions_.insert(action);
     }
     return registered;

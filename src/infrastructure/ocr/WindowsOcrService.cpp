@@ -166,6 +166,7 @@ WindowsOcrService::~WindowsOcrService()
 void WindowsOcrService::cancel()
 {
     cancelled_ = true;
+    ++currentRequestId_;
 }
 
 void WindowsOcrService::setLanguage(const QString& bcp47Tag)
@@ -177,13 +178,14 @@ void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 OcrResult WindowsOcrService::recognizeText(const QImage& source)
 {
     cancelled_ = false;
+    const auto requestId = ++currentRequestId_;
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     if (source.isNull()) {
         return {false, {}, QObject::tr("No image is available for OCR."), {}, {}};
     }
 
     try {
-        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
+        if (isCancelled(requestId)) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
 
         QString lang;
         {
@@ -202,7 +204,7 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             return {false, {}, QObject::tr("OCR is not available for the current Windows language profile."), {}, {}};
         }
 
-        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
+        if (isCancelled(requestId)) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
 
         const auto processed = preprocessForOcr(source);
         const double scaleX = static_cast<double>(source.width()) / processed.width();
@@ -235,8 +237,9 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
             }
         }
 
-        if (cancelled_) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
+        if (isCancelled(requestId)) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
         const auto result = engine.RecognizeAsync(bitmap).get();
+        if (isCancelled(requestId)) return {false, {}, QObject::tr("OCR cancelled."), {}, {}};
         QStringList lines;
         QVector<OcrBlockInfo> blocks;
         for (const auto& line : result.Lines()) {
