@@ -22,7 +22,8 @@ struct PinToolbar {
     static QVector<QRect> buttonRects(int parentWidth);
     static QRect overflowRect(int parentWidth, int parentHeight);
     static bool fits(int parentWidth, int parentHeight);
-    static void draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider);
+    static void draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider,
+                     int hoveredButton, bool clickThroughActive, bool alwaysOnTopActive);
     static int buttonAt(const QPoint& pos, int parentWidth);
 };
 

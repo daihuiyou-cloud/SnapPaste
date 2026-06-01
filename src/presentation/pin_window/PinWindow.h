@@ -82,6 +82,7 @@ private:
     QRect resizeStartGeometry_;
     QPoint resizeStartGlobal_;
     bool hovered_ = false;
+    int hoveredButton_ = -1;
     bool controlsVisible_ = false;
     bool firstShow_ = true;
     bool closeRequested_ = false;

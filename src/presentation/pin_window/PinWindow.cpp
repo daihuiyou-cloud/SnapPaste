@@ -447,6 +447,7 @@ void PinWindow::leaveEvent(QEvent* event)
 {
     Q_UNUSED(event)
     hovered_ = false;
+    hoveredButton_ = -1;
     update();
 }
 
@@ -508,8 +509,9 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if (!dragging_ && !resizing_) {
-        const int btn = (hovered_ || controlsVisible_) && PinToolbar::fits(width(), height())
+        hoveredButton_ = (hovered_ || controlsVisible_) && PinToolbar::fits(width(), height())
             ? PinToolbar::buttonAt(event->pos(), width()) : -1;
+        const int btn = hoveredButton_;
         static const char* kTooltipLabels[] = {
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Close"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Rotate Left"),
@@ -746,7 +748,10 @@ void PinWindow::paintEvent(QPaintEvent* event)
         painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
 
         if (PinToolbar::fits(width(), height())) {
-            PinToolbar::draw(painter, width(), height(), iconProvider_);
+            PinToolbar::draw(painter, width(), height(), iconProvider_,
+                             showControls ? hoveredButton_ : -1,
+                             item_.state.options.clickThrough,
+                             item_.state.options.alwaysOnTop);
         } else {
             const auto ob = PinToolbar::overflowRect(width(), height());
             painter.setBrush(QColor(20, 26, 33, 200));

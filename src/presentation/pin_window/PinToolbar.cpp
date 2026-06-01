@@ -36,7 +36,8 @@ bool PinToolbar::fits(int parentWidth, int parentHeight)
     return parentWidth >= tb.width() && parentHeight >= tb.bottom() + 4;
 }
 
-void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider)
+void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider,
+                      int hoveredButton, bool clickThroughActive, bool alwaysOnTopActive)
 {
     Q_UNUSED(parentHeight)
 
@@ -55,9 +56,26 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
         IconName::ClickThrough,
         IconName::Pin
     };
+    constexpr int kToggleIdxClickThrough = 5;
+    constexpr int kToggleIdxAlwaysOnTop = 6;
 
     for (int i = 0; i < btns.size(); ++i) {
-        painter.fillRect(btns[i], QColor(255, 255, 255, 24));
+        const bool active = (i == kToggleIdxClickThrough && clickThroughActive)
+                         || (i == kToggleIdxAlwaysOnTop && alwaysOnTopActive);
+
+        if (active) {
+            painter.fillRect(btns[i], QColor(47, 191, 159, 50));
+        } else if (i == hoveredButton) {
+            painter.fillRect(btns[i], QColor(255, 255, 255, 48));
+        } else {
+            painter.fillRect(btns[i], QColor(255, 255, 255, 24));
+        }
+
+        if (active) {
+            painter.setPen(QPen(QColor(47, 191, 159), 2));
+            painter.drawRoundedRect(btns[i].adjusted(1, 1, -1, -1), 3, 3);
+        }
+
         const auto pixmap = iconProvider.icon(icons[i]).pixmap(kIconSize, kIconSize);
         const auto iconTopLeft = btns[i].center() - QPoint(kIconSize / 2, kIconSize / 2);
         painter.drawPixmap(iconTopLeft, pixmap);

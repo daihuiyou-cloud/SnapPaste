@@ -577,9 +577,11 @@ void OcrResultWindow::performCopy()
     if (text.isEmpty()) return;
     QApplication::clipboard()->setText(text);
 
-    QString orig = copyBtn_->text();
+    copyBtn_->setProperty("originalText", copyBtn_->text());
     copyBtn_->setText(tr("Copied!"));
-    QTimer::singleShot(1500, this, [this, orig] { copyBtn_->setText(orig); });
+    QTimer::singleShot(1500, this, [this] {
+        copyBtn_->setText(copyBtn_->property("originalText").toString());
+    });
 }
 
 void OcrResultWindow::performPaste()
