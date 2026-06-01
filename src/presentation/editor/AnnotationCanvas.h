@@ -51,6 +51,9 @@ public:
     int fontSize() const;
     void setFontSize(int size);
     void setOnFontSizeChanged(std::function<void(int)> cb);
+    int selectedIndex() const { return selectedIndex_; }
+    const Annotation& annotationAt(int index) const { return annotations_.at(index); }
+    void setOnSelectionChanged(std::function<void()> cb);
 
     QString fontFamily() const;
     void setFontFamily(const QString& family);
@@ -63,6 +66,7 @@ public:
     int textAlignment() const;
     void setTextAlignment(int align);
     void setOnTextPropertiesChanged(std::function<void()> cb);
+    void syncTextPropertiesUI();
 
     double cropAspectRatio() const;
     void setCropAspectRatio(double ratio);
@@ -93,6 +97,9 @@ public:
 
     bool gridEnabled() const;
     void setGridEnabled(bool enabled);
+    bool filled() const { return filled_; }
+    bool textOutlineEnabled() const { return textOutlineEnabled_; }
+    bool mosaicBlurred() const { return mosaicBlurred_; }
 
     QPointF mouseImagePos() const;
     QColor mousePixelColor() const;
@@ -209,6 +216,7 @@ private:
     std::function<void()> onTextPropertiesChanged_;
     std::function<void(double)> onCropAspectRatioChanged_;
     std::function<void()> onModified_;
+    std::function<void()> onSelectionChanged_;
 };
 
 } // namespace snappaste

@@ -607,6 +607,7 @@ void EditorWindow::createToolPanel()
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
         btn->setStyleSheet(selStyle);
+        btn->setProperty("width", s.width);
         if (s.width == 4) btn->setChecked(true);
         strokeGroup->addButton(btn);
         connect(btn, &QToolButton::clicked, this, [this, s, refreshPreview] {
@@ -642,6 +643,7 @@ void EditorWindow::createToolPanel()
         btn->setCheckable(true);
         btn->setChecked(p.defaultOn);
         btn->setStyleSheet(chipStyle);
+        btn->setProperty("chipKey", QByteArray(p.text));
         connect(btn, &QToolButton::clicked, this, [this, p](bool checked) {
             (canvas_->*p.setter)(checked);
         });
@@ -915,9 +917,10 @@ void EditorWindow::createToolPanel()
     auto* bgColorBtn = new QToolButton(content);
     bgColorBtn->setFixedSize(22, 22);
     bgColorBtn->setToolTip(tr("Text background color"));
-    auto updateBgColorIcon = [bgColorBtn, this]() {
+    auto updateBgColorIcon = [bgColorBtn, this](QColor color = QColor()) {
+        if (!color.isValid()) color = canvas_->textBackgroundColor();
         QPixmap px(14, 14);
-        px.fill(canvas_->textBackgroundColor());
+        px.fill(color);
         QPainter p(&px);
         p.setPen(QPen(QColor(255, 255, 255, 64), 1));
         p.drawRect(QRectF(0.5, 0.5, 13, 13));
@@ -943,19 +946,25 @@ void EditorWindow::createToolPanel()
 
     // Sync UI when text properties change programmatically
     canvas_->setOnTextPropertiesChanged([this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup, bgToggle, updateBgColorIcon]() {
-        fontCombo->setCurrentFont(QFont(canvas_->fontFamily()));
-        boldBtn->setChecked(canvas_->bold());
-        italicBtn->setChecked(canvas_->italic());
-        underlineBtn->setChecked(canvas_->underline());
-        int align = canvas_->textAlignment();
+        auto idx = canvas_->selectedIndex();
+        bool sel = (idx >= 0);
+        const Annotation* a = sel ? &canvas_->annotationAt(idx) : nullptr;
+        bool textSel = (a && (a->tool == AnnotationTool::Text || a->tool == AnnotationTool::Numbered));
+
+        fontCombo->setCurrentFont(QFont(textSel && !a->fontFamily.isEmpty() ? a->fontFamily : canvas_->fontFamily()));
+        boldBtn->setChecked(textSel ? a->bold : canvas_->bold());
+        italicBtn->setChecked(textSel ? a->italic : canvas_->italic());
+        underlineBtn->setChecked(textSel ? a->underline : canvas_->underline());
+        int align = textSel ? a->textAlignment : canvas_->textAlignment();
         int id = 0;
         if (align == (Qt::AlignHCenter | Qt::AlignTop)) id = 1;
         else if (align == (Qt::AlignRight | Qt::AlignTop)) id = 2;
         auto* btn = alignGroup->button(id);
         if (btn) btn->setChecked(true);
-        bgToggle->setChecked(canvas_->textBackgroundEnabled());
-        bgToggle->setText(canvas_->textBackgroundEnabled() ? tr("On") : tr("Off"));
-        updateBgColorIcon();
+        bool bgOn = textSel ? a->textBackground : canvas_->textBackgroundEnabled();
+        bgToggle->setChecked(bgOn);
+        bgToggle->setText(bgOn ? tr("On") : tr("Off"));
+        updateBgColorIcon(textSel ? a->textBackgroundColor : canvas_->textBackgroundColor());
     });
 
     fontWidget_->setVisible(false);
@@ -1149,6 +1158,53 @@ void EditorWindow::createToolPanel()
             }
         }
         canvas_->setFocus();
+    });
+
+    // Sync property panel when selection changes
+    canvas_->setOnSelectionChanged([this, preview, strokeGroup, arrowGroup, radiusSlider, radiusVal]() {
+        auto idx = canvas_->selectedIndex();
+        if (idx >= 0) {
+            const auto& a = canvas_->annotationAt(idx);
+            updateColorWell(a.color);
+            updateFillColorWell(a.fillColor);
+            preview->showStroke(a.color, a.strokeWidth);
+            for (auto* btn : strokeGroup->buttons())
+                btn->setChecked(btn->property("width").toInt() == a.strokeWidth);
+            // Chip buttons
+            for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
+                auto key = btn->property("chipKey").toByteArray();
+                if (key == "Fill")
+                    btn->setChecked(a.filled);
+                else if (key == "Outline")
+                    btn->setChecked(a.textOutline);
+                // Blur is canvas-level, not per-annotation
+            }
+            // Arrow style
+            if (a.tool == AnnotationTool::Arrow) {
+                auto* abtn = arrowGroup->button(static_cast<int>(a.arrowStyle));
+                if (abtn) abtn->setChecked(true);
+            }
+            // Corner radius
+            radiusSlider->setValue(a.cornerRadius);
+            radiusVal->setText(a.cornerRadius > 0 ? tr("%1px").arg(a.cornerRadius) : tr("Off"));
+            canvas_->syncTextPropertiesUI();
+        } else {
+            updateColorWell(canvas_->color());
+            updateFillColorWell(canvas_->fillColor());
+            preview->showStroke(canvas_->color(), canvas_->strokeWidth());
+            for (auto* btn : strokeGroup->buttons())
+                btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
+            for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
+                auto key = btn->property("chipKey").toByteArray();
+                if (key == "Fill")
+                    btn->setChecked(canvas_->filled());
+                else if (key == "Outline")
+                    btn->setChecked(canvas_->textOutlineEnabled());
+            }
+            radiusSlider->setValue(canvas_->cornerRadius());
+            radiusVal->setText(canvas_->cornerRadius() > 0 ? tr("%1px").arg(canvas_->cornerRadius()) : tr("Off"));
+            canvas_->syncTextPropertiesUI();
+        }
     });
 
     scrollArea->setWidget(content);

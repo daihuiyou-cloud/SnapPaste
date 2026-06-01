@@ -208,11 +208,19 @@ void AnnotationCanvas::setTool(AnnotationTool tool)
 void AnnotationCanvas::setColor(const QColor& color)
 {
     currentColor_ = color;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        annotations_[selectedIndex_].color = color;
+        markModified();
+    }
 }
 
 void AnnotationCanvas::setStrokeWidth(int width)
 {
     currentStrokeWidth_ = std::clamp(width, 1, 12);
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        annotations_[selectedIndex_].strokeWidth = currentStrokeWidth_;
+        markModified();
+    }
 }
 
 void AnnotationCanvas::setPickingColor(bool picking)
@@ -234,20 +242,55 @@ void AnnotationCanvas::setMosaicBlurred(bool blurred)
 void AnnotationCanvas::setTextOutlineEnabled(bool enabled)
 {
     textOutlineEnabled_ = enabled;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        annotations_[selectedIndex_].textOutline = enabled;
+        markModified();
+    }
     update();
 }
 
 void AnnotationCanvas::setFilled(bool filled)
 {
     filled_ = filled;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse) {
+            a.filled = filled;
+            markModified();
+        }
+    }
     update();
 }
 
 QColor AnnotationCanvas::fillColor() const { return currentFillColor_; }
-void AnnotationCanvas::setFillColor(const QColor& color) { currentFillColor_ = color; update(); }
-void AnnotationCanvas::setTextBackgroundEnabled(bool enabled) { textBackgroundEnabled_ = enabled; update(); }
+void AnnotationCanvas::setFillColor(const QColor& color) {
+    currentFillColor_ = color;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        annotations_[selectedIndex_].fillColor = color;
+        markModified();
+    }
+    update();
+}
+void AnnotationCanvas::setTextBackgroundEnabled(bool enabled) {
+    textBackgroundEnabled_ = enabled;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        annotations_[selectedIndex_].textBackground = enabled;
+        markModified();
+    }
+    update();
+}
 bool AnnotationCanvas::textBackgroundEnabled() const { return textBackgroundEnabled_; }
-void AnnotationCanvas::setTextBackgroundColor(const QColor& color) { textBackgroundColor_ = color; update(); }
+void AnnotationCanvas::setTextBackgroundColor(const QColor& color) {
+    textBackgroundColor_ = color;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        annotations_[selectedIndex_].textBackgroundColor = color;
+        markModified();
+    }
+    update();
+}
 QColor AnnotationCanvas::textBackgroundColor() const { return textBackgroundColor_; }
 
 void AnnotationCanvas::updateTextBounds(int index)
@@ -285,6 +328,12 @@ void AnnotationCanvas::setFontSize(int size)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].textFontSize = size;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
+                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
+            annotations_[selectedIndex_].textFontSize = size;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         if (currentTool_ == AnnotationTool::Text || currentTool_ == AnnotationTool::Numbered) {
             markModified();
@@ -304,6 +353,11 @@ void AnnotationCanvas::setFontFamily(const QString& family)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].fontFamily = family;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            annotations_[selectedIndex_].fontFamily = family;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
@@ -318,6 +372,11 @@ void AnnotationCanvas::setBold(bool b)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].bold = b;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            annotations_[selectedIndex_].bold = b;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
@@ -332,6 +391,11 @@ void AnnotationCanvas::setItalic(bool i)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].italic = i;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            annotations_[selectedIndex_].italic = i;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
@@ -346,6 +410,11 @@ void AnnotationCanvas::setUnderline(bool u)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].underline = u;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            annotations_[selectedIndex_].underline = u;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
@@ -360,6 +429,11 @@ void AnnotationCanvas::setTextAlignment(int align)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].textAlignment = align;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            annotations_[selectedIndex_].textAlignment = align;
+            updateTextBounds(selectedIndex_);
+            markModified();
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
@@ -367,6 +441,10 @@ void AnnotationCanvas::setTextAlignment(int align)
     }
 }
 void AnnotationCanvas::setOnTextPropertiesChanged(std::function<void()> cb) { onTextPropertiesChanged_ = std::move(cb); }
+
+void AnnotationCanvas::syncTextPropertiesUI() { if (onTextPropertiesChanged_) onTextPropertiesChanged_(); }
+
+void AnnotationCanvas::setOnSelectionChanged(std::function<void()> cb) { onSelectionChanged_ = std::move(cb); }
 
 double AnnotationCanvas::cropAspectRatio() const { return cropAspectRatio_; }
 void AnnotationCanvas::setCropAspectRatio(double ratio)
@@ -400,6 +478,11 @@ ArrowStyle AnnotationCanvas::arrowStyle() const { return arrowStyle_; }
 void AnnotationCanvas::setArrowStyle(ArrowStyle style)
 {
     arrowStyle_ = style;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Arrow) {
+        annotations_[selectedIndex_].arrowStyle = style;
+        markModified();
+    }
     if (onArrowStyleChanged_) onArrowStyleChanged_(static_cast<int>(style));
     update();
 }
@@ -409,6 +492,11 @@ int AnnotationCanvas::cornerRadius() const { return cornerRadius_; }
 void AnnotationCanvas::setCornerRadius(int radius)
 {
     cornerRadius_ = std::clamp(radius, 0, 40);
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Rectangle) {
+        annotations_[selectedIndex_].cornerRadius = cornerRadius_;
+        markModified();
+    }
     if (onCornerRadiusChanged_) onCornerRadiusChanged_(cornerRadius_);
     update();
 }
@@ -486,6 +574,7 @@ void AnnotationCanvas::undo()
     nextNumber_ = maxNumber + 1;
     selectedIndex_ = -1;
     markModified();
+    if (onSelectionChanged_) onSelectionChanged_();
 }
 
 void AnnotationCanvas::pushUndo()
@@ -511,6 +600,7 @@ void AnnotationCanvas::redo()
     annotations_ = redoStack_.takeLast();
     selectedIndex_ = -1;
     markModified();
+    if (onSelectionChanged_) onSelectionChanged_();
 }
 
 void AnnotationCanvas::dragEnterEvent(QDragEnterEvent* event)
@@ -657,11 +747,13 @@ bool AnnotationCanvas::handleSelectPress(const QPoint& pos)
             moving_ = true;
             moveOffset_ = annotations_[i].bounds.topLeft() - pos;
             update();
+            if (onSelectionChanged_) onSelectionChanged_();
             return true;
         }
     }
     selectedIndex_ = -1;
     update();
+    if (onSelectionChanged_) onSelectionChanged_();
     return true;
 }
 
@@ -761,6 +853,7 @@ bool AnnotationCanvas::handleExistingAnnotationPress(const QPoint& pos)
             if (i != selectedIndex_) {
                 selectedIndex_ = i;
                 update();
+                if (onSelectionChanged_) onSelectionChanged_();
             }
             return true;
         }
@@ -817,6 +910,7 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
                 annotations_.removeAt(editingTextIndex_);
                 if (selectedIndex_ >= editingTextIndex_) selectedIndex_--;
                 markModified();
+                if (onSelectionChanged_) onSelectionChanged_();
             }
             editingTextIndex_ = -1;
             cursorPos_ = 0;
@@ -1117,6 +1211,7 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
         annotations_.push_back(draft_);
         selectedIndex_ = annotations_.size() - 1;
         markModified();
+        if (onSelectionChanged_) onSelectionChanged_();
         if (currentTool_ != AnnotationTool::Select && currentTool_ != AnnotationTool::Text
             && currentTool_ != AnnotationTool::Numbered && currentTool_ != AnnotationTool::Mosaic
             && currentTool_ != AnnotationTool::Eraser) {
@@ -1275,6 +1370,7 @@ void AnnotationCanvas::handleAnnotationDeleteKey()
     annotations_.removeAt(selectedIndex_);
     selectedIndex_ = -1;
     markModified();
+    if (onSelectionChanged_) onSelectionChanged_();
 }
 
 void AnnotationCanvas::handleDuplicateKey()
@@ -1290,6 +1386,7 @@ void AnnotationCanvas::handleDuplicateKey()
     annotations_.push_back(std::move(dup));
     selectedIndex_ = annotations_.size() - 1;
     markModified();
+    if (onSelectionChanged_) onSelectionChanged_();
 }
 
 void AnnotationCanvas::handleLayerReorderKey(int direction)
