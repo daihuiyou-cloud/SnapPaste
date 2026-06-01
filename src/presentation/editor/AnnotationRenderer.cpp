@@ -260,7 +260,8 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
 
     if (annotation.textOutline) {
         painter->save();
-        painter->setPen(QPen(QColor(255, 255, 255, 200), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter->setBrush(QColor(255, 255, 255, 200));
+        painter->setPen(Qt::NoPen);
         QPainterPathStroker stroker;
         stroker.setWidth(3.0);
         QPainterPath path;
@@ -330,7 +331,7 @@ void AnnotationRenderer::drawNumberedAnnotation(QPainter* painter, const Annotat
     QFont numFont;
     if (!annotation.fontFamily.isEmpty())
         numFont.setFamily(annotation.fontFamily);
-    numFont.setPixelSize(r);
+    numFont.setPointSize(r);
     numFont.setBold(annotation.bold);
     numFont.setItalic(annotation.italic);
     painter->setFont(numFont);

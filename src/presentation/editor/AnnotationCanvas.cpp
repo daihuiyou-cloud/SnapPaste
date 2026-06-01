@@ -244,10 +244,10 @@ void AnnotationCanvas::setFilled(bool filled)
 }
 
 QColor AnnotationCanvas::fillColor() const { return currentFillColor_; }
-void AnnotationCanvas::setFillColor(const QColor& color) { currentFillColor_ = color; }
+void AnnotationCanvas::setFillColor(const QColor& color) { currentFillColor_ = color; update(); }
 void AnnotationCanvas::setTextBackgroundEnabled(bool enabled) { textBackgroundEnabled_ = enabled; update(); }
 bool AnnotationCanvas::textBackgroundEnabled() const { return textBackgroundEnabled_; }
-void AnnotationCanvas::setTextBackgroundColor(const QColor& color) { textBackgroundColor_ = color; }
+void AnnotationCanvas::setTextBackgroundColor(const QColor& color) { textBackgroundColor_ = color; update(); }
 QColor AnnotationCanvas::textBackgroundColor() const { return textBackgroundColor_; }
 
 void AnnotationCanvas::updateTextBounds(int index)
