@@ -45,6 +45,7 @@ private:
     void updateFillColorWell(const QColor& c);
 
     void refreshPanelUi();
+    void syncPanelDefaults();
 
     void buildToolSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& toolButtons);
     void buildActionSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& actionButtons);

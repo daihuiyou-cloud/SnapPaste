@@ -51,7 +51,7 @@ public:
     int fontSize() const;
     void setFontSize(int size);
     void setOnFontSizeChanged(std::function<void(int)> cb);
-    int selectedIndex() const { return selectedIndex_; }
+    int selectedIndex() const { return (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) ? selectedIndex_ : -1; }
     const Annotation& annotationAt(int index) const { return annotations_.at(index); }
     void setOnSelectionChanged(std::function<void()> cb);
 

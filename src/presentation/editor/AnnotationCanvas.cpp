@@ -236,16 +236,23 @@ void AnnotationCanvas::setOnPickingColorChanged(std::function<void(bool)> cb) { 
 void AnnotationCanvas::setMosaicBlurred(bool blurred)
 {
     mosaicBlurred_ = blurred;
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+        && annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
+        annotations_[selectedIndex_].blurRadius = blurred ? currentStrokeWidth_ : 0;
+        markModified();
+    }
     update();
 }
 
 void AnnotationCanvas::setTextOutlineEnabled(bool enabled)
 {
     textOutlineEnabled_ = enabled;
-    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-        && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
-        annotations_[selectedIndex_].textOutline = enabled;
-        markModified();
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto t = annotations_[selectedIndex_].tool;
+        if (t == AnnotationTool::Text || t == AnnotationTool::Numbered) {
+            annotations_[selectedIndex_].textOutline = enabled;
+            markModified();
+        }
     }
     update();
 }
@@ -255,7 +262,8 @@ void AnnotationCanvas::setFilled(bool filled)
     filled_ = filled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
-        if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse) {
+        if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse
+            || a.tool == AnnotationTool::Arrow) {
             a.filled = filled;
             markModified();
         }

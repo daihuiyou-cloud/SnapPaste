@@ -212,7 +212,6 @@ void EditorWindow::setImage(const QImage& image)
 
 void EditorWindow::refreshPanelUi()
 {
-    // Undo/Redo counts
     if (undoBtn_) {
         QString text = undoBtn_->text();
         int uc = canvas_->undoCount();
@@ -225,6 +224,38 @@ void EditorWindow::refreshPanelUi()
         QString newText = rc > 0 ? tr("Redo (%1)").arg(rc) : tr("Redo");
         if (text != newText) redoBtn_->setText(newText);
     }
+    if (canvas_->selectedIndex() < 0)
+        syncPanelDefaults();
+}
+
+void EditorWindow::syncPanelDefaults()
+{
+    updateColorWell(canvas_->color());
+    updateFillColorWell(canvas_->fillColor());
+    if (auto* preview = findChild<StrokePreview*>())
+        preview->showStroke(canvas_->color(), canvas_->strokeWidth());
+    if (auto* sg = findChild<QButtonGroup*>("strokeGroup")) {
+        for (auto* btn : sg->buttons())
+            btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
+    }
+    for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
+        auto key = btn->property("chipKey").toByteArray();
+        if (key == "Fill")
+            btn->setChecked(canvas_->filled());
+        else if (key == "Outline")
+            btn->setChecked(canvas_->textOutlineEnabled());
+    }
+    if (auto* rs = findChild<QSlider*>("radiusSlider")) {
+        int v = canvas_->cornerRadius();
+        rs->setValue(v);
+        if (auto* rv = findChild<QLabel*>("radiusVal"))
+            rv->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
+    }
+    if (auto* ag = findChild<QButtonGroup*>("arrowGroup")) {
+        if (auto* abtn = ag->button(static_cast<int>(canvas_->arrowStyle())))
+            abtn->setChecked(true);
+    }
+    canvas_->syncTextPropertiesUI();
 }
 
 void EditorWindow::onToolChanged(AnnotationTool tool)
@@ -595,6 +626,7 @@ void EditorWindow::createToolPanel()
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{tr("S"), 2}, {tr("M"), 4}, {tr("L"), 8}};
     auto* strokeGroup = new QButtonGroup(content);
+    strokeGroup->setObjectName("strokeGroup");
     strokeGroup->setExclusive(true);
     auto* widthRow = new QHBoxLayout();
     widthRow->setContentsMargins(0, 0, 0, 0);
@@ -711,6 +743,7 @@ void EditorWindow::createToolPanel()
                                   {QT_TRANSLATE_NOOP("EditorWindow", "Circle"), 1},
                                   {QT_TRANSLATE_NOOP("EditorWindow", "Square"), 2}};
     auto* arrowGroup = new QButtonGroup(content);
+    arrowGroup->setObjectName("arrowGroup");
     arrowGroup->setExclusive(true);
     for (const auto& ad : arrowDefs) {
         auto* btn = new QToolButton(content);
@@ -738,11 +771,13 @@ void EditorWindow::createToolPanel()
     radiusLbl->setFixedWidth(34);
     radiusLbl->setStyleSheet(sliderLabelStyle);
     auto* radiusSlider = new QSlider(Qt::Horizontal, content);
+    radiusSlider->setObjectName("radiusSlider");
     radiusSlider->setRange(0, 40);
     radiusSlider->setValue(0);
     radiusSlider->setFixedHeight(18);
     radiusSlider->setStyleSheet(sliderStyle);
     auto* radiusVal = new QLabel(tr("Off"), content);
+    radiusVal->setObjectName("radiusVal");
     radiusVal->setFixedWidth(30);
     radiusVal->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     radiusVal->setStyleSheet(sliderValStyle);
@@ -1189,21 +1224,7 @@ void EditorWindow::createToolPanel()
             radiusVal->setText(a.cornerRadius > 0 ? tr("%1px").arg(a.cornerRadius) : tr("Off"));
             canvas_->syncTextPropertiesUI();
         } else {
-            updateColorWell(canvas_->color());
-            updateFillColorWell(canvas_->fillColor());
-            preview->showStroke(canvas_->color(), canvas_->strokeWidth());
-            for (auto* btn : strokeGroup->buttons())
-                btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
-            for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
-                auto key = btn->property("chipKey").toByteArray();
-                if (key == "Fill")
-                    btn->setChecked(canvas_->filled());
-                else if (key == "Outline")
-                    btn->setChecked(canvas_->textOutlineEnabled());
-            }
-            radiusSlider->setValue(canvas_->cornerRadius());
-            radiusVal->setText(canvas_->cornerRadius() > 0 ? tr("%1px").arg(canvas_->cornerRadius()) : tr("Off"));
-            canvas_->syncTextPropertiesUI();
+            syncPanelDefaults();
         }
     });
 
