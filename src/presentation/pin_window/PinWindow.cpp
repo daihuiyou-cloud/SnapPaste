@@ -784,6 +784,7 @@ void PinWindow::wheelEvent(QWheelEvent* event)
         setOpacityValue(item_.state.opacity + (delta > 0 ? 0.05 : -0.05));
     } else {
         const auto oldScale = item_.state.transform.scale;
+        pushUndoState();
         item_.state.transform.scale *= delta > 0 ? 1.08 : 0.92;
         item_.state = normalizedState(item_.state);
         const auto newSize = item_.state.size * item_.state.transform.scale;
@@ -892,6 +893,7 @@ void PinWindow::setScale(double scale)
 
 void PinWindow::setOpacityValue(double opacity)
 {
+    pushUndoState();
     item_.state.opacity = opacity;
     item_.state = normalizedState(item_.state);
     setWindowOpacity(item_.state.opacity);

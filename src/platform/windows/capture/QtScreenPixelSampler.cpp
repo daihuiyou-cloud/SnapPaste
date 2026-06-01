@@ -121,8 +121,12 @@ QImage QtScreenPixelSampler::sampleRegion(const QPoint& center, int halfSize) co
     }
     const auto physicalCenter = physicalFromLogical(center);
     const auto local = physicalCenter - snapshotOrigin_;
-    const auto rect = QRect(local.x() - halfSize, local.y() - halfSize,
-                            2 * halfSize + 1, 2 * halfSize + 1);
+    auto rect = QRect(local.x() - halfSize, local.y() - halfSize,
+                      2 * halfSize + 1, 2 * halfSize + 1);
+    rect = rect.intersected(snapshot_.rect());
+    if (rect.width() < 1 || rect.height() < 1) {
+        return {};
+    }
     return snapshot_.copy(rect);
 }
 

@@ -206,7 +206,11 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
         } else if (action == copyAction) {
             if (paths.size() == 1) {
                 QImage img(paths.first());
-                if (!img.isNull()) QApplication::clipboard()->setImage(img);
+                if (img.isNull()) {
+                    QMessageBox::warning(this, tr("SnapPaste"), tr("Failed to load image."));
+                } else {
+                    QApplication::clipboard()->setImage(img);
+                }
             } else {
                 QStringList fileList;
                 for (const auto& p : paths) fileList << QDir::toNativeSeparators(p);

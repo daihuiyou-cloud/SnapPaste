@@ -88,6 +88,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
 
     pushUndo();
     redoStack_.clear();
+    cropUndoOffset_ = -physicalCrop.topLeft();
     image_ = image_.copy(physicalCrop);
     renderer_.invalidateCache();
     annotations_.clear();
@@ -272,6 +273,10 @@ void AnnotationCanvas::setFontSize(int size)
     size = qBound(8, size, 72);
     if (size != fontSize_) {
         fontSize_ = size;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].textFontSize = size;
+            updateTextBounds(editingTextIndex_);
+        }
         if (currentTool_ == AnnotationTool::Text || currentTool_ == AnnotationTool::Numbered) {
             markModified();
         }
@@ -444,6 +449,18 @@ void AnnotationCanvas::undo()
     resizing_ = false;
     redoStack_.push_back(annotations_);
     annotations_ = undoStack_.takeLast();
+    if (!cropUndoOffset_.isNull()) {
+        for (auto& a : annotations_) {
+            a.bounds.translate(cropUndoOffset_);
+            for (auto& pt : a.points) pt += cropUndoOffset_;
+        }
+        cropUndoOffset_ = {};
+    }
+    int maxNumber = 0;
+    for (const auto& a : annotations_) {
+        if (a.number > maxNumber) maxNumber = a.number;
+    }
+    nextNumber_ = maxNumber + 1;
     selectedIndex_ = -1;
     markModified();
 }
@@ -827,6 +844,9 @@ void AnnotationCanvas::handleMovePan(QMouseEvent* event)
 
 void AnnotationCanvas::handleMoveSelect(QMouseEvent* event)
 {
+    if (!resizing_ && !moving_) {
+        return;
+    }
     renderer_.invalidateCache();
     if (resizing_) {
         auto& a = annotations_[selectedIndex_];
@@ -1158,6 +1178,10 @@ void AnnotationCanvas::handleFontSizeChange(int delta)
     int newSize = fontSize_ + delta;
     if (newSize >= 8 && newSize <= 72) {
         fontSize_ = newSize;
+        if (editingTextIndex_ >= 0) {
+            annotations_[editingTextIndex_].textFontSize = fontSize_;
+            updateTextBounds(editingTextIndex_);
+        }
         markModified();
         update();
         if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);

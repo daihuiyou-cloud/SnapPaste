@@ -167,7 +167,7 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
     }
 
     auto result = captureRectWithGdi(physicalRegion);
-    if (result.isOk() && dpr > 1.0 && !mixedDpr) {
+    if (result.isOk() && dpr > 1.0) {
         auto image = result.value();
         image.setDevicePixelRatio(dpr);
         return Result<QImage>::success(std::move(image));

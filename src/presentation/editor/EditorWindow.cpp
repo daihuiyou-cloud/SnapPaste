@@ -186,6 +186,7 @@ void EditorWindow::closeEvent(QCloseEvent* event)
         if (ret == QMessageBox::Save) {
             emit imageEdited(canvas_->renderedImage());
             emit saveRequested();
+            canvas_->clearModified();
             event->accept();
         } else if (ret == QMessageBox::Discard) {
             event->accept();

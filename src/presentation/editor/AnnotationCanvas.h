@@ -169,6 +169,7 @@ private:
     QPoint panStart_;
     double zoomFactor_ = 1.0;
     bool modified_ = false;
+    QPoint cropUndoOffset_;
     int nextNumber_ = 1;
     int fontSize_ = 14;
     bool filled_ = false;

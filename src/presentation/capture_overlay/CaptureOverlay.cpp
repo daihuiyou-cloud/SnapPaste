@@ -249,6 +249,7 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Tab: {
         refreshSmartCandidates(selection_.center());
         if (!smartCandidates_.isEmpty()) {
+            selectionUndoStack_.append(selection_);
             int dir = event->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1;
             int best = -1;
             for (int i = 0; i < smartCandidates_.size(); ++i) {

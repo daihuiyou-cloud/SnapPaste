@@ -207,6 +207,20 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
         }
         break;
 
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+        for (int y = 0; y < height; ++y) {
+            const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x) {
+                int r = src[x * 4 + 0];
+                int g = src[x * 4 + 1];
+                int b = src[x * 4 + 2];
+                int a = src[x * 4 + 3];
+                pixels[x] = qRgba(r, g, b, a);
+            }
+        }
+        break;
+
     default:
         for (int y = 0; y < height; ++y) {
             const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
