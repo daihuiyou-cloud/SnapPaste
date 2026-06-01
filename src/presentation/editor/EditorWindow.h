@@ -60,6 +60,7 @@ private:
     QToolButton* undoBtn_ = nullptr;
     QToolButton* redoBtn_ = nullptr;
     QWidget* propsWidget_ = nullptr;
+    QWidget* preview_ = nullptr;
     QWidget* arrowWidget_ = nullptr;
     QWidget* radiusWidget_ = nullptr;
     QWidget* fontWidget_ = nullptr;

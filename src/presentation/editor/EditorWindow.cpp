@@ -232,8 +232,8 @@ void EditorWindow::syncPanelDefaults()
 {
     updateColorWell(canvas_->color());
     updateFillColorWell(canvas_->fillColor());
-    if (auto* preview = findChild<StrokePreview*>())
-        preview->showStroke(canvas_->color(), canvas_->strokeWidth());
+    if (preview_)
+        static_cast<StrokePreview*>(preview_)->showStroke(canvas_->color(), canvas_->strokeWidth());
     if (auto* sg = findChild<QButtonGroup*>("strokeGroup")) {
         for (auto* btn : sg->buttons())
             btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
@@ -622,7 +622,8 @@ void EditorWindow::createToolPanel()
 
     layout->addSpacing(4);
 
-    auto* preview = new StrokePreview(content);
+    preview_ = new StrokePreview(content);
+    auto* preview = static_cast<StrokePreview*>(preview_);
     auto refreshPreview = [this, preview]() {
         preview->showStroke(canvas_->color(), canvas_->strokeWidth());
     };
