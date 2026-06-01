@@ -958,8 +958,11 @@ void EditorWindow::createToolPanel()
         updateFontSizeUI(newSize);
     });
     connect(fontSizeSlider, &QSlider::valueChanged, this, [this, updateFontSizeUI](int size) {
-        canvas_->setFontSize(size);
+        canvas_->setFontSize(size, false);
         updateFontSizeUI(size);
+    });
+    connect(fontSizeSlider, &QSlider::sliderReleased, this, [this] {
+        QSettings().setValue("editor/fontSize", canvas_->fontSize());
     });
     canvas_->setOnFontSizeChanged([updateFontSizeUI](int size) {
         updateFontSizeUI(size);

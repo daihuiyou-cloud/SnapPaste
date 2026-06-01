@@ -59,6 +59,7 @@ QPoint AnnotationCanvas::toImage(QPoint widgetPt) const
 void AnnotationCanvas::setImage(QImage image)
 {
     zoomFactor_ = 1.0;
+    image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     baseImage_ = image;
     brightness_ = 0;
     contrast_ = 0;
@@ -72,6 +73,7 @@ void AnnotationCanvas::setImage(QImage image)
     editingTextIndex_ = -1;
     preeditString_.clear();
     preCropImage_ = {};
+    preAdjustImage_ = {};
     cropUndoOffset_ = {};
     auto dpr = image_.devicePixelRatio();
     QSize logicalSize(image_.size() / dpr);
@@ -89,6 +91,7 @@ void AnnotationCanvas::adjustImage(int brightness, int contrast)
     if (brightness == brightness_ && contrast == contrast_) return;
     pushUndo();
     redoStack_.clear();
+    preAdjustImage_ = image_;
     brightness_ = brightness;
     contrast_ = contrast;
     double contrastFactor = (contrast + 100.0) / 100.0;
@@ -119,6 +122,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
     preCropImage_ = image_.copy();
+    preAdjustImage_ = {};
     pushUndo();
     redoStack_.clear();
     cropUndoOffset_ = -physicalCrop.topLeft();
@@ -140,6 +144,9 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
         zoomFactor_ = fit;
     }
 
+    baseImage_ = image_;
+    brightness_ = 0;
+    contrast_ = 0;
     auto logicalSize = image_.size() / image_.devicePixelRatio();
     setMinimumSize(logicalSize);
     resize(logicalSize);
@@ -392,7 +399,7 @@ void AnnotationCanvas::updateTextBounds(int index)
 }
 
 int AnnotationCanvas::fontSize() const { return fontSize_; }
-void AnnotationCanvas::setFontSize(int size)
+void AnnotationCanvas::setFontSize(int size, bool persist)
 {
     size = qBound(8, size, 72);
     if (size != fontSize_) {
@@ -412,7 +419,8 @@ void AnnotationCanvas::setFontSize(int size)
         }
         update();
         if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
-        QSettings().setValue("editor/fontSize", fontSize_);
+        if (persist)
+            QSettings().setValue("editor/fontSize", fontSize_);
     }
 }
 void AnnotationCanvas::setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
@@ -623,6 +631,14 @@ void AnnotationCanvas::undo()
         image_ = preCropImage_;
         preCropImage_ = {};
         cropUndoOffset_ = {};
+        renderer_.invalidateCache();
+        auto logicalSize = image_.size() / image_.devicePixelRatio();
+        setMinimumSize(logicalSize);
+        resize(logicalSize);
+        updateWindowTitle();
+    } else if (!preAdjustImage_.isNull()) {
+        image_ = preAdjustImage_;
+        preAdjustImage_ = {};
         renderer_.invalidateCache();
         auto logicalSize = image_.size() / image_.devicePixelRatio();
         setMinimumSize(logicalSize);
@@ -1807,24 +1823,28 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
                 .arg(static_cast<int>(mouseImagePos_.x()))
                 .arg(static_cast<int>(mouseImagePos_.y()))
                 .arg(mousePixelColor_.name(QColor::HexRgb).toUpper());
-            QFont infoFont;
-            infoFont.setPixelSize(11);
+            static QFont infoFont = []{ QFont f; f.setPixelSize(11); return f; }();
             painter.setFont(infoFont);
             auto textRect = painter.fontMetrics().boundingRect(info);
             int ox = static_cast<int>(mouseImagePos_.x() * zoomFactor_) + 14;
             int oy = static_cast<int>(mouseImagePos_.y() * zoomFactor_) - textRect.height() - 6;
-            if (ox + textRect.width() + 8 > width()) ox = width() - textRect.width() - 10;
+            int overlayW = textRect.width() + 8;
+            int overlayH = textRect.height() + 4;
+            if (ox + overlayW > width()) ox = width() - overlayW - 10;
             if (oy < 2) oy = static_cast<int>(mouseImagePos_.y() * zoomFactor_) + 14;
-            QRect bgRect(ox - 4, oy - 2, textRect.width() + 8, textRect.height() + 4);
+            if (oy + overlayH > height()) oy = static_cast<int>(mouseImagePos_.y() * zoomFactor_) - overlayH - 6;
+            QRect bgRect(ox, oy, overlayW, overlayH);
             painter.setPen(Qt::NoPen);
             painter.setBrush(QColor(0, 0, 0, 180));
             painter.drawRoundedRect(bgRect, 3, 3);
-            painter.setPen(mousePixelColor_.lightness() > 128 ? Qt::black : Qt::white);
+            painter.setPen(Qt::white);
             painter.setBrush(Qt::NoBrush);
             painter.drawText(bgRect, Qt::AlignCenter, info);
             // Color swatch
             int swatchSize = 10;
-            QRect swatchRect(bgRect.right() + 4, bgRect.center().y() - swatchSize / 2, swatchSize, swatchSize);
+            bool swatchRight = bgRect.right() + 4 + swatchSize <= width();
+            QRect swatchRect(swatchRight ? bgRect.right() + 4 : bgRect.left() - swatchSize - 4,
+                             bgRect.center().y() - swatchSize / 2, swatchSize, swatchSize);
             painter.setPen(Qt::NoPen);
             painter.setBrush(mousePixelColor_);
             painter.drawRoundedRect(swatchRect, 2, 2);

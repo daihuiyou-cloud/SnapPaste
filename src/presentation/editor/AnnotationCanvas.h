@@ -52,7 +52,7 @@ public:
     QColor textBackgroundColor() const;
     void updateTextBounds(int index);
     int fontSize() const;
-    void setFontSize(int size);
+    void setFontSize(int size, bool persist = true);
     void setOnFontSizeChanged(std::function<void(int)> cb);
     int selectedIndex() const { return (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) ? selectedIndex_ : -1; }
     const Annotation& annotationAt(int index) const { return annotations_.at(index); }
@@ -192,6 +192,7 @@ private:
     bool modified_ = false;
     QPoint cropUndoOffset_;
     QImage preCropImage_;
+    QImage preAdjustImage_;
     int nextNumber_ = 1;
     int fontSize_ = 14;
     bool filled_ = false;
