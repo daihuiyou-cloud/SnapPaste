@@ -38,6 +38,10 @@ AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     QSettings settings;
     fontSize_ = settings.value("editor/fontSize", 14).toInt();
     currentFontFamily_ = settings.value("editor/fontFamily", QStringLiteral("Microsoft YaHei UI")).toString();
+    bold_ = settings.value("editor/bold", false).toBool();
+    italic_ = settings.value("editor/italic", false).toBool();
+    underline_ = settings.value("editor/underline", false).toBool();
+    textAlignment_ = settings.value("editor/textAlignment", -1).toInt();
     const auto saved = settings.value("editor/recentColors").toList();
     for (const auto& v : saved) {
         QColor c(v.toString());
@@ -303,6 +307,7 @@ void AnnotationCanvas::setBold(bool b)
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        QSettings().setValue("editor/bold", b);
     }
 }
 bool AnnotationCanvas::italic() const { return italic_; }
@@ -316,6 +321,7 @@ void AnnotationCanvas::setItalic(bool i)
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        QSettings().setValue("editor/italic", i);
     }
 }
 bool AnnotationCanvas::underline() const { return underline_; }
@@ -329,6 +335,7 @@ void AnnotationCanvas::setUnderline(bool u)
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        QSettings().setValue("editor/underline", u);
     }
 }
 int AnnotationCanvas::textAlignment() const { return textAlignment_; }
@@ -342,6 +349,7 @@ void AnnotationCanvas::setTextAlignment(int align)
         }
         update();
         if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        QSettings().setValue("editor/textAlignment", align);
     }
 }
 void AnnotationCanvas::setOnTextPropertiesChanged(std::function<void()> cb) { onTextPropertiesChanged_ = std::move(cb); }

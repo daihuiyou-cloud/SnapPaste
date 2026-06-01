@@ -55,8 +55,6 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/capture_actions/CaptureActionBar.cpp
     src/presentation/capture_overlay/CaptureOverlay.cpp
     src/presentation/capture_overlay/CaptureOverlayGeometry.cpp
-    src/presentation/capture_overlay/OverlayStateMachine.h
-    src/presentation/capture_overlay/OverlayStateMachine.cpp
     src/presentation/editor/AnnotationCanvas.cpp
     src/presentation/editor/AnnotationRenderer.h
     src/presentation/editor/AnnotationRenderer.cpp

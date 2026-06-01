@@ -1,6 +1,5 @@
 #pragma once
 
-#include "presentation/capture_overlay/OverlayStateMachine.h"
 #include "presentation/icons/IIconProvider.h"
 
 #include <QColor>
@@ -53,8 +52,24 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    using State = OverlayStateMachine::State;
-    using Handle = OverlayStateMachine::Handle;
+    enum class State {
+        Idle,
+        CandidatePressed,
+        Selecting,
+        Moving,
+        Resizing,
+        Ready,
+        ActionPending,
+        Cancelled
+    };
+
+    enum class Handle {
+        None,
+        Inside,
+        TopLeft, Top, TopRight,
+        Right, BottomRight, Bottom,
+        BottomLeft, Left
+    };
 
     QRect selectedRegion() const noexcept;
     QRect localSelectedRegion() const;
@@ -109,7 +124,6 @@ private:
     static constexpr int kMaxSelectionUndo = 20;
     State state_ = State::Idle;
     Handle activeHandle_ = Handle::None;
-    OverlayStateMachine stateMachine_;
     QPoint lastMouseGlobal_;
     std::optional<QColor> sampledColor_;
     bool spaceRepositioning_ = false;

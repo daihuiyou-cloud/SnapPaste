@@ -267,9 +267,6 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
     if (cropWidget_) {
         bool show = tool == AnnotationTool::Crop;
         cropWidget_->setVisible(show);
-        if (show) {
-            canvas_->setTool(AnnotationTool::Crop);
-        }
     }
     refreshPanelUi();
 }
@@ -732,9 +729,9 @@ void EditorWindow::createToolPanel()
         return btn;
     };
 
-    auto* alignLeft = makeAlignToggle(QStringLiteral("\u2261"), tr("Align left"));
-    auto* alignCenter = makeAlignToggle(QStringLiteral("\u2261"), tr("Align center"));
-    auto* alignRight = makeAlignToggle(QStringLiteral("\u2261"), tr("Align right"));
+    auto* alignLeft = makeAlignToggle(QStringLiteral("\u251C"), tr("Align left"));
+    auto* alignCenter = makeAlignToggle(QStringLiteral("\u253C"), tr("Align center"));
+    auto* alignRight = makeAlignToggle(QStringLiteral("\u2524"), tr("Align right"));
     auto* alignGroup = new QButtonGroup(content);
     alignGroup->setExclusive(true);
     alignGroup->addButton(alignLeft, 0);
@@ -742,7 +739,7 @@ void EditorWindow::createToolPanel()
     alignGroup->addButton(alignRight, 2);
     int curAlign = canvas_->textAlignment();
     if (curAlign < 0) curAlign = 0;
-    if (curAlign == Qt::AlignCenter) curAlign = 1;
+    if (curAlign == (Qt::AlignHCenter | Qt::AlignTop)) curAlign = 1;
     else if (curAlign == (Qt::AlignRight | Qt::AlignTop)) curAlign = 2;
     else curAlign = 0;
     alignGroup->button(curAlign)->setChecked(true);
