@@ -1245,11 +1245,11 @@ void EditorWindow::createToolPanel()
     transformRow->setContentsMargins(0, 0, 0, 0);
     transformRow->setSpacing(4);
 
-    auto* rotCw = addTransformBtn(QStringLiteral("\u21BB"), tr("Rotate 90\u00B0 CW"));
-    auto* rotCcw = addTransformBtn(QStringLiteral("\u21BA"), tr("Rotate 90\u00B0 CCW"));
-    auto* rot180 = addTransformBtn(QStringLiteral("\u21D4"), tr("Rotate 180\u00B0"));
-    auto* flipH = addTransformBtn(QStringLiteral("\u2194"), tr("Flip horizontal"));
-    auto* flipV = addTransformBtn(QStringLiteral("\u2195"), tr("Flip vertical"));
+    auto* rotCw = addTransformBtn(tr("CW"), tr("Rotate 90 degrees clockwise"));
+    auto* rotCcw = addTransformBtn(tr("CCW"), tr("Rotate 90 degrees counter-clockwise"));
+    auto* rot180 = addTransformBtn(tr("180"), tr("Rotate 180 degrees"));
+    auto* flipH = addTransformBtn(tr("H"), tr("Flip horizontal"));
+    auto* flipV = addTransformBtn(tr("V"), tr("Flip vertical"));
 
     connect(rotCw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(90); });
     connect(rotCcw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(270); });
