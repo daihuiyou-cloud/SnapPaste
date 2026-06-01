@@ -26,16 +26,19 @@ public:
 
     QPoint toImage(QPoint widgetPt) const;
     void setImage(QImage image);
+    void adjustImage(int brightness, int contrast);
     void applyCrop(QRect cropRect);
     void clearModified();
     bool isModified() const;
     void markModified();
     void zoomAt(double factor, QPoint center);
+    void zoomFit();
     void updateWindowTitle();
     QImage renderedImage() const;
     void setTool(AnnotationTool tool);
     void setColor(const QColor& color);
     void setStrokeWidth(int width);
+    void updateBrushCursor();
     void setPickingColor(bool picking);
     void setOnPickingColorChanged(std::function<void(bool)> cb);
     void setMosaicBlurred(bool blurred);
@@ -157,6 +160,9 @@ private:
 
     AnnotationRenderer renderer_;
     QImage image_;
+    QImage baseImage_;
+    int brightness_ = 0;
+    int contrast_ = 0;
     QVector<Annotation> annotations_;
     QVector<QVector<Annotation>> undoStack_;
     QVector<QVector<Annotation>> redoStack_;

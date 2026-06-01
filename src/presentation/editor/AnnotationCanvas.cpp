@@ -59,6 +59,9 @@ QPoint AnnotationCanvas::toImage(QPoint widgetPt) const
 void AnnotationCanvas::setImage(QImage image)
 {
     zoomFactor_ = 1.0;
+    baseImage_ = image;
+    brightness_ = 0;
+    contrast_ = 0;
     image_ = std::move(image);
     annotations_.clear();
     undoStack_.clear();
@@ -75,6 +78,33 @@ void AnnotationCanvas::setImage(QImage image)
     setMinimumSize(logicalSize);
     resize(logicalSize);
     updateWindowTitle();
+    update();
+}
+
+void AnnotationCanvas::adjustImage(int brightness, int contrast)
+{
+    if (baseImage_.isNull()) return;
+    brightness = qBound(-100, brightness, 100);
+    contrast = qBound(-100, contrast, 100);
+    if (brightness == brightness_ && contrast == contrast_) return;
+    pushUndo();
+    redoStack_.clear();
+    brightness_ = brightness;
+    contrast_ = contrast;
+    double contrastFactor = (contrast + 100.0) / 100.0;
+    image_ = baseImage_.copy();
+    int w = image_.width(), h = image_.height();
+    for (int y = 0; y < h; ++y) {
+        auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
+        for (int x = 0; x < w; ++x) {
+            int r = qBound(0, static_cast<int>((qRed(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
+            int g = qBound(0, static_cast<int>((qGreen(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
+            int b = qBound(0, static_cast<int>((qBlue(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
+            line[x] = qRgba(r, g, b, qAlpha(line[x]));
+        }
+    }
+    renderer_.invalidateCache();
+    markModified();
     update();
 }
 
@@ -183,6 +213,35 @@ QImage AnnotationCanvas::renderedImage() const
     return renderer_.renderToImage(image_, annotations_, fontSize_);
 }
 
+void AnnotationCanvas::updateBrushCursor()
+{
+    int diameter;
+    switch (currentTool_) {
+    case AnnotationTool::Pen:     diameter = currentStrokeWidth_; break;
+    case AnnotationTool::Mosaic:  diameter = currentStrokeWidth_ * 4; break;
+    case AnnotationTool::Eraser:  diameter = currentStrokeWidth_ * 2; break;
+    default: setCursor(Qt::CrossCursor); return;
+    }
+    int margin = 4;
+    int size = qMax(diameter + margin * 2, 24);
+    QPixmap pm(size, size);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(QColor(255, 255, 255, 160), 1));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(QPointF(size / 2.0, size / 2.0), diameter / 2.0, diameter / 2.0);
+    p.setPen(QPen(QColor(0, 0, 0, 80), 1));
+    p.drawEllipse(QPointF(size / 2.0, size / 2.0), diameter / 2.0 + 1, diameter / 2.0 + 1);
+    if (currentTool_ == AnnotationTool::Pen || currentTool_ == AnnotationTool::Mosaic) {
+        p.setPen(QPen(QColor(255, 255, 255, 120), 1));
+        p.drawLine(QPointF(size / 2.0 - 6, size / 2.0), QPointF(size / 2.0 + 6, size / 2.0));
+        p.drawLine(QPointF(size / 2.0, size / 2.0 - 6), QPointF(size / 2.0, size / 2.0 + 6));
+    }
+    p.end();
+    setCursor(QCursor(pm, size / 2, size / 2));
+}
+
 void AnnotationCanvas::setTool(AnnotationTool tool)
 {
     if (pickingColor_) {
@@ -190,13 +249,13 @@ void AnnotationCanvas::setTool(AnnotationTool tool)
     }
     if (currentTool_ == tool) return;
     currentTool_ = tool;
-    switch (tool) {
-    case AnnotationTool::Pen: setCursor(Qt::CrossCursor); break;
-    case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
-    case AnnotationTool::Eraser:
-    case AnnotationTool::Mosaic: setCursor(Qt::PointingHandCursor); break;
-    case AnnotationTool::Crop: setCursor(Qt::CrossCursor); break;
-    default: setCursor(Qt::CrossCursor); break;
+    if (tool == AnnotationTool::Pen || tool == AnnotationTool::Eraser || tool == AnnotationTool::Mosaic) {
+        updateBrushCursor();
+    } else {
+        switch (tool) {
+        case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
+        default: setCursor(Qt::CrossCursor); break;
+        }
     }
     recentTools_.removeAll(tool);
     recentTools_.prepend(tool);
@@ -220,6 +279,9 @@ void AnnotationCanvas::setStrokeWidth(int width)
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         annotations_[selectedIndex_].strokeWidth = currentStrokeWidth_;
         markModified();
+    }
+    if (currentTool_ == AnnotationTool::Pen || currentTool_ == AnnotationTool::Eraser || currentTool_ == AnnotationTool::Mosaic) {
+        updateBrushCursor();
     }
 }
 
@@ -1179,12 +1241,13 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
 {
     if (panning_) {
         panning_ = false;
-        switch (currentTool_) {
-        case AnnotationTool::Pen: setCursor(Qt::CrossCursor); break;
-        case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
-        case AnnotationTool::Eraser:
-        case AnnotationTool::Mosaic: setCursor(Qt::PointingHandCursor); break;
-        default: setCursor(Qt::CrossCursor); break;
+        if (currentTool_ == AnnotationTool::Pen || currentTool_ == AnnotationTool::Eraser || currentTool_ == AnnotationTool::Mosaic) {
+            updateBrushCursor();
+        } else {
+            switch (currentTool_) {
+            case AnnotationTool::Text: setCursor(Qt::IBeamCursor); break;
+            default: setCursor(Qt::CrossCursor); break;
+            }
         }
         event->accept();
         return;
@@ -1349,6 +1412,11 @@ bool AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
     }
 
     return false;
+}
+
+void AnnotationCanvas::zoomFit()
+{
+    handleZoomFit();
 }
 
 void AnnotationCanvas::handleZoomFit()
@@ -1727,6 +1795,40 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         }
         renderer_.drawTextEditCursor(painter, annotations_, editingTextIndex_,
             cursorPos_, preeditString_, fontSize_, zoomFactor_);
+    }
+    // Pixel info overlay near cursor
+    if (!image_.isNull() && mousePixelColor_.isValid()) {
+        auto dpr = image_.devicePixelRatio();
+        QPoint px(static_cast<int>(mouseImagePos_.x() * dpr),
+                  static_cast<int>(mouseImagePos_.y() * dpr));
+        QRect imgRect(QPoint(0, 0), image_.size());
+        if (imgRect.contains(px)) {
+            QString info = tr("(%1, %2) %3")
+                .arg(static_cast<int>(mouseImagePos_.x()))
+                .arg(static_cast<int>(mouseImagePos_.y()))
+                .arg(mousePixelColor_.name(QColor::HexRgb).toUpper());
+            QFont infoFont;
+            infoFont.setPixelSize(11);
+            painter.setFont(infoFont);
+            auto textRect = painter.fontMetrics().boundingRect(info);
+            int ox = static_cast<int>(mouseImagePos_.x() * zoomFactor_) + 14;
+            int oy = static_cast<int>(mouseImagePos_.y() * zoomFactor_) - textRect.height() - 6;
+            if (ox + textRect.width() + 8 > width()) ox = width() - textRect.width() - 10;
+            if (oy < 2) oy = static_cast<int>(mouseImagePos_.y() * zoomFactor_) + 14;
+            QRect bgRect(ox - 4, oy - 2, textRect.width() + 8, textRect.height() + 4);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(0, 0, 0, 180));
+            painter.drawRoundedRect(bgRect, 3, 3);
+            painter.setPen(mousePixelColor_.lightness() > 128 ? Qt::black : Qt::white);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawText(bgRect, Qt::AlignCenter, info);
+            // Color swatch
+            int swatchSize = 10;
+            QRect swatchRect(bgRect.right() + 4, bgRect.center().y() - swatchSize / 2, swatchSize, swatchSize);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(mousePixelColor_);
+            painter.drawRoundedRect(swatchRect, 2, 2);
+        }
     }
     renderer_.drawDraftSizeLabel(painter, current_, draft_, drawing_, zoomFactor_);
 }
