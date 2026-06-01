@@ -764,6 +764,16 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
             && annotations_[editingTextIndex_].tool == AnnotationTool::Text
             && renderer_.hitTestAnnotation(annotations_[editingTextIndex_], pos));
         if (!clickedSelf) {
+            if (editingTextIndex_ < annotations_.size()
+                && annotations_[editingTextIndex_].tool == AnnotationTool::Text
+                && annotations_[editingTextIndex_].text.isEmpty()
+                && annotations_[editingTextIndex_].points.isEmpty()) {
+                pushUndo();
+                redoStack_.clear();
+                annotations_.removeAt(editingTextIndex_);
+                if (selectedIndex_ >= editingTextIndex_) selectedIndex_--;
+                markModified();
+            }
             editingTextIndex_ = -1;
             preeditString_.clear();
             update();

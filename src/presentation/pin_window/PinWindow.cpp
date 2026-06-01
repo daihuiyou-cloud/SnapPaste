@@ -251,8 +251,8 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
     } else if (action == saveAsAction) {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
             tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
-        if (!path.isEmpty()) {
-            renderedImage().save(path);
+        if (!path.isEmpty() && !renderedImage().save(path)) {
+            QMessageBox::warning(this, tr("Save Error"), tr("Failed to save image."));
         }
     } else if (action == copyColorAction) {
         auto img = renderedImage();
@@ -358,8 +358,8 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
             if (event->modifiers().testFlag(Qt::ShiftModifier)) {
                 auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
                     tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
-                if (!path.isEmpty()) {
-                    renderedImage().save(path);
+                if (!path.isEmpty() && !renderedImage().save(path)) {
+                    QMessageBox::warning(this, tr("Save Error"), tr("Failed to save image."));
                 }
             } else {
                 emit saveRequested(renderedImage());

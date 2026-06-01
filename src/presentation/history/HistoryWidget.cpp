@@ -66,7 +66,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     auto* pinButton = new QPushButton(tr("Pin"), this);
     auto* copyButton = new QPushButton(tr("Copy"), this);
     auto* openButton = new QPushButton(tr("Open"), this);
-    auto* showInExplorerButton = new QPushButton(tr("Explore"), this);
+    auto* showInExplorerButton = new QPushButton(tr("Show in Explorer"), this);
     auto* deleteButton = new QPushButton(tr("Delete"), this);
 
     proxyModel_->setSourceModel(viewModel_.model());

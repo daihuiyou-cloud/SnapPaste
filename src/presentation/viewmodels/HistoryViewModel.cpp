@@ -1,6 +1,7 @@
 #include "presentation/viewmodels/HistoryViewModel.h"
 
 #include <QCoreApplication>
+#include <QFile>
 #include <QFileInfo>
 #include <QPixmap>
 #include <QStandardItem>
@@ -64,10 +65,16 @@ void HistoryViewModel::deleteByRow(int row)
         return;
     }
 
-    const auto result = deleteCapture(records_.at(row).id);
+    const auto& record = records_.at(row);
+    const auto result = deleteCapture(record.id);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
+    }
+
+    QFile::remove(record.filePath);
+    if (!record.thumbnailPath.isEmpty()) {
+        QFile::remove(record.thumbnailPath);
     }
 
     refresh();

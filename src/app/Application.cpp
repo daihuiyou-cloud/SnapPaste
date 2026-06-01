@@ -110,7 +110,8 @@ void Application::connectCoreSignals()
         showStatus(message);
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::copied, this, [this] {
-        showStatus(tr("Screenshot copied. Press F3 to pin."), [this] {
+        showStatus(tr("Screenshot copied. Press %1 to pin.")
+            .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->pasteHotkey, "F3") : QStringLiteral("F3")), [this] {
             showMainWindow();
         });
     });
@@ -126,7 +127,8 @@ void Application::connectCoreSignals()
             preferLastPinnableImage_ = true;
         }
         openPinWindow(item);
-        showStatus(tr("Pinned image created. Press F3 to repeat."));
+        showStatus(tr("Pinned image created. Press %1 to repeat.")
+            .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->repeatCaptureHotkey, "F4") : QStringLiteral("F4")));
     });
     connect(&context_.pinViewModel(), &PinViewModel::pinRestored, this, [this](const PinnedItem& item) {
         openPinWindow(item);
@@ -361,6 +363,14 @@ void Application::captureAfterOverlayHidden(const QRect& region, std::function<v
     });
 }
 
+QString Application::hotkeyDisplayString(const Hotkey& hk, const char* fallback) const
+{
+    if (hk.key > 0) {
+        return hk.toDisplayString();
+    }
+    return QString::fromLatin1(fallback);
+}
+
 void Application::ensureSettingsCached()
 {
     if (cachedSettings_.has_value()) {
@@ -464,7 +474,8 @@ void Application::openPinWindow(PinnedItem item)
         preferLastPinnableImage_ = true;
         const QSignalBlocker blocker(QApplication::clipboard());
         QApplication::clipboard()->setImage(image);
-        showStatus(tr("Pinned image copied. Press F3 to repeat."));
+        showStatus(tr("Pinned image copied. Press %1 to repeat.")
+            .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->repeatCaptureHotkey, "F4") : QStringLiteral("F4")));
     });
     connect(window, &PinWindow::saveRequested, this, [this](const QImage& image) {
         context_.captureViewModel().saveImage(image, "pin");

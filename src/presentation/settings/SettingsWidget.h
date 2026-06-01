@@ -22,6 +22,7 @@ private:
     int themeIndex(ThemeMode mode) const;
 
     SettingsViewModel& viewModel_;
+    QString savedLanguage_;
     QLineEdit* saveDirectoryEdit_ = nullptr;
     QComboBox* imageFormatCombo_ = nullptr;
     QComboBox* themeCombo_ = nullptr;

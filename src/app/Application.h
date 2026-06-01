@@ -51,6 +51,7 @@ private:
     void ensureSettingsCached();
     void invalidateSettingsCache();
     void registerHotkey();
+    QString hotkeyDisplayString(const Hotkey& hk, const char* fallback) const;
     void applyCurrentTheme();
     void openPinWindow(PinnedItem item);
     QPoint cascadedPinPosition(const QPoint& basePosition);

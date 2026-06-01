@@ -252,8 +252,25 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
             }
         }
 
+        const auto dir = saveDirectoryEdit_->text().trimmed();
+        QDir testDir(dir);
+        if (!testDir.exists() && !testDir.mkpath(QStringLiteral("."))) {
+            QMessageBox::warning(this, tr("Validation"),
+                tr("Save directory does not exist and could not be created."));
+            saveDirectoryEdit_->setFocus();
+            return;
+        }
+        QFile testFile(testDir.filePath(QStringLiteral(".writetest")));
+        if (!testFile.open(QIODevice::WriteOnly)) {
+            QMessageBox::warning(this, tr("Validation"),
+                tr("Save directory is not writable."));
+            saveDirectoryEdit_->setFocus();
+            return;
+        }
+        testFile.remove();
+
         AppSettings settings;
-        settings.saveDirectory = saveDirectoryEdit_->text().trimmed();
+        settings.saveDirectory = dir;
         settings.imageFormat = imageFormatCombo_->currentText();
         settings.themeMode = SettingsViewModel::themeFromIndex(themeCombo_->currentIndex());
         settings.captureHotkey = hotkeys[0];
@@ -264,6 +281,11 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
         settings.autoSaveOnCapture = autoSaveCheckbox_->isChecked();
         settings.repeatCaptureHotkey = hotkeys[3];
         viewModel_.save(settings);
+
+        if (uiLanguageCombo_->currentData().toString() != savedLanguage_) {
+            QMessageBox::information(this, tr("Language Changed"),
+                tr("The language change will take effect after you restart the application."));
+        }
     });
     connect(restoreButton, &QPushButton::clicked, this, [this] {
         auto ret = QMessageBox::question(this, tr("Restore Defaults"),
@@ -282,6 +304,7 @@ SettingsWidget::SettingsWidget(SettingsViewModel& viewModel, QWidget* parent)
                 if (langIdx >= 0) ocrLanguageCombo_->setCurrentIndex(langIdx);
                 int uiLangIdx = uiLanguageCombo_->findData(settings.language);
                 if (uiLangIdx >= 0) uiLanguageCombo_->setCurrentIndex(uiLangIdx);
+                savedLanguage_ = settings.language;
                 autoSaveCheckbox_->setChecked(settings.autoSaveOnCapture);
                 captureHotkeyInput_->setHotkey(settings.captureHotkey);
                 pasteHotkeyInput_->setHotkey(settings.pasteHotkey);
