@@ -41,8 +41,15 @@ static void installTranslators()
 {
     const auto langTag = readSavedLanguage();
 
-    auto* translator = new QTranslator(QCoreApplication::instance());
     QLocale locale = langTag.isEmpty() ? QLocale() : QLocale(langTag);
+
+    auto* qtTr = new QTranslator(QCoreApplication::instance());
+    if (qtTr->load(locale, QLatin1String("qt"), QLatin1String("_"),
+                   QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+        QCoreApplication::installTranslator(qtTr);
+    }
+
+    auto* translator = new QTranslator(QCoreApplication::instance());
     if (translator->load(locale, QLatin1String("snappaste"), QLatin1String("_"),
                          QLatin1String(":/translations"))) {
         QCoreApplication::installTranslator(translator);
