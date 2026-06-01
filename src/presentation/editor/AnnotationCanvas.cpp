@@ -59,7 +59,8 @@ QPoint AnnotationCanvas::toImage(QPoint widgetPt) const
 void AnnotationCanvas::setImage(QImage image)
 {
     zoomFactor_ = 1.0;
-    image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    if (image.format() != QImage::Format_ARGB32_Premultiplied)
+        image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     baseImage_ = image;
     brightness_ = 0;
     contrast_ = 0;
@@ -639,6 +640,8 @@ void AnnotationCanvas::undo()
     } else if (!preAdjustImage_.isNull()) {
         image_ = preAdjustImage_;
         preAdjustImage_ = {};
+        brightness_ = 0;
+        contrast_ = 0;
         renderer_.invalidateCache();
         auto logicalSize = image_.size() / image_.devicePixelRatio();
         setMinimumSize(logicalSize);
