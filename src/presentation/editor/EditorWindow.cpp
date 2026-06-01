@@ -368,7 +368,7 @@ void EditorWindow::buildToolSection(QVBoxLayout* layout, QWidget* content, const
     auto* toolGrid = new QGridLayout();
     toolGrid->setSpacing(2);
     toolGrid->setContentsMargins(0, 0, 0, 0);
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < std::size(allTools); ++i) {
         auto* btn = makeToolBtn(allTools[i]);
         toolGrid->addWidget(btn, i / 2, i % 2);
         toolButtons.push_back(btn);
@@ -440,7 +440,8 @@ void EditorWindow::createToolPanel()
     // -- Styles --
 
     const QString toolStyle =
-        "QToolButton { font: 9px 'Microsoft YaHei UI','Segoe UI',sans-serif;"
+        "QToolButton { font: 9px;"
+        "  font-family: 'Microsoft YaHei UI','Segoe UI',sans-serif;"
         "  padding: 4px 6px; text-align: left; border: none; border-radius: 4px; }"
         "QToolButton:hover { background: rgba(255,255,255,0.06); }"
         "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";

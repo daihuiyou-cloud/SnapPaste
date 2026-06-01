@@ -174,7 +174,7 @@ private:
     int fontSize_ = 14;
     bool filled_ = false;
     bool textOutlineEnabled_ = true;
-    QString currentFontFamily_ = QStringLiteral("Microsoft YaHei UI");
+    QString currentFontFamily_;
     bool bold_ = false;
     bool italic_ = false;
     bool underline_ = false;

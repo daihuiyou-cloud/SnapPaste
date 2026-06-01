@@ -45,7 +45,7 @@ struct Annotation final {
     bool textOutline = false;
     ArrowStyle arrowStyle = ArrowStyle::DefaultArrow;
     int cornerRadius = 0; // 0=sharp, >0 for rounded rect corners
-    QString fontFamily = QStringLiteral("Microsoft YaHei UI");
+    QString fontFamily;
     bool bold = false;
     bool italic = false;
     bool underline = false;

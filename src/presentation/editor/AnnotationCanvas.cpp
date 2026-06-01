@@ -37,7 +37,7 @@ AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     setMinimumSize(640, 360);
     QSettings settings;
     fontSize_ = settings.value("editor/fontSize", 14).toInt();
-    currentFontFamily_ = settings.value("editor/fontFamily", QStringLiteral("Microsoft YaHei UI")).toString();
+    currentFontFamily_ = settings.value("editor/fontFamily", QApplication::font().family()).toString();
     bold_ = settings.value("editor/bold", false).toBool();
     italic_ = settings.value("editor/italic", false).toBool();
     underline_ = settings.value("editor/underline", false).toBool();
@@ -245,7 +245,7 @@ void AnnotationCanvas::updateTextBounds(int index)
     if (index < 0 || index >= annotations_.size()) return;
     auto& a = annotations_[index];
     if (a.tool != AnnotationTool::Text) return;
-    QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
                a.textFontSize > 0 ? a.textFontSize : fontSize_);
     font.setBold(a.bold);
     font.setItalic(a.italic);
@@ -673,7 +673,7 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
             return true;
         }
     }
-    QFont font(currentFontFamily_.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : currentFontFamily_, fontSize_);
+    QFont font(currentFontFamily_.isEmpty() ? QApplication::font().family() : currentFontFamily_, fontSize_);
     font.setBold(bold_);
     font.setItalic(italic_);
     font.setUnderline(underline_);
@@ -1513,7 +1513,7 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         const auto& img = image_;
         switch (query) {
         case Qt::ImCursorRectangle: {
-            QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
                        a.textFontSize > 0 ? a.textFontSize : fontSize_);
             font.setBold(a.bold);
             font.setItalic(a.italic);
@@ -1528,7 +1528,7 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         case Qt::ImEnabled:
             return true;
         case Qt::ImFont: {
-            QFont f(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+            QFont f(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
                     a.textFontSize > 0 ? a.textFontSize : fontSize_);
             f.setBold(a.bold);
             f.setItalic(a.italic);

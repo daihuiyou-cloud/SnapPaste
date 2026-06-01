@@ -2,6 +2,7 @@
 #include "presentation/editor/AnnotationRenderer.h"
 #include "presentation/editor/ImageBlur.h"
 
+#include <QApplication>
 #include <QPainter>
 
 #include <algorithm>
@@ -49,7 +50,7 @@ void AnnotationRenderer::drawTextEditCursor(QPainter& painter,
     if (editingTextIndex >= 0 && editingTextIndex < annotations.size()) {
         const auto& a = annotations[editingTextIndex];
         if (a.tool == AnnotationTool::Text) {
-            QFont font(a.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : a.fontFamily,
+            QFont font(a.fontFamily.isEmpty() ? qApp->font().family() : a.fontFamily,
                        a.textFontSize > 0 ? a.textFontSize : fontSize);
             font.setBold(a.bold);
             font.setItalic(a.italic);
@@ -233,7 +234,7 @@ void AnnotationRenderer::drawPenAnnotation(QPainter* painter, const Annotation& 
 
 void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize)
 {
-    QFont font(annotation.fontFamily.isEmpty() ? QStringLiteral("Microsoft YaHei UI") : annotation.fontFamily,
+    QFont font(annotation.fontFamily.isEmpty() ? qApp->font().family() : annotation.fontFamily,
                annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
     font.setBold(annotation.bold);
     font.setItalic(annotation.italic);

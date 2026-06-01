@@ -38,7 +38,8 @@ QToolButton* createActionButton(const ActionDef& def, IIconProvider& iconProvide
     btn->setFixedSize(48, 48);
     btn->setStyleSheet(
         "QToolButton#CaptureActionButton {"
-        " color: #f4fbff; font: 11px 'Microsoft YaHei UI','Segoe UI',sans-serif; padding: 2px 4px;"
+        " color: #f4fbff; font: 11px;"
+        " font-family: 'Microsoft YaHei UI','Segoe UI',sans-serif; padding: 2px 4px;"
         " border: 1px solid rgba(255,255,255,20); border-radius: 4px;"
         " background: rgba(255,255,255,12);"
         "}"

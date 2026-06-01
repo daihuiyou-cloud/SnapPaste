@@ -90,7 +90,7 @@ Result<void> SqlitePinnedItemRepository::updateState(qint64 id, const PinnedImag
         "opacity = :opacity, scale = :scale, rotation = :rotation, flip_h = :flip_h, flip_v = :flip_v, "
         "always_on_top = :always_on_top, click_through = :click_through, visible = :visible, "
         "device_pixel_ratio = :device_pixel_ratio, "
-        "updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') WHERE id = :id");
+        "updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = :id");
     query.bindValue(":id", id);
     query.bindValue(":x", state.position.x());
     query.bindValue(":y", state.position.y());
@@ -122,7 +122,7 @@ Result<void> SqlitePinnedItemRepository::setAllVisible(bool visible)
 
     QSqlQuery query(dbResult.value());
     query.prepare(
-        "UPDATE pinned_items SET visible = :visible, updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') "
+        "UPDATE pinned_items SET visible = :visible, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') "
         "WHERE closed = 0");
     query.bindValue(":visible", visible);
 
@@ -141,7 +141,7 @@ Result<void> SqlitePinnedItemRepository::close(qint64 id)
     }
 
     QSqlQuery query(dbResult.value());
-    query.prepare("UPDATE pinned_items SET closed = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%S', 'now') WHERE id = :id");
+    query.prepare("UPDATE pinned_items SET closed = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = :id");
     query.bindValue(":id", id);
 
     if (!query.exec()) {

@@ -97,48 +97,6 @@ Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physica
     return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "No matching DXGI output was found."));
 }
 
-Result<ComPtr<ID3D11Device>> createD3dDevice(ComPtr<ID3D11DeviceContext>& context)
-{
-    constexpr D3D_FEATURE_LEVEL featureLevels[] = {
-        D3D_FEATURE_LEVEL_11_1,
-        D3D_FEATURE_LEVEL_11_0,
-        D3D_FEATURE_LEVEL_10_1,
-        D3D_FEATURE_LEVEL_10_0,
-    };
-
-    ComPtr<ID3D11Device> device;
-    D3D_FEATURE_LEVEL selectedLevel{};
-    const auto flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-    auto hr = D3D11CreateDevice(nullptr,
-                                D3D_DRIVER_TYPE_HARDWARE,
-                                nullptr,
-                                flags,
-                                featureLevels,
-                                ARRAYSIZE(featureLevels),
-                                D3D11_SDK_VERSION,
-                                device.GetAddressOf(),
-                                &selectedLevel,
-                                context.GetAddressOf());
-    if (FAILED(hr)) {
-        hr = D3D11CreateDevice(nullptr,
-                               D3D_DRIVER_TYPE_WARP,
-                               nullptr,
-                               flags,
-                               featureLevels,
-                               ARRAYSIZE(featureLevels),
-                               D3D11_SDK_VERSION,
-                               device.GetAddressOf(),
-                               &selectedLevel,
-                               context.GetAddressOf());
-    }
-
-    if (FAILED(hr)) {
-        return Result<ComPtr<ID3D11Device>>::failure("Failed to create D3D11 device.");
-    }
-
-    return Result<ComPtr<ID3D11Device>>::success(std::move(device));
-}
-
 QRect toPhysicalRegion(const QRect& logicalRegion,
                        const QRect& logicalScreenGeometry,
                        qreal devicePixelRatio,
@@ -422,24 +380,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         QPainter painter(&composite);
 
         for (const auto& segment : segments) {
-            auto segmentResult = [&]() -> Result<QImage> {
-                std::scoped_lock lock(mutex_);
-                ComPtr<ID3D11DeviceContext> context;
-                auto deviceResult = createD3dDevice(context);
-                if (deviceResult.isOk()) {
-                    constexpr int kMaxDxgiRetries = 3;
-                    for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
-                        auto result = captureSegmentWithDxgi(segment, *deviceResult.value().Get(), *context.Get());
-                        if (result.isOk()) {
-                            return result;
-                        }
-                        if (attempt < kMaxDxgiRetries - 1) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
-                        }
-                    }
-                }
-                return Result<QImage>::failure(deviceResult.error());
-            }();
+            auto segmentResult = captureWithDxgi(segment);
             if (segmentResult.isError()) {
                 segmentResult = fallback_.captureRegion(segment.logicalRegion);
             }
@@ -459,24 +400,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         return Result<QImage>::success(std::move(composite));
     }
 
-    auto dxgiResult = [&]() -> Result<QImage> {
-        std::scoped_lock lock(mutex_);
-        ComPtr<ID3D11DeviceContext> context;
-        auto deviceResult = createD3dDevice(context);
-        if (deviceResult.isOk()) {
-            constexpr int kMaxDxgiRetries = 3;
-            for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
-                auto result = captureSegmentWithDxgi(segments.first(), *deviceResult.value().Get(), *context.Get());
-                if (result.isOk()) {
-                    return result;
-                }
-                if (attempt < kMaxDxgiRetries - 1) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
-                }
-            }
-        }
-        return Result<QImage>::failure(deviceResult.error());
-    }();
+    auto dxgiResult = captureWithDxgi(segments.first());
     if (dxgiResult.isError()) {
         dxgiResult = fallback_.captureRegion(region);
     }
@@ -524,6 +448,71 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
     }
     return fallback_.captureRegion(region);
 #endif
+}
+
+Result<void> DxgiScreenCaptureService::ensureD3dDevice()
+{
+    if (d3dDeviceValid_) {
+        return Result<void>::success();
+    }
+
+    constexpr D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_1,
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0,
+    };
+
+    D3D_FEATURE_LEVEL selectedLevel{};
+    const auto flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    auto hr = D3D11CreateDevice(nullptr,
+                                D3D_DRIVER_TYPE_HARDWARE,
+                                nullptr,
+                                flags,
+                                featureLevels,
+                                ARRAYSIZE(featureLevels),
+                                D3D11_SDK_VERSION,
+                                d3dDevice_.GetAddressOf(),
+                                &selectedLevel,
+                                d3dContext_.GetAddressOf());
+    if (FAILED(hr)) {
+        hr = D3D11CreateDevice(nullptr,
+                               D3D_DRIVER_TYPE_WARP,
+                               nullptr,
+                               flags,
+                               featureLevels,
+                               ARRAYSIZE(featureLevels),
+                               D3D11_SDK_VERSION,
+                               d3dDevice_.GetAddressOf(),
+                               &selectedLevel,
+                               d3dContext_.GetAddressOf());
+    }
+
+    if (FAILED(hr)) {
+        return Result<void>::failure("Failed to create D3D11 device.");
+    }
+
+    d3dDeviceValid_ = true;
+    return Result<void>::success();
+}
+
+Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegment& segment)
+{
+    std::scoped_lock lock(mutex_);
+    auto deviceResult = ensureD3dDevice();
+    if (deviceResult.isOk()) {
+        constexpr int kMaxDxgiRetries = 3;
+        for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
+            auto result = captureSegmentWithDxgi(segment, *d3dDevice_.Get(), *d3dContext_.Get());
+            if (result.isOk()) {
+                return result;
+            }
+            if (attempt < kMaxDxgiRetries - 1) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
+            }
+        }
+    }
+    return Result<QImage>::failure(deviceResult.error());
 }
 
 } // namespace snappaste

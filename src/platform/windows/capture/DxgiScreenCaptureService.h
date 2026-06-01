@@ -7,6 +7,11 @@
 
 #include <mutex>
 
+#ifdef Q_OS_WIN
+#include <d3d11.h>
+#include <wrl/client.h>
+#endif
+
 namespace snappaste {
 
 class DxgiScreenCaptureService final : public IScreenCaptureService {
@@ -16,8 +21,16 @@ public:
     Result<QImage> captureRegion(const QRect& region, const QVector<ScreenCaptureSegment>& segments) override;
 
 private:
+    Result<QImage> captureWithDxgi(const ScreenCaptureSegment& segment);
+    Result<void> ensureD3dDevice();
+
     std::mutex mutex_;
     GdiScreenCaptureService fallback_;
+#ifdef Q_OS_WIN
+    Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice_;
+    Microsoft::WRL::ComPtr<ID3D11DeviceContext> d3dContext_;
+    bool d3dDeviceValid_ = false;
+#endif
 };
 
 } // namespace snappaste
