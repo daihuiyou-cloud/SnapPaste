@@ -118,6 +118,7 @@ void AnnotationRenderer::drawAnnotations(QPainter& painter,
     cachePainter.setRenderHint(QPainter::Antialiasing, true);
 
     for (int i = 0; i < annotations.size(); ++i) {
+        if (!annotations.at(i).visible) continue;
         drawAnnotation(&cachePainter, sourceImage, annotations.at(i), fontSize);
     }
     cachePainter.end();
@@ -149,6 +150,7 @@ QImage AnnotationRenderer::renderToImage(const QImage& sourceImage,
     QImage result = sourceImage.copy();
     QPainter painter(&result);
     for (const auto& a : annotations) {
+        if (!a.visible) continue;
         drawAnnotation(&painter, sourceImage, a, fontSize);
     }
     painter.end();

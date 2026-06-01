@@ -2031,4 +2031,14 @@ void AnnotationCanvas::swapAnnotations(int i, int j)
     markModified();
 }
 
+void AnnotationCanvas::setAnnotationVisible(int index, bool visible)
+{
+    if (index < 0 || index >= annotations_.size()) return;
+    if (annotations_[index].visible == visible) return;
+    pushUndo();
+    redoStack_.clear();
+    annotations_[index].visible = visible;
+    markModified();
+}
+
 } // namespace snappaste

@@ -54,6 +54,7 @@ struct Annotation final {
     QColor fillColor;
     bool textBackground = false;
     QColor textBackgroundColor = QColor(0, 0, 0, 80);
+    bool visible = true;
 };
 
 } // namespace snappaste

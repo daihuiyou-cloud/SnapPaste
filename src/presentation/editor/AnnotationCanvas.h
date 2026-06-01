@@ -120,6 +120,7 @@ public:
     void deleteAnnotation(int index);
     void duplicateAnnotation(int index);
     void swapAnnotations(int i, int j);
+    void setAnnotationVisible(int index, bool visible);
 
 signals:
     void imageEdited(const QImage& image);

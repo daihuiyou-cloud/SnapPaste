@@ -250,7 +250,6 @@ void EditorWindow::refreshPanelUi()
 void EditorWindow::rebuildLayerList()
 {
     rebuildingLayerList_ = true;
-    int prevRow = layerList_->currentRow();
     layerList_->clear();
 
     int n = canvas_->annotationCount();
@@ -266,6 +265,8 @@ void EditorWindow::rebuildLayerList()
         }
         auto* item = new QListWidgetItem(label, layerList_);
         item->setData(Qt::UserRole, i);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(a.visible ? Qt::Checked : Qt::Unchecked);
     }
 
     // Restore selection
@@ -1348,6 +1349,16 @@ void EditorWindow::createToolPanel()
         if (annCount == 0) return;
         int idx = annCount - 1 - row;
         canvas_->selectAnnotation(idx);
+    });
+
+    connect(layerList_, &QListWidget::itemChanged, this, [this](QListWidgetItem* item) {
+        if (rebuildingLayerList_) return;
+        int row = layerList_->row(item);
+        int annCount = canvas_->annotationCount();
+        if (annCount == 0) return;
+        int idx = annCount - 1 - row;
+        bool visible = (item->checkState() == Qt::Checked);
+        canvas_->setAnnotationVisible(idx, visible);
     });
 
     connect(layerList_, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
