@@ -42,6 +42,7 @@ private:
     void setupActions();
     void rebuildColorMenu();
     void updateColorWell(const QColor& c);
+    void updateFillColorWell(const QColor& c);
 
     void refreshPanelUi();
 
@@ -51,6 +52,7 @@ private:
     IIconProvider& iconProvider_;
     AnnotationCanvas* canvas_ = nullptr;
     QToolButton* colorBtn_ = nullptr;
+    QToolButton* fillColorBtn_ = nullptr;
     QLabel* contextHint_ = nullptr;
     QLabel* imageInfoLabel_ = nullptr;
     QLabel* pixelInfoLabel_ = nullptr;

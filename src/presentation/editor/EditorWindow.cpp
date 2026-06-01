@@ -283,6 +283,25 @@ void EditorWindow::updateColorWell(const QColor& c)
     colorBtn_->setIcon(QIcon(px));
 }
 
+void EditorWindow::updateFillColorWell(const QColor& c)
+{
+    QPixmap px(18, 18);
+    px.fill(c.isValid() ? c : QColor(0, 0, 0, 0));
+    QPainter p(&px);
+    p.setPen(QPen(QColor(255, 255, 255, 48), 1));
+    if (c.isValid()) {
+        p.fillRect(QRectF(0.5, 0.5, 17, 17), c);
+        p.drawRect(QRectF(0.5, 0.5, 17, 17));
+    } else {
+        p.setPen(QPen(QColor(255, 255, 255, 32), 1));
+        p.drawLine(1, 1, 16, 16);
+        p.drawLine(16, 1, 1, 16);
+        p.drawRect(QRectF(0.5, 0.5, 17, 17));
+    }
+    p.end();
+    fillColorBtn_->setIcon(QIcon(px));
+}
+
 void EditorWindow::rebuildColorMenu()
 {
     const QColor fixedColors[] = {
@@ -498,6 +517,73 @@ void EditorWindow::createToolPanel()
     connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
     colorBtn_->setMenu(colorMenu);
     layout->addWidget(colorBtn_);
+
+    // Fill color
+    fillColorBtn_ = new QToolButton(content);
+    fillColorBtn_->setObjectName("fillColorWell");
+    fillColorBtn_->setFixedHeight(26);
+    fillColorBtn_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    fillColorBtn_->setPopupMode(QToolButton::InstantPopup);
+    fillColorBtn_->setToolTip(tr("Fill Color"));
+    fillColorBtn_->setStyleSheet(
+        "QToolButton#fillColorWell { border: 1px solid rgba(255,255,255,0.1);"
+        "  border-radius: 4px; padding: 2px; }"
+        "QToolButton#fillColorWell:hover { border-color: rgba(255,255,255,0.25); }");
+    updateFillColorWell(canvas_->fillColor());
+
+    auto* fillMenu = new QMenu(fillColorBtn_);
+    connect(fillMenu, &QMenu::aboutToShow, this, [this, fillMenu]() {
+        auto actions = fillMenu->actions();
+        for (auto* a : actions) {
+            fillMenu->removeAction(a);
+            delete a;
+        }
+        auto recent = canvas_->recentColors();
+        if (!recent.isEmpty()) {
+            for (const auto& c : recent) {
+                auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), fillMenu);
+                fillMenu->addAction(a);
+                connect(a, &QAction::triggered, this, [this, c] {
+                    canvas_->setFillColor(c);
+                    updateFillColorWell(c);
+                });
+            }
+            fillMenu->addSeparator();
+        }
+        const QColor fixedColors[] = {
+            QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
+            QColor("#34c759"), QColor("#007aff"), QColor("#af52de"),
+            QColor("#ffffff"), QColor("#000000")
+        };
+        for (const auto& c : fixedColors) {
+            auto* a = new QAction(makeColorIcon(c), c.name(QColor::HexRgb).toUpper(), fillMenu);
+            fillMenu->addAction(a);
+            connect(a, &QAction::triggered, this, [this, c] {
+                canvas_->setFillColor(c);
+                updateFillColorWell(c);
+            });
+        }
+        fillMenu->addSeparator();
+        auto* customAction = new QAction(tr("Custom Color..."), fillMenu);
+        fillMenu->addAction(customAction);
+        connect(customAction, &QAction::triggered, this, [this] {
+            auto color = QColorDialog::getColor(canvas_->fillColor().isValid() ? canvas_->fillColor() : Qt::white, this, tr("Choose Fill Color"));
+            if (color.isValid()) {
+                canvas_->setFillColor(color);
+                canvas_->addRecentColor(color);
+                updateFillColorWell(color);
+            }
+        });
+        fillMenu->addSeparator();
+        auto* noFillAction = new QAction(tr("No Fill"), fillMenu);
+        fillMenu->addAction(noFillAction);
+        connect(noFillAction, &QAction::triggered, this, [this] {
+            canvas_->setFillColor(QColor());
+            updateFillColorWell(QColor());
+        });
+    });
+    fillColorBtn_->setMenu(fillMenu);
+    layout->addWidget(fillColorBtn_);
 
     layout->addSpacing(4);
 
@@ -803,8 +889,60 @@ void EditorWindow::createToolPanel()
         fontSizeVal->setText(tr("%1px").arg(size));
     });
 
+    // Row 4: Text background
+    auto* bgRow = new QHBoxLayout();
+    bgRow->setContentsMargins(0, 0, 0, 0);
+    bgRow->setSpacing(4);
+
+    auto* bgLabel = new QLabel(tr("BG"), content);
+    bgLabel->setFixedWidth(34);
+    bgLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+
+    auto* bgToggle = new QToolButton(content);
+    bgToggle->setText(tr("On"));
+    bgToggle->setToolTip(tr("Toggle text background"));
+    bgToggle->setCheckable(true);
+    bgToggle->setChecked(canvas_->textBackgroundEnabled());
+    bgToggle->setFixedHeight(22);
+    bgToggle->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    bgToggle->setStyleSheet(chipStyle);
+    bgToggle->setText(canvas_->textBackgroundEnabled() ? tr("On") : tr("Off"));
+    connect(bgToggle, &QToolButton::clicked, this, [this, bgToggle](bool checked) {
+        canvas_->setTextBackgroundEnabled(checked);
+        bgToggle->setText(checked ? tr("On") : tr("Off"));
+    });
+
+    auto* bgColorBtn = new QToolButton(content);
+    bgColorBtn->setFixedSize(22, 22);
+    bgColorBtn->setToolTip(tr("Text background color"));
+    auto updateBgColorIcon = [bgColorBtn, this]() {
+        QPixmap px(14, 14);
+        px.fill(canvas_->textBackgroundColor());
+        QPainter p(&px);
+        p.setPen(QPen(QColor(255, 255, 255, 64), 1));
+        p.drawRect(QRectF(0.5, 0.5, 13, 13));
+        p.end();
+        bgColorBtn->setIcon(QIcon(px));
+    };
+    updateBgColorIcon();
+    bgColorBtn->setStyleSheet(
+        "QToolButton { border: 1px solid rgba(255,255,255,0.15); border-radius: 3px; padding: 2px; }"
+        "QToolButton:hover { border-color: #2fbf9f; }");
+    connect(bgColorBtn, &QToolButton::clicked, this, [this, updateBgColorIcon] {
+        auto color = QColorDialog::getColor(canvas_->textBackgroundColor(), this, tr("Choose Text Background Color"));
+        if (color.isValid()) {
+            canvas_->setTextBackgroundColor(color);
+            updateBgColorIcon();
+        }
+    });
+
+    bgRow->addWidget(bgLabel);
+    bgRow->addWidget(bgToggle);
+    bgRow->addWidget(bgColorBtn);
+    fontLayout->addLayout(bgRow);
+
     // Sync UI when text properties change programmatically
-    canvas_->setOnTextPropertiesChanged([this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup]() {
+    canvas_->setOnTextPropertiesChanged([this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup, bgToggle, updateBgColorIcon]() {
         fontCombo->setCurrentFont(QFont(canvas_->fontFamily()));
         boldBtn->setChecked(canvas_->bold());
         italicBtn->setChecked(canvas_->italic());
@@ -815,6 +953,9 @@ void EditorWindow::createToolPanel()
         else if (align == (Qt::AlignRight | Qt::AlignTop)) id = 2;
         auto* btn = alignGroup->button(id);
         if (btn) btn->setChecked(true);
+        bgToggle->setChecked(canvas_->textBackgroundEnabled());
+        bgToggle->setText(canvas_->textBackgroundEnabled() ? tr("On") : tr("Off"));
+        updateBgColorIcon();
     });
 
     fontWidget_->setVisible(false);

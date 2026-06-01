@@ -26,7 +26,7 @@ public:
     void drawGridOverlay(QPainter& painter, const QRect& imageRect, double zoomFactor);
 
     void drawTextEditCursor(QPainter& painter, const QVector<Annotation>& annotations,
-                            int editingTextIndex, const QString& preeditString,
+                            int editingTextIndex, int cursorPos, const QString& preeditString,
                             int fontSize, double zoomFactor);
 
     void drawDraftSizeLabel(QPainter& painter, const QPoint& currentPos,

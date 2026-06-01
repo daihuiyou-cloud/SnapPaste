@@ -41,6 +41,12 @@ public:
     void setMosaicBlurred(bool blurred);
     void setTextOutlineEnabled(bool enabled);
     void setFilled(bool filled);
+    QColor fillColor() const;
+    void setFillColor(const QColor& color);
+    void setTextBackgroundEnabled(bool enabled);
+    bool textBackgroundEnabled() const;
+    void setTextBackgroundColor(const QColor& color);
+    QColor textBackgroundColor() const;
     void updateTextBounds(int index);
     int fontSize() const;
     void setFontSize(int size);
@@ -149,9 +155,11 @@ private:
     QVector<QVector<Annotation>> redoStack_;
     AnnotationTool currentTool_ = AnnotationTool::Rectangle;
     QColor currentColor_{"#ff3b30"};
+    QColor currentFillColor_;
     int currentStrokeWidth_ = 4;
     int selectedIndex_ = -1;
     int editingTextIndex_ = -1;
+    int cursorPos_ = 0;
     QString preeditString_;
     bool moving_ = false;
     bool resizing_ = false;
@@ -170,6 +178,7 @@ private:
     double zoomFactor_ = 1.0;
     bool modified_ = false;
     QPoint cropUndoOffset_;
+    QImage preCropImage_;
     int nextNumber_ = 1;
     int fontSize_ = 14;
     bool filled_ = false;
@@ -179,6 +188,8 @@ private:
     bool italic_ = false;
     bool underline_ = false;
     int textAlignment_ = -1;
+    bool textBackgroundEnabled_ = false;
+    QColor textBackgroundColor_{0, 0, 0, 80};
     double cropAspectRatio_ = 0.0;
     QVector<QColor> customColors_;
     int strokeAlpha_ = 255;

@@ -68,6 +68,8 @@ void AnnotationCanvas::setImage(QImage image)
     nextNumber_ = 1;
     editingTextIndex_ = -1;
     preeditString_.clear();
+    preCropImage_ = {};
+    cropUndoOffset_ = {};
     auto dpr = image_.devicePixelRatio();
     QSize logicalSize(image_.size() / dpr);
     setMinimumSize(logicalSize);
@@ -86,6 +88,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     physicalCrop = physicalCrop.intersected(image_.rect());
     if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
+    preCropImage_ = image_.copy();
     pushUndo();
     redoStack_.clear();
     cropUndoOffset_ = -physicalCrop.topLeft();
@@ -239,6 +242,13 @@ void AnnotationCanvas::setFilled(bool filled)
     filled_ = filled;
     update();
 }
+
+QColor AnnotationCanvas::fillColor() const { return currentFillColor_; }
+void AnnotationCanvas::setFillColor(const QColor& color) { currentFillColor_ = color; }
+void AnnotationCanvas::setTextBackgroundEnabled(bool enabled) { textBackgroundEnabled_ = enabled; update(); }
+bool AnnotationCanvas::textBackgroundEnabled() const { return textBackgroundEnabled_; }
+void AnnotationCanvas::setTextBackgroundColor(const QColor& color) { textBackgroundColor_ = color; }
+QColor AnnotationCanvas::textBackgroundColor() const { return textBackgroundColor_; }
 
 void AnnotationCanvas::updateTextBounds(int index)
 {
@@ -442,10 +452,24 @@ void AnnotationCanvas::undo()
         return;
     }
     editingTextIndex_ = -1;
+    cursorPos_ = 0;
     preeditString_.clear();
     drawing_ = false;
     moving_ = false;
     resizing_ = false;
+
+    bool restoringCrop = !preCropImage_.isNull() && !cropUndoOffset_.isNull();
+    if (restoringCrop) {
+        image_ = preCropImage_;
+        preCropImage_ = {};
+        cropUndoOffset_ = {};
+        renderer_.invalidateCache();
+        auto logicalSize = image_.size() / image_.devicePixelRatio();
+        setMinimumSize(logicalSize);
+        resize(logicalSize);
+        updateWindowTitle();
+    }
+
     redoStack_.push_back(annotations_);
     annotations_ = undoStack_.takeLast();
     if (!cropUndoOffset_.isNull()) {
@@ -478,6 +502,7 @@ void AnnotationCanvas::redo()
         return;
     }
     editingTextIndex_ = -1;
+    cursorPos_ = 0;
     preeditString_.clear();
     drawing_ = false;
     moving_ = false;
@@ -583,11 +608,10 @@ bool AnnotationCanvas::handlePickingColorPress(QMouseEvent* event)
     const auto pos = toImage(event->pos());
     QRect logicalImageRect(QPoint(0, 0), image_.size() / image_.devicePixelRatio());
     if (logicalImageRect.contains(pos)) {
-        QImage composited = renderer_.renderToImage(image_, annotations_, fontSize_);
         const auto dpr = image_.devicePixelRatio();
         QPoint physicalPos(static_cast<int>(pos.x() * dpr),
                            static_cast<int>(pos.y() * dpr));
-        currentColor_ = QColor::fromRgba(composited.pixel(physicalPos));
+        currentColor_ = QColor::fromRgba(image_.pixel(physicalPos));
     }
     if (onPickingColorChanged_) onPickingColorChanged_(false);
     update();
@@ -605,6 +629,20 @@ bool AnnotationCanvas::handleSelectPress(const QPoint& pos)
                 redoStack_.clear();
                 resizing_ = true;
                 resizeCorner_ = ci;
+                resizeStartBounds_ = r;
+                resizeStartPoints_ = annotations_[selectedIndex_].points;
+                return true;
+            }
+        }
+        const QPoint midpoints[] = {
+            QPoint(r.center().x(), r.top()), QPoint(r.right(), r.center().y()),
+            QPoint(r.center().x(), r.bottom()), QPoint(r.left(), r.center().y())};
+        for (int mi = 0; mi < 4; ++mi) {
+            if (QRect(midpoints[mi].x() - 7, midpoints[mi].y() - 7, 14, 14).contains(pos)) {
+                pushUndo();
+                redoStack_.clear();
+                resizing_ = true;
+                resizeCorner_ = 4 + mi;
                 resizeStartBounds_ = r;
                 resizeStartPoints_ = annotations_[selectedIndex_].points;
                 return true;
@@ -662,6 +700,7 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
 {
     if (editingTextIndex_ >= 0) {
         editingTextIndex_ = -1;
+        cursorPos_ = 0;
         preeditString_.clear();
         update();
     }
@@ -696,6 +735,8 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
     ann.strokeWidth = 2;
     ann.textFontSize = fontSize_;
     ann.textOutline = textOutlineEnabled_;
+    ann.textBackground = textBackgroundEnabled_;
+    ann.textBackgroundColor = textBackgroundColor_;
     ann.fontFamily = currentFontFamily_;
     ann.bold = bold_;
     ann.italic = italic_;
@@ -739,6 +780,9 @@ void AnnotationCanvas::startDrawingAnnotation(const QPoint& pos)
     draft_.strokeWidth = currentStrokeWidth_;
     draft_.blurRadius = (currentTool_ == AnnotationTool::Mosaic && mosaicBlurred_) ? currentStrokeWidth_ : 0;
     draft_.filled = filled_;
+    draft_.fillColor = currentFillColor_.isValid() ? currentFillColor_ : QColor();
+    draft_.textBackground = textBackgroundEnabled_;
+    draft_.textBackgroundColor = textBackgroundColor_;
     draft_.arrowStyle = arrowStyle_;
     draft_.cornerRadius = cornerRadius_;
     draft_.textFontSize = fontSize_;
@@ -775,6 +819,7 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
                 markModified();
             }
             editingTextIndex_ = -1;
+            cursorPos_ = 0;
             preeditString_.clear();
             update();
         }
@@ -829,6 +874,20 @@ void AnnotationCanvas::updateMoveCursor(QMouseEvent* event)
                 break;
             }
         }
+        if (cursor == Qt::ArrowCursor) {
+            const QPoint midpoints[] = {
+                QPoint(r.center().x(), r.top()), QPoint(r.right(), r.center().y()),
+                QPoint(r.center().x(), r.bottom()), QPoint(r.left(), r.center().y())};
+            const Qt::CursorShape midCursors[] = {
+                Qt::SizeVerCursor, Qt::SizeHorCursor,
+                Qt::SizeVerCursor, Qt::SizeHorCursor};
+            for (int mi = 0; mi < 4; ++mi) {
+                if (QRect(midpoints[mi].x() - 7, midpoints[mi].y() - 7, 14, 14).contains(pos)) {
+                    cursor = midCursors[mi];
+                    break;
+                }
+            }
+        }
         setCursor(cursor);
     } else if (currentTool_ == AnnotationTool::Text)
         setCursor(Qt::IBeamCursor);
@@ -861,14 +920,24 @@ void AnnotationCanvas::handleMoveSelect(QMouseEvent* event)
         auto& a = annotations_[selectedIndex_];
         auto b = resizeStartBounds_;
         const auto p = toImage(event->pos());
-        switch (resizeCorner_) {
-        case 0: b.setTopLeft(p); break;
-        case 1: b.setTopRight(p); break;
-        case 2: b.setBottomLeft(p); break;
-        case 3: b.setBottomRight(p); break;
+        if (resizeCorner_ < 4) {
+            switch (resizeCorner_) {
+            case 0: b.setTopLeft(p); break;
+            case 1: b.setTopRight(p); break;
+            case 2: b.setBottomLeft(p); break;
+            case 3: b.setBottomRight(p); break;
+            }
+            a.bounds = b.normalized();
+        } else {
+            switch (resizeCorner_) {
+            case 4: b.setTop(p.y()); break;
+            case 5: b.setRight(p.x()); break;
+            case 6: b.setBottom(p.y()); break;
+            case 7: b.setLeft(p.x()); break;
+            }
+            a.bounds = b.normalized();
         }
-        a.bounds = b.normalized();
-        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+        if (event->modifiers().testFlag(Qt::ShiftModifier) && resizeCorner_ < 4) {
             double aspect = static_cast<double>(resizeStartBounds_.width()) / resizeStartBounds_.height();
             auto newSize = a.bounds.size();
             newSize.setWidth(static_cast<int>(newSize.height() * aspect));
@@ -1061,13 +1130,24 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
 bool AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
 {
     auto& textAnn = annotations_[editingTextIndex_];
+
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        editingTextIndex_ = -1;
-        preeditString_.clear();
-        update();
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            editingTextIndex_ = -1;
+            cursorPos_ = 0;
+            preeditString_.clear();
+            update();
+            event->accept();
+            return true;
+        }
+        textAnn.text.insert(cursorPos_, QChar::LineFeed);
+        cursorPos_++;
+        updateTextBounds(editingTextIndex_);
+        markModified();
         event->accept();
         return true;
     }
+
     if (event->key() == Qt::Key_Escape) {
         if (textAnn.text.isEmpty()) {
             pushUndo();
@@ -1076,14 +1156,67 @@ bool AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
             selectedIndex_ = -1;
         }
         editingTextIndex_ = -1;
+        cursorPos_ = 0;
         preeditString_.clear();
         markModified();
         event->accept();
         return true;
     }
+
+    if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        if (event->key() == Qt::Key_C) {
+            QApplication::clipboard()->setText(textAnn.text);
+            event->accept();
+            return true;
+        }
+        if (event->key() == Qt::Key_V) {
+            QString clipText = QApplication::clipboard()->text();
+            if (!clipText.isEmpty()) {
+                textAnn.text.insert(cursorPos_, clipText);
+                cursorPos_ += clipText.length();
+                updateTextBounds(editingTextIndex_);
+                markModified();
+            }
+            event->accept();
+            return true;
+        }
+        if (event->key() == Qt::Key_A) {
+            cursorPos_ = textAnn.text.length();
+            update();
+            event->accept();
+            return true;
+        }
+    }
+
+    if (event->key() == Qt::Key_Left) {
+        if (cursorPos_ > 0) cursorPos_--;
+        update();
+        event->accept();
+        return true;
+    }
+    if (event->key() == Qt::Key_Right) {
+        if (cursorPos_ < textAnn.text.length()) cursorPos_++;
+        update();
+        event->accept();
+        return true;
+    }
+    if (event->key() == Qt::Key_Home) {
+        cursorPos_ = 0;
+        update();
+        event->accept();
+        return true;
+    }
+    if (event->key() == Qt::Key_End) {
+        cursorPos_ = textAnn.text.length();
+        update();
+        event->accept();
+        return true;
+    }
+
     if (event->key() == Qt::Key_Backspace) {
-        if (!textAnn.text.isEmpty()) {
-            textAnn.text.chop(1);
+        if (cursorPos_ > 0) {
+            cursorPos_--;
+            textAnn.text.remove(cursorPos_, 1);
             updateTextBounds(editingTextIndex_);
             markModified();
         }
@@ -1091,17 +1224,25 @@ bool AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
         return true;
     }
     if (event->key() == Qt::Key_Delete) {
+        if (cursorPos_ < textAnn.text.length()) {
+            textAnn.text.remove(cursorPos_, 1);
+            updateTextBounds(editingTextIndex_);
+            markModified();
+        }
         event->accept();
         return true;
     }
+
     QString text = event->text();
     if (!text.isEmpty() && text[0].isPrint()) {
-        textAnn.text += text;
+        textAnn.text.insert(cursorPos_, text);
+        cursorPos_ += text.length();
         updateTextBounds(editingTextIndex_);
         markModified();
         event->accept();
         return true;
     }
+
     return false;
 }
 
@@ -1139,6 +1280,7 @@ void AnnotationCanvas::handleAnnotationDeleteKey()
 void AnnotationCanvas::handleDuplicateKey()
 {
     editingTextIndex_ = -1;
+    cursorPos_ = 0;
     preeditString_.clear();
     auto dup = annotations_.at(selectedIndex_);
     dup.bounds.translate(10, 10);
@@ -1332,6 +1474,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
     }
     if (editingTextIndex_ >= 0) {
         editingTextIndex_ = -1;
+        cursorPos_ = 0;
         preeditString_.clear();
         update();
     }
@@ -1460,6 +1603,13 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
             for (const auto& c : corners) {
                 painter.drawRect(QRect(c.x() - 4, c.y() - 4, 8, 8));
             }
+            const QPoint midpoints[] = {
+                QPoint(r.center().x(), r.top()), QPoint(r.right(), r.center().y()),
+                QPoint(r.center().x(), r.bottom()), QPoint(r.left(), r.center().y())};
+            painter.setBrush(QColor("#ffffff"));
+            for (const auto& m : midpoints) {
+                painter.drawRect(QRect(m.x() - 3, m.y() - 3, 6, 6));
+            }
         }
         if (drawing_) {
             renderer_.drawDraft(painter, image_, draft_, fontSize_);
@@ -1469,7 +1619,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
             renderer_.drawGridOverlay(painter, rect(), zoomFactor_);
         }
         renderer_.drawTextEditCursor(painter, annotations_, editingTextIndex_,
-            preeditString_, fontSize_, zoomFactor_);
+            cursorPos_, preeditString_, fontSize_, zoomFactor_);
     }
     renderer_.drawDraftSizeLabel(painter, current_, draft_, drawing_, zoomFactor_);
 }

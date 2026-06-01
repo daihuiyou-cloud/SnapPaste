@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QPainter>
+#include <QPainterPath>
 
 #include <algorithm>
 #include <cmath>
@@ -42,7 +43,7 @@ void AnnotationRenderer::drawGridOverlay(QPainter& painter, const QRect& imageRe
 
 void AnnotationRenderer::drawTextEditCursor(QPainter& painter,
     const QVector<Annotation>& annotations,
-    int editingTextIndex, const QString& preeditString,
+    int editingTextIndex, int cursorPos, const QString& preeditString,
     int fontSize, double zoomFactor)
 {
     painter.save();
@@ -56,19 +57,18 @@ void AnnotationRenderer::drawTextEditCursor(QPainter& painter,
             font.setItalic(a.italic);
             font.setUnderline(a.underline);
             painter.setFont(font);
-            int textWidth = painter.fontMetrics().horizontalAdvance(a.text);
-            int cx = a.bounds.left() + 4 + textWidth;
+            int cursorPosClamped = qBound(0, cursorPos, a.text.length());
+            QString textBeforeCursor = a.text.left(cursorPosClamped);
+            int cx = a.bounds.left() + 4 + painter.fontMetrics().horizontalAdvance(textBeforeCursor);
             int cy = a.bounds.top() + 4;
             int ch = painter.fontMetrics().height();
             if (!preeditString.isEmpty()) {
                 painter.setPen(QPen(a.color, 1));
-                painter.drawText(cx, cy, painter.fontMetrics().horizontalAdvance(preeditString) + 4, ch,
-                    Qt::AlignLeft | Qt::AlignTop, preeditString);
                 int preeditWidth = painter.fontMetrics().horizontalAdvance(preeditString);
+                painter.drawText(cx, cy, preeditWidth + 4, ch,
+                    Qt::AlignLeft | Qt::AlignTop, preeditString);
                 painter.setPen(QPen(a.color, 1, Qt::DashLine));
                 painter.drawLine(cx, cy + ch + 1, cx + preeditWidth, cy + ch + 1);
-                textWidth += preeditWidth;
-                cx += preeditWidth;
             }
             painter.setPen(QPen(a.color, 1.5));
             painter.drawLine(cx, cy, cx, cy + ch);
@@ -172,7 +172,9 @@ bool AnnotationRenderer::hitTestAnnotation(const Annotation& annotation, const Q
 void AnnotationRenderer::drawRectAnnotation(QPainter* painter, const Annotation& annotation)
 {
     painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
+    QColor fill = annotation.fillColor.isValid() && annotation.filled ? annotation.fillColor
+                 : annotation.filled ? annotation.color : Qt::transparent;
+    painter->setBrush(fill);
     if (annotation.cornerRadius > 0)
         painter->drawRoundedRect(annotation.bounds, annotation.cornerRadius, annotation.cornerRadius);
     else
@@ -182,7 +184,9 @@ void AnnotationRenderer::drawRectAnnotation(QPainter* painter, const Annotation&
 void AnnotationRenderer::drawEllipseAnnotation(QPainter* painter, const Annotation& annotation)
 {
     painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    painter->setBrush(annotation.filled ? annotation.color : Qt::NoBrush);
+    QColor fill = annotation.fillColor.isValid() && annotation.filled ? annotation.fillColor
+                 : annotation.filled ? annotation.color : Qt::transparent;
+    painter->setBrush(fill);
     painter->drawEllipse(annotation.bounds);
 }
 
@@ -192,24 +196,24 @@ void AnnotationRenderer::drawArrowAnnotation(QPainter* painter, const Annotation
     const auto to = annotation.points.size() >= 2 ? annotation.points.last() : annotation.bounds.bottomRight();
     painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter->drawLine(from, to);
-    constexpr double kArrowSize = 12.0;
+    const double arrowSize = 6.0 + annotation.strokeWidth * 2.0;
     const auto angle = std::atan2(to.y() - from.y(), to.x() - from.x());
     painter->setBrush(annotation.color);
     painter->setPen(Qt::NoPen);
     if (annotation.arrowStyle == ArrowStyle::CircleArrow) {
-        auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
-        auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
-        painter->drawEllipse(QPointF(cx, cy), kArrowSize * 0.5, kArrowSize * 0.5);
+        auto cx = to.x() - arrowSize * 0.5 * std::cos(angle);
+        auto cy = to.y() - arrowSize * 0.5 * std::sin(angle);
+        painter->drawEllipse(QPointF(cx, cy), arrowSize * 0.5, arrowSize * 0.5);
     } else if (annotation.arrowStyle == ArrowStyle::SquareArrow) {
-        auto cx = to.x() - kArrowSize * 0.5 * std::cos(angle);
-        auto cy = to.y() - kArrowSize * 0.5 * std::sin(angle);
-        painter->drawRect(QRectF(cx - kArrowSize * 0.4, cy - kArrowSize * 0.4,
-                                 kArrowSize * 0.8, kArrowSize * 0.8));
+        auto cx = to.x() - arrowSize * 0.5 * std::cos(angle);
+        auto cy = to.y() - arrowSize * 0.5 * std::sin(angle);
+        painter->drawRect(QRectF(cx - arrowSize * 0.4, cy - arrowSize * 0.4,
+                                 arrowSize * 0.8, arrowSize * 0.8));
     } else {
-        const auto p1 = QPointF(to.x() - kArrowSize * std::cos(angle - M_PI / 6),
-                                 to.y() - kArrowSize * std::sin(angle - M_PI / 6));
-        const auto p2 = QPointF(to.x() - kArrowSize * std::cos(angle + M_PI / 6),
-                                 to.y() - kArrowSize * std::sin(angle + M_PI / 6));
+        const auto p1 = QPointF(to.x() - arrowSize * std::cos(angle - M_PI / 6),
+                                 to.y() - arrowSize * std::sin(angle - M_PI / 6));
+        const auto p2 = QPointF(to.x() - arrowSize * std::cos(angle + M_PI / 6),
+                                 to.y() - arrowSize * std::sin(angle + M_PI / 6));
         QPolygonF arrowHead;
         arrowHead << to << p1 << p2;
         painter->drawPolygon(arrowHead);
@@ -242,14 +246,28 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
     painter->setFont(font);
     int align = (annotation.textAlignment >= 0) ? annotation.textAlignment : (Qt::AlignLeft | Qt::AlignTop);
     const auto flags = align | Qt::TextWordWrap;
-    if (annotation.textOutline) {
-        painter->setPen(QColor(255, 255, 255, 220));
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                if (dx == 0 && dy == 0) continue;
-                painter->drawText(annotation.bounds.adjusted(dx, dy, dx, dy), flags, annotation.text);
-            }
+
+    if (annotation.textBackground && annotation.textBackgroundColor.isValid() && !annotation.text.isEmpty()) {
+        auto textBounds = painter->fontMetrics().boundingRect(
+            annotation.bounds, flags, annotation.text);
+        textBounds = textBounds.intersected(annotation.bounds);
+        if (!textBounds.isEmpty()) {
+            painter->setBrush(annotation.textBackgroundColor);
+            painter->setPen(Qt::NoPen);
+            painter->drawRoundedRect(textBounds.adjusted(-2, -1, 2, 1), 3, 3);
         }
+    }
+
+    if (annotation.textOutline) {
+        painter->save();
+        painter->setPen(QPen(QColor(255, 255, 255, 200), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        QPainterPathStroker stroker;
+        stroker.setWidth(3.0);
+        QPainterPath path;
+        path.addText(annotation.bounds.topLeft() + QPoint(0, painter->fontMetrics().ascent()), font, annotation.text);
+        auto outline = stroker.createStroke(path);
+        painter->drawPath(outline);
+        painter->restore();
     }
     painter->setPen(QPen(annotation.color, 1));
     painter->drawText(annotation.bounds, flags, annotation.text);
@@ -309,8 +327,14 @@ void AnnotationRenderer::drawNumberedAnnotation(QPainter* painter, const Annotat
     painter->setPen(QPen(annotation.color, 2));
     painter->setBrush(annotation.color);
     painter->drawEllipse(center, r, r);
+    QFont numFont;
+    if (!annotation.fontFamily.isEmpty())
+        numFont.setFamily(annotation.fontFamily);
+    numFont.setPixelSize(r);
+    numFont.setBold(annotation.bold);
+    numFont.setItalic(annotation.italic);
+    painter->setFont(numFont);
     painter->setPen(Qt::white);
-    painter->setFont(QFont("Segoe UI", r, QFont::Bold));
     painter->drawText(QRect(center.x() - r, center.y() - r, kDefaultNumberedSize, kDefaultNumberedSize),
                       Qt::AlignCenter, QString::number(annotation.number));
 }

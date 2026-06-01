@@ -50,6 +50,10 @@ struct Annotation final {
     bool italic = false;
     bool underline = false;
     int textAlignment = -1; // -1 = default (AlignLeft|AlignTop), otherwise Qt::AlignmentFlag
+
+    QColor fillColor;
+    bool textBackground = false;
+    QColor textBackgroundColor = QColor(0, 0, 0, 80);
 };
 
 } // namespace snappaste
