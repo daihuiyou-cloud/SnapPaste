@@ -115,6 +115,11 @@ public:
 
     int undoCount() const;
     int redoCount() const;
+    int annotationCount() const { return annotations_.size(); }
+    void selectAnnotation(int index);
+    void deleteAnnotation(int index);
+    void duplicateAnnotation(int index);
+    void swapAnnotations(int i, int j);
 
 signals:
     void imageEdited(const QImage& image);

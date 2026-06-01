@@ -9,6 +9,7 @@
 #include <QCloseEvent>
 #include <QImage>
 #include <QLabel>
+#include <QListWidget>
 #include <QMainWindow>
 #include <QSlider>
 #include <QToolButton>
@@ -66,7 +67,11 @@ private:
     QWidget* fontWidget_ = nullptr;
     QWidget* cropWidget_ = nullptr;
     QAction* eyeAction_ = nullptr;
+    QListWidget* layerList_ = nullptr;
+    bool rebuildingLayerList_ = false;
     std::function<void(AnnotationTool)> updateToolActions_;
+
+    void rebuildLayerList();
 };
 
 } // namespace snappaste

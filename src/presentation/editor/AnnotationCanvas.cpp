@@ -1981,4 +1981,54 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
     return QWidget::inputMethodQuery(query);
 }
 
+void AnnotationCanvas::selectAnnotation(int index)
+{
+    if (index < 0 || index >= annotations_.size()) return;
+    selectedIndex_ = index;
+    editingTextIndex_ = -1;
+    cursorPos_ = 0;
+    preeditString_.clear();
+    update();
+    if (onSelectionChanged_) onSelectionChanged_();
+}
+
+void AnnotationCanvas::deleteAnnotation(int index)
+{
+    if (index < 0 || index >= annotations_.size()) return;
+    pushUndo();
+    redoStack_.clear();
+    annotations_.removeAt(index);
+    if (selectedIndex_ == index) selectedIndex_ = -1;
+    else if (selectedIndex_ > index) --selectedIndex_;
+    markModified();
+}
+
+void AnnotationCanvas::duplicateAnnotation(int index)
+{
+    if (index < 0 || index >= annotations_.size()) return;
+    editingTextIndex_ = -1;
+    cursorPos_ = 0;
+    preeditString_.clear();
+    auto dup = annotations_.at(index);
+    dup.bounds.translate(10, 10);
+    for (auto& pt : dup.points) pt += QPoint(10, 10);
+    pushUndo();
+    redoStack_.clear();
+    annotations_.push_back(std::move(dup));
+    selectedIndex_ = annotations_.size() - 1;
+    markModified();
+}
+
+void AnnotationCanvas::swapAnnotations(int i, int j)
+{
+    if (i < 0 || i >= annotations_.size()) return;
+    if (j < 0 || j >= annotations_.size()) return;
+    pushUndo();
+    redoStack_.clear();
+    qSwap(annotations_[i], annotations_[j]);
+    if (selectedIndex_ == i) selectedIndex_ = j;
+    else if (selectedIndex_ == j) selectedIndex_ = i;
+    markModified();
+}
+
 } // namespace snappaste

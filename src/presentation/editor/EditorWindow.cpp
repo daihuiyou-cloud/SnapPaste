@@ -79,6 +79,25 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: t
 QScrollBar::corner { background: transparent; }
 )";
 
+const char* toolLabel(AnnotationTool tool)
+{
+    switch (tool) {
+    case AnnotationTool::Select:    return QT_TRANSLATE_NOOP("EditorWindow", "Select");
+    case AnnotationTool::Rectangle: return QT_TRANSLATE_NOOP("EditorWindow", "Rect");
+    case AnnotationTool::Arrow:     return QT_TRANSLATE_NOOP("EditorWindow", "Arrow");
+    case AnnotationTool::Line:      return QT_TRANSLATE_NOOP("EditorWindow", "Line");
+    case AnnotationTool::Pen:       return QT_TRANSLATE_NOOP("EditorWindow", "Pen");
+    case AnnotationTool::Text:      return QT_TRANSLATE_NOOP("EditorWindow", "Text");
+    case AnnotationTool::Mosaic:    return QT_TRANSLATE_NOOP("EditorWindow", "Mosaic");
+    case AnnotationTool::Ellipse:   return QT_TRANSLATE_NOOP("EditorWindow", "Ellipse");
+    case AnnotationTool::Highlight: return QT_TRANSLATE_NOOP("EditorWindow", "Hi");
+    case AnnotationTool::Eraser:    return QT_TRANSLATE_NOOP("EditorWindow", "Eraser");
+    case AnnotationTool::Numbered:  return QT_TRANSLATE_NOOP("EditorWindow", "Num");
+    case AnnotationTool::Crop:      return QT_TRANSLATE_NOOP("EditorWindow", "Crop");
+    }
+    return "";
+}
+
 } // namespace
 
 
@@ -226,6 +245,39 @@ void EditorWindow::refreshPanelUi()
     }
     if (canvas_->selectedIndex() < 0)
         syncPanelDefaults();
+}
+
+void EditorWindow::rebuildLayerList()
+{
+    rebuildingLayerList_ = true;
+    int prevRow = layerList_->currentRow();
+    layerList_->clear();
+
+    int n = canvas_->annotationCount();
+    for (int i = n - 1; i >= 0; --i) {
+        const auto& a = canvas_->annotationAt(i);
+        QString label = qApp->translate("EditorWindow", toolLabel(a.tool));
+        if (!a.text.isEmpty()) {
+            QString t = a.text.left(20);
+            t.replace('\n', ' ');
+            label += QStringLiteral(" - ") + t;
+        } else if (a.tool == AnnotationTool::Numbered) {
+            label += QStringLiteral(" #%1").arg(a.number);
+        }
+        auto* item = new QListWidgetItem(label, layerList_);
+        item->setData(Qt::UserRole, i);
+    }
+
+    // Restore selection
+    int sel = canvas_->selectedIndex();
+    if (sel >= 0) {
+        int row = n - 1 - sel;
+        layerList_->setCurrentRow(row);
+        layerList_->scrollToItem(layerList_->item(row));
+    } else {
+        layerList_->setCurrentRow(-1);
+    }
+    rebuildingLayerList_ = false;
 }
 
 void EditorWindow::syncPanelDefaults()
@@ -1264,6 +1316,77 @@ void EditorWindow::createToolPanel()
     transformRow->addWidget(flipV);
     layout->addLayout(transformRow);
 
+    layout->addSpacing(8);
+
+    // ==========================================
+    // Layer List
+    // ==========================================
+    auto* layerLabel = new QLabel(tr("Layers"), content);
+    layerLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    layout->addWidget(layerLabel);
+
+    layout->addSpacing(2);
+
+    const QString listStyle =
+        "QListWidget { background: transparent; border: 1px solid rgba(255,255,255,0.06);"
+        "  border-radius: 4px; padding: 2px; font: 9px; color: #bcbec6; outline: none; }"
+        "QListWidget::item { padding: 4px 6px; border-radius: 3px; }"
+        "QListWidget::item:hover { background: rgba(255,255,255,0.06); }"
+        "QListWidget::item:selected { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
+
+    layerList_ = new QListWidget(content);
+    layerList_->setStyleSheet(listStyle);
+    layerList_->setFixedHeight(100);
+    layerList_->setContextMenuPolicy(Qt::CustomContextMenu);
+    layerList_->setSelectionMode(QAbstractItemView::SingleSelection);
+
+    connect(layerList_, &QListWidget::currentRowChanged, this, [this](int row) {
+        if (rebuildingLayerList_) return;
+        if (row < 0) return;
+        // Row 0 = top layer (last in vector); reverse mapping
+        int annCount = canvas_->annotationCount();
+        if (annCount == 0) return;
+        int idx = annCount - 1 - row;
+        canvas_->selectAnnotation(idx);
+    });
+
+    connect(layerList_, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        auto* item = layerList_->itemAt(pos);
+        if (!item) return;
+        int row = layerList_->row(item);
+        int annCount = canvas_->annotationCount();
+        if (annCount == 0) return;
+        int idx = annCount - 1 - row;
+
+        QMenu menu(layerList_);
+        auto* delAct = menu.addAction(tr("Delete"));
+        auto* dupAct = menu.addAction(tr("Duplicate"));
+        menu.addSeparator();
+        auto* upAct = menu.addAction(tr("Move Up"));
+        auto* downAct = menu.addAction(tr("Move Down"));
+
+        auto* act = menu.exec(layerList_->mapToGlobal(pos));
+        if (act == delAct) {
+            canvas_->deleteAnnotation(idx);
+            rebuildLayerList();
+        } else if (act == dupAct) {
+            canvas_->duplicateAnnotation(idx);
+            rebuildLayerList();
+        } else if (act == upAct) {
+            if (idx < annCount - 1) {
+                canvas_->swapAnnotations(idx, idx + 1);
+                rebuildLayerList();
+            }
+        } else if (act == downAct) {
+            if (idx > 0) {
+                canvas_->swapAnnotations(idx, idx - 1);
+                rebuildLayerList();
+            }
+        }
+    });
+
+    layout->addWidget(layerList_);
+
     layout->addSpacing(6);
 
     // -- Info --
@@ -1294,14 +1417,14 @@ void EditorWindow::createToolPanel()
     refreshPanelUi();
 
     // -- Connections --
-    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); canvas_->setFocus(); });
-    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); canvas_->setFocus(); });
+    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
+    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
 
     // Pixel info shown on canvas overlay; clear panel label
     canvas_->setOnMouseInfoChanged([](QPointF, QColor) {});
 
     // -- State change (undo/redo counts etc.) --
-    canvas_->setOnModified([this] { refreshPanelUi(); });
+    canvas_->setOnModified([this] { refreshPanelUi(); rebuildLayerList(); });
 
     connect(actionButtons[2], &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
@@ -1338,6 +1461,7 @@ void EditorWindow::createToolPanel()
 
     // Sync property panel when selection changes
     canvas_->setOnSelectionChanged([this, preview, strokeGroup, arrowGroup, radiusSlider, radiusVal]() {
+        rebuildLayerList();
         auto idx = canvas_->selectedIndex();
         if (idx >= 0) {
             const auto& a = canvas_->annotationAt(idx);
