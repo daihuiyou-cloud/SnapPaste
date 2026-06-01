@@ -145,7 +145,6 @@ void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
 {
     if (baseImage_.isNull()) return;
     if (!horizontal && !vertical) return;
-    Qt::TransformationMode mode = Qt::SmoothTransformation;
     if (horizontal && vertical) {
         baseImage_ = baseImage_.mirrored(true, true);
     } else if (horizontal) {
