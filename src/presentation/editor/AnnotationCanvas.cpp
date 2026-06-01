@@ -266,6 +266,7 @@ void AnnotationCanvas::setFilled(bool filled)
             || a.tool == AnnotationTool::Arrow) {
             a.filled = filled;
             markModified();
+            if (onSelectionChanged_) onSelectionChanged_();
         }
     }
     update();
@@ -277,6 +278,7 @@ void AnnotationCanvas::setFillColor(const QColor& color) {
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         annotations_[selectedIndex_].fillColor = color;
         markModified();
+        if (onSelectionChanged_) onSelectionChanged_();
     }
     update();
 }
