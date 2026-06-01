@@ -27,6 +27,8 @@ public:
     QPoint toImage(QPoint widgetPt) const;
     void setImage(QImage image);
     void adjustImage(int brightness, int contrast);
+    void rotateImage(int degrees);
+    void flipImage(bool horizontal, bool vertical);
     void applyCrop(QRect cropRect);
     void clearModified();
     bool isModified() const;
@@ -133,6 +135,7 @@ protected:
     QVariant inputMethodQuery(Qt::InputMethodQuery query) const override;
 
 private:
+    void reapplyAdjustments();
     void handlePanningPress(QMouseEvent* event);
     bool handlePickingColorPress(QMouseEvent* event);
     bool handleSelectPress(const QPoint& pos);

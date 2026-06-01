@@ -1217,6 +1217,53 @@ void EditorWindow::createToolPanel()
     connect(brightSlider, &QSlider::sliderReleased, this, applyAdjust);
     connect(contrastSlider, &QSlider::sliderReleased, this, applyAdjust);
 
+    layout->addSpacing(8);
+
+    // ==========================================
+    // Transform
+    // ==========================================
+    auto* transformLabel = new QLabel(tr("Transform"), content);
+    transformLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    layout->addWidget(transformLabel);
+
+    const QString smallBtnStyle =
+        "QToolButton { font: 9px; color: #999; background: rgba(255,255,255,0.04);"
+        "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
+        "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }";
+
+    auto addTransformBtn = [content, &smallBtnStyle](const QString& text, const QString& tip) -> QToolButton* {
+        auto* btn = new QToolButton(content);
+        btn->setText(text);
+        btn->setToolTip(tip);
+        btn->setFixedHeight(22);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        btn->setStyleSheet(smallBtnStyle);
+        return btn;
+    };
+
+    auto* transformRow = new QHBoxLayout();
+    transformRow->setContentsMargins(0, 0, 0, 0);
+    transformRow->setSpacing(4);
+
+    auto* rotCw = addTransformBtn(QStringLiteral("\u21BB"), tr("Rotate 90\u00B0 CW"));
+    auto* rotCcw = addTransformBtn(QStringLiteral("\u21BA"), tr("Rotate 90\u00B0 CCW"));
+    auto* rot180 = addTransformBtn(QStringLiteral("\u21D4"), tr("Rotate 180\u00B0"));
+    auto* flipH = addTransformBtn(QStringLiteral("\u2194"), tr("Flip horizontal"));
+    auto* flipV = addTransformBtn(QStringLiteral("\u2195"), tr("Flip vertical"));
+
+    connect(rotCw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(90); });
+    connect(rotCcw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(270); });
+    connect(rot180, &QToolButton::clicked, this, [this] { canvas_->rotateImage(180); });
+    connect(flipH, &QToolButton::clicked, this, [this] { canvas_->flipImage(true, false); });
+    connect(flipV, &QToolButton::clicked, this, [this] { canvas_->flipImage(false, true); });
+
+    transformRow->addWidget(rotCw);
+    transformRow->addWidget(rotCcw);
+    transformRow->addWidget(rot180);
+    transformRow->addWidget(flipH);
+    transformRow->addWidget(flipV);
+    layout->addLayout(transformRow);
+
     layout->addSpacing(6);
 
     // -- Info --

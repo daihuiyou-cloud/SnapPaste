@@ -84,6 +84,29 @@ void AnnotationCanvas::setImage(QImage image)
     update();
 }
 
+void AnnotationCanvas::reapplyAdjustments()
+{
+    double contrastFactor = (contrast_ + 100.0) / 100.0;
+    image_ = baseImage_.copy();
+    int w = image_.width(), h = image_.height();
+    for (int y = 0; y < h; ++y) {
+        auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
+        for (int x = 0; x < w; ++x) {
+            int r = qBound(0, static_cast<int>((qRed(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
+            int g = qBound(0, static_cast<int>((qGreen(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
+            int b = qBound(0, static_cast<int>((qBlue(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
+            line[x] = qRgba(r, g, b, qAlpha(line[x]));
+        }
+    }
+    auto logicalSize = image_.size() / image_.devicePixelRatio();
+    setMinimumSize(logicalSize);
+    resize(logicalSize);
+    updateWindowTitle();
+    renderer_.invalidateCache();
+    markModified();
+    update();
+}
+
 void AnnotationCanvas::adjustImage(int brightness, int contrast)
 {
     if (baseImage_.isNull()) return;
@@ -95,21 +118,48 @@ void AnnotationCanvas::adjustImage(int brightness, int contrast)
     preAdjustImage_ = image_;
     brightness_ = brightness;
     contrast_ = contrast;
-    double contrastFactor = (contrast + 100.0) / 100.0;
-    image_ = baseImage_.copy();
-    int w = image_.width(), h = image_.height();
-    for (int y = 0; y < h; ++y) {
-        auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
-        for (int x = 0; x < w; ++x) {
-            int r = qBound(0, static_cast<int>((qRed(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
-            int g = qBound(0, static_cast<int>((qGreen(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
-            int b = qBound(0, static_cast<int>((qBlue(line[x]) - 128) * contrastFactor + 128 + brightness), 255);
-            line[x] = qRgba(r, g, b, qAlpha(line[x]));
-        }
+    reapplyAdjustments();
+}
+
+void AnnotationCanvas::rotateImage(int degrees)
+{
+    if (baseImage_.isNull()) return;
+    degrees = ((degrees % 360) + 360) % 360;
+    if (degrees == 0) return;
+    QTransform transform;
+    if (degrees == 90)       transform.rotate(90);
+    else if (degrees == 180) transform.rotate(180);
+    else if (degrees == 270) transform.rotate(270);
+    else return;
+    pushUndo();
+    redoStack_.clear();
+    preAdjustImage_ = {};
+    baseImage_ = baseImage_.transformed(transform, Qt::SmoothTransformation);
+    annotations_.clear();
+    selectedIndex_ = -1;
+    nextNumber_ = 1;
+    reapplyAdjustments();
+}
+
+void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
+{
+    if (baseImage_.isNull()) return;
+    if (!horizontal && !vertical) return;
+    Qt::TransformationMode mode = Qt::SmoothTransformation;
+    if (horizontal && vertical) {
+        baseImage_ = baseImage_.mirrored(true, true);
+    } else if (horizontal) {
+        baseImage_ = baseImage_.mirrored(true, false);
+    } else {
+        baseImage_ = baseImage_.mirrored(false, true);
     }
-    renderer_.invalidateCache();
-    markModified();
-    update();
+    pushUndo();
+    redoStack_.clear();
+    preAdjustImage_ = {};
+    annotations_.clear();
+    selectedIndex_ = -1;
+    nextNumber_ = 1;
+    reapplyAdjustments();
 }
 
 void AnnotationCanvas::applyCrop(QRect cropRect)
