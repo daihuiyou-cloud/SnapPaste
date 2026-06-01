@@ -249,6 +249,7 @@ void EditorWindow::refreshPanelUi()
 
 void EditorWindow::rebuildLayerList()
 {
+    if (!layerList_) return;
     rebuildingLayerList_ = true;
     layerList_->clear();
 
@@ -1337,7 +1338,8 @@ void EditorWindow::createToolPanel()
 
     layerList_ = new QListWidget(content);
     layerList_->setStyleSheet(listStyle);
-    layerList_->setFixedHeight(100);
+    layerList_->setMinimumHeight(60);
+    layerList_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     layerList_->setContextMenuPolicy(Qt::CustomContextMenu);
     layerList_->setSelectionMode(QAbstractItemView::SingleSelection);
 

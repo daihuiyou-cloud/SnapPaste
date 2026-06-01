@@ -1511,12 +1511,8 @@ void AnnotationCanvas::handleZoomFit()
 
 void AnnotationCanvas::handleAnnotationDeleteKey()
 {
-    pushUndo();
-    redoStack_.clear();
-    annotations_.removeAt(selectedIndex_);
-    selectedIndex_ = -1;
-    markModified();
-    if (onSelectionChanged_) onSelectionChanged_();
+    if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size())
+        deleteAnnotation(selectedIndex_);
 }
 
 void AnnotationCanvas::handleDuplicateKey()
