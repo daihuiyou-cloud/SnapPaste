@@ -93,6 +93,7 @@ private:
     mutable QImage renderedCache_;
     mutable int cachedRenderedVersion_ = -1;
     int renderedVersion_ = 0;
+    bool savedClickThrough_ = false;
     static constexpr int kMaxPinUndo = 20;
     QVector<PinnedImageState> undoStack_;
 };

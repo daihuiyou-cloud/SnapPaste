@@ -501,11 +501,11 @@ Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegm
     std::scoped_lock lock(mutex_);
     constexpr int kMaxDxgiRetries = 3;
     for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
-        // Recreate device on each retry to handle DXGI_ERROR_DEVICE_REMOVED/RESET.
-        // Transient failures are rare, so the cost of recreation is negligible.
-        d3dDeviceValid_ = false;
-        d3dDevice_.Reset();
-        d3dContext_.Reset();
+        if (attempt > 0) {
+            d3dDeviceValid_ = false;
+            d3dDevice_.Reset();
+            d3dContext_.Reset();
+        }
         auto deviceResult = ensureD3dDevice();
         if (deviceResult.isError()) {
             break;

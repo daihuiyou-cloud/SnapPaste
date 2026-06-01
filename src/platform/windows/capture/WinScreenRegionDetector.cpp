@@ -211,14 +211,17 @@ namespace detail {
 ComInitializer::ComInitializer()
 {
 #ifdef Q_OS_WIN
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    initialized_ = SUCCEEDED(hr);
 #endif
 }
 
 ComInitializer::~ComInitializer()
 {
 #ifdef Q_OS_WIN
-    CoUninitialize();
+    if (initialized_) {
+        CoUninitialize();
+    }
 #endif
 }
 

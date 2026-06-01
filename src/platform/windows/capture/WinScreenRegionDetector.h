@@ -19,6 +19,8 @@ public:
     ~ComInitializer();
     ComInitializer(const ComInitializer&) = delete;
     ComInitializer& operator=(const ComInitializer&) = delete;
+private:
+    bool initialized_ = false;
 };
 
 } // namespace detail
