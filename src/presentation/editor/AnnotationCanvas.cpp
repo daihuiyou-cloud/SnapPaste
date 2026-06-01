@@ -251,15 +251,14 @@ void AnnotationCanvas::updateTextBounds(int index)
     font.setItalic(a.italic);
     font.setUnderline(a.underline);
     QFontMetrics fm(font);
-    int wrapWidth = qMax(a.bounds.width() - 8, 20);
+    auto logicalW = image_.width() / image_.devicePixelRatio();
+    int textWidth = fm.horizontalAdvance(a.text);
+    int naturalW = qMax(textWidth + 8, 60);
+    int newW = qMin(qMax(a.bounds.width(), naturalW), static_cast<int>(logicalW));
+    int wrapWidth = qMax(newW - 8, 20);
     auto textRect = fm.boundingRect(QRect(0, 0, wrapWidth, 4096), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, a.text);
     int newH = qMax(textRect.height() + 8, fm.height() + 8);
-    int newW = a.bounds.width();
-    if (a.text.isEmpty()) {
-        newW = qMax(fm.horizontalAdvance(QStringLiteral("    ")) + 8, 60);
-    }
     QRect newBounds(a.bounds.topLeft(), QSize(newW, newH));
-    auto logicalW = image_.width() / image_.devicePixelRatio();
     if (newBounds.right() > logicalW) {
         newBounds.moveRight(logicalW - 4);
     }
