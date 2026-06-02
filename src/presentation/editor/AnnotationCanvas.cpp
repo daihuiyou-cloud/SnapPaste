@@ -218,6 +218,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     updateWindowTitle();
     update();
     emit imageEdited(image_);
+    emit zoomChanged(zoomFactor_);
 }
 
 void AnnotationCanvas::clearModified() { modified_ = false; updateWindowTitle(); }
@@ -487,9 +488,6 @@ void AnnotationCanvas::setFontSize(int size, bool persist)
             updateTextBounds(selectedIndex_);
             markModified();
         }
-        if (currentTool_ == AnnotationTool::Text || currentTool_ == AnnotationTool::Numbered) {
-            markModified();
-        }
         update();
         emit fontSizeChanged(fontSize_);
         if (persist)
@@ -696,7 +694,7 @@ void AnnotationCanvas::undo()
 
     // Save current state for redo
     redoStack_.push_back(annotations_);
-    redoImageHistory_.push_back({image_, baseImage_, brightness_, contrast_});
+    redoImageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_});
 
     // Restore annotations from undo stack
     annotations_ = undoStack_.takeLast();
@@ -707,11 +705,16 @@ void AnnotationCanvas::undo()
     baseImage_ = snap.baseImage;
     brightness_ = snap.brightness;
     contrast_ = snap.contrast;
+    zoomFactor_ = snap.zoomFactor;
 
     renderer_.invalidateCache();
     auto logicalSize = image_.size() / image_.devicePixelRatio();
-    setMinimumSize(logicalSize);
-    resize(logicalSize);
+    {
+        QSize newSize(static_cast<int>(logicalSize.width() * zoomFactor_),
+                      static_cast<int>(logicalSize.height() * zoomFactor_));
+        setMinimumSize(newSize);
+        resize(newSize);
+    }
     updateWindowTitle();
 
     int maxNumber = 0;
@@ -722,12 +725,13 @@ void AnnotationCanvas::undo()
     selectedIndex_ = -1;
     markModified();
     emit selectionChanged();
+    emit zoomChanged(zoomFactor_);
 }
 
 void AnnotationCanvas::pushUndoSnapshot(bool clearRedo)
 {
     undoStack_.push_back(annotations_);
-    imageHistory_.push_back({image_, baseImage_, brightness_, contrast_});
+    imageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_});
     if (clearRedo) {
         redoStack_.clear();
         redoImageHistory_.clear();
@@ -765,16 +769,22 @@ void AnnotationCanvas::redo()
     baseImage_ = snap.baseImage;
     brightness_ = snap.brightness;
     contrast_ = snap.contrast;
+    zoomFactor_ = snap.zoomFactor;
 
     renderer_.invalidateCache();
     auto logicalSize = image_.size() / image_.devicePixelRatio();
-    setMinimumSize(logicalSize);
-    resize(logicalSize);
+    {
+        QSize newSize(static_cast<int>(logicalSize.width() * zoomFactor_),
+                      static_cast<int>(logicalSize.height() * zoomFactor_));
+        setMinimumSize(newSize);
+        resize(newSize);
+    }
     updateWindowTitle();
 
     selectedIndex_ = -1;
     markModified();
     emit selectionChanged();
+    emit zoomChanged(zoomFactor_);
 }
 
 void AnnotationCanvas::dragEnterEvent(QDragEnterEvent* event)
@@ -1940,7 +1950,8 @@ void AnnotationCanvas::inputMethodEvent(QInputMethodEvent* event)
     }
     auto& a = annotations_[editingTextIndex_];
     if (!event->commitString().isEmpty()) {
-        a.text += event->commitString();
+        a.text.insert(cursorPos_, event->commitString());
+        cursorPos_ += event->commitString().length();
         preeditString_.clear();
         updateTextBounds(editingTextIndex_);
         markModified();
@@ -1981,13 +1992,13 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
             return f;
         }
         case Qt::ImCursorPosition:
-            return a.text.length() + preeditString_.length();
+            return cursorPos_;
         case Qt::ImSurroundingText:
             return a.text + preeditString_;
         case Qt::ImCurrentSelection:
             return QString();
         case Qt::ImAnchorPosition:
-            return a.text.length() + preeditString_.length();
+            return cursorPos_;
         default:
             break;
         }

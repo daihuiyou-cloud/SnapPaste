@@ -172,6 +172,7 @@ private:
         QImage baseImage;
         int brightness = 0;
         int contrast = 0;
+        double zoomFactor = 1.0;
     };
 
     static constexpr int kMaxUndo = 20;
