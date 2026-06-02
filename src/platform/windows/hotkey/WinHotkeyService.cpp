@@ -13,6 +13,8 @@ constexpr int kCaptureHotkeyId = 1001;
 constexpr int kPasteHotkeyId = 1002;
 constexpr int kHidePinsHotkeyId = 1003;
 constexpr int kRepeatCaptureHotkeyId = 1004;
+constexpr int kMinHotkeyId = kCaptureHotkeyId;
+constexpr int kMaxHotkeyId = kRepeatCaptureHotkeyId;
 }
 
 WinHotkeyService::WinHotkeyService()
@@ -52,6 +54,7 @@ void WinHotkeyService::unregisterHotkey(HotkeyAction action)
         UnregisterHotKey(nullptr, idFor(action));
         registeredActions_.erase(action);
     }
+    callbacks_.erase(action);
 #else
     Q_UNUSED(action)
 #endif
@@ -78,7 +81,11 @@ bool WinHotkeyService::nativeEventFilter(const QByteArray& eventType, void* mess
 #ifdef Q_OS_WIN
     auto* msg = static_cast<MSG*>(message);
     if (msg != nullptr && msg->message == WM_HOTKEY) {
-        const auto action = actionForId(static_cast<int>(msg->wParam));
+        const auto id = static_cast<int>(msg->wParam);
+        if (id < kMinHotkeyId || id > kMaxHotkeyId) {
+            return false;
+        }
+        const auto action = actionForId(id);
         const auto callback = callbacks_.find(action);
         if (callback != callbacks_.end() && callback->second) {
             callback->second();
