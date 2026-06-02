@@ -24,6 +24,14 @@ namespace snappaste {
 
 namespace {
 
+QRect logicalToPhysical(const QRect& logical, qreal dpr)
+{
+    return QRect(qRound(logical.x() * dpr),
+                 qRound(logical.y() * dpr),
+                 qRound(logical.width() * dpr),
+                 qRound(logical.height() * dpr));
+}
+
 #ifdef Q_OS_WIN
 using Microsoft::WRL::ComPtr;
 
@@ -382,7 +390,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         for (const auto& segment : segments) {
             auto segmentResult = captureWithDxgi(segment);
             if (segmentResult.isError()) {
-                segmentResult = fallback_.captureRegion(segment.logicalRegion);
+                segmentResult = fallback_.captureRegion(logicalToPhysical(segment.logicalRegion, segment.devicePixelRatio), segment.devicePixelRatio);
             }
             if (segmentResult.isError()) {
                 return Result<QImage>::failure(segmentResult.error());
@@ -402,7 +410,8 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
 
     auto dxgiResult = captureWithDxgi(segments.first());
     if (dxgiResult.isError()) {
-        dxgiResult = fallback_.captureRegion(region);
+        const auto& seg = segments.first();
+        dxgiResult = fallback_.captureRegion(logicalToPhysical(seg.logicalRegion, seg.devicePixelRatio), seg.devicePixelRatio);
     }
     if (dxgiResult.isOk()) {
         auto image = dxgiResult.value();
@@ -432,7 +441,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
         composite.fill(Qt::black);
         QPainter painter(&composite);
         for (const auto& segment : segments) {
-            auto segmentResult = fallback_.captureRegion(segment.logicalRegion);
+            auto segmentResult = fallback_.captureRegion(logicalToPhysical(segment.logicalRegion, segment.devicePixelRatio), segment.devicePixelRatio);
             if (segmentResult.isError()) {
                 return Result<QImage>::failure(segmentResult.error());
             }

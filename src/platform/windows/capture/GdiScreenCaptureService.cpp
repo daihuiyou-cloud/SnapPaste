@@ -132,6 +132,16 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region, const
     return captureRegion(region);
 }
 
+Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& physicalRegion, qreal devicePixelRatio)
+{
+    auto result = captureRectWithGdi(physicalRegion);
+    if (result.isOk() && devicePixelRatio > 1.0) {
+        auto image = result.value();
+        image.setDevicePixelRatio(devicePixelRatio);
+    }
+    return result;
+}
+
 Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 {
 #if defined(Q_OS_WIN)
