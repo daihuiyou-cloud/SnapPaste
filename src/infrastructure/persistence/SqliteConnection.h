@@ -6,6 +6,8 @@
 #include <QSqlDatabase>
 #include <QString>
 
+#include <mutex>
+
 namespace snappaste {
 
 class SqliteConnection final {
@@ -20,6 +22,7 @@ private:
     QString databasePath_;
     SqliteMigrator migrator_;
     bool opened_ = false;
+    std::mutex mutex_;
 };
 
 } // namespace snappaste

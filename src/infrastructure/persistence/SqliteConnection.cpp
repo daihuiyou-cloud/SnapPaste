@@ -24,6 +24,7 @@ SqliteConnection::~SqliteConnection()
 
 Result<QSqlDatabase> SqliteConnection::database()
 {
+    std::scoped_lock lock(mutex_);
     QSqlDatabase db;
     if (QSqlDatabase::contains(connectionName_)) {
         db = QSqlDatabase::database(connectionName_);
