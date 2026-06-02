@@ -237,6 +237,7 @@ void AnnotationCanvas::zoomAt(double factor, QPoint center)
 {
     const auto oldCenter = toImage(center);
     zoomFactor_ = std::max(0.1, std::min(5.0, factor));
+    renderer_.invalidateCache();
     auto logicalSize = image_.size() / image_.devicePixelRatio();
     QSize newSize(static_cast<int>(logicalSize.width() * zoomFactor_),
                   static_cast<int>(logicalSize.height() * zoomFactor_));
@@ -448,8 +449,8 @@ void AnnotationCanvas::updateTextBounds(int index)
     if (index < 0 || index >= annotations_.size()) return;
     auto& a = annotations_[index];
     if (a.tool != AnnotationTool::Text) return;
-    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
-               a.textFontSize > 0 ? a.textFontSize : fontSize_);
+    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily);
+    font.setPixelSize(a.textFontSize > 0 ? a.textFontSize : fontSize_);
     font.setBold(a.bold);
     font.setItalic(a.italic);
     font.setUnderline(a.underline);
@@ -971,7 +972,8 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
             return true;
         }
     }
-    QFont font(currentFontFamily_.isEmpty() ? QApplication::font().family() : currentFontFamily_, fontSize_);
+    QFont font(currentFontFamily_.isEmpty() ? QApplication::font().family() : currentFontFamily_);
+    font.setPixelSize(fontSize_);
     font.setBold(bold_);
     font.setItalic(italic_);
     font.setUnderline(underline_);
@@ -1956,8 +1958,8 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         const auto& img = image_;
         switch (query) {
         case Qt::ImCursorRectangle: {
-    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
-                       a.textFontSize > 0 ? a.textFontSize : fontSize_);
+    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily);
+            font.setPixelSize(a.textFontSize > 0 ? a.textFontSize : fontSize_);
             font.setBold(a.bold);
             font.setItalic(a.italic);
             font.setUnderline(a.underline);
@@ -1971,8 +1973,8 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
         case Qt::ImEnabled:
             return true;
         case Qt::ImFont: {
-            QFont f(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
-                    a.textFontSize > 0 ? a.textFontSize : fontSize_);
+            QFont f(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily);
+            f.setPixelSize(a.textFontSize > 0 ? a.textFontSize : fontSize_);
             f.setBold(a.bold);
             f.setItalic(a.italic);
             f.setUnderline(a.underline);

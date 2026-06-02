@@ -51,8 +51,8 @@ void AnnotationRenderer::drawTextEditCursor(QPainter& painter,
     if (editingTextIndex >= 0 && editingTextIndex < annotations.size()) {
         const auto& a = annotations[editingTextIndex];
         if (a.tool == AnnotationTool::Text) {
-            QFont font(a.fontFamily.isEmpty() ? qApp->font().family() : a.fontFamily,
-                       a.textFontSize > 0 ? a.textFontSize : fontSize);
+            QFont font(a.fontFamily.isEmpty() ? qApp->font().family() : a.fontFamily);
+            font.setPixelSize(a.textFontSize > 0 ? a.textFontSize : fontSize);
             font.setBold(a.bold);
             font.setItalic(a.italic);
             font.setUnderline(a.underline);
@@ -116,6 +116,7 @@ void AnnotationRenderer::drawAnnotations(QPainter& painter,
     cache.fill(Qt::transparent);
     QPainter cachePainter(&cache);
     cachePainter.setRenderHint(QPainter::Antialiasing, true);
+    cachePainter.setRenderHint(QPainter::TextAntialiasing, true);
 
     for (int i = 0; i < annotations.size(); ++i) {
         if (!annotations.at(i).visible) continue;
@@ -242,8 +243,8 @@ void AnnotationRenderer::drawPenAnnotation(QPainter* painter, const Annotation& 
 
 void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize)
 {
-    QFont font(annotation.fontFamily.isEmpty() ? qApp->font().family() : annotation.fontFamily,
-               annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
+    QFont font(annotation.fontFamily.isEmpty() ? qApp->font().family() : annotation.fontFamily);
+    font.setPixelSize(annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
     font.setBold(annotation.bold);
     font.setItalic(annotation.italic);
     font.setUnderline(annotation.underline);
@@ -335,7 +336,7 @@ void AnnotationRenderer::drawNumberedAnnotation(QPainter* painter, const Annotat
     QFont numFont;
     if (!annotation.fontFamily.isEmpty())
         numFont.setFamily(annotation.fontFamily);
-    numFont.setPointSize(r);
+    numFont.setPixelSize(r);
     numFont.setBold(annotation.bold);
     numFont.setItalic(annotation.italic);
     painter->setFont(numFont);
