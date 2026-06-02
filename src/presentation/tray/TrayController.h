@@ -34,8 +34,8 @@ signals:
     void quitRequested();
 
 private:
-    QSystemTrayIcon trayIcon_;
     std::unique_ptr<QMenu> menu_;
+    QSystemTrayIcon trayIcon_;
 };
 
 } // namespace snappaste
