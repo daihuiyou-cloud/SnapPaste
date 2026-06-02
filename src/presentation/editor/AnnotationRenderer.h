@@ -48,14 +48,16 @@ private:
     static void drawLineAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawPenAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize);
-    static void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation);
+    void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation) const;
     static void drawHighlightAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawNumberedAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawCropAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize);
+    void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize) const;
 
     mutable QImage annotationCache_;
     mutable bool cacheValid_ = false;
+    mutable QImage mosaicBlurCache_;
+    mutable int mosaicCachedRadius_ = -1;
 };
 
 } // namespace snappaste

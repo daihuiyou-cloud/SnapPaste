@@ -1,4 +1,3 @@
-#define _USE_MATH_DEFINES
 #include "presentation/editor/AnnotationCanvas.h"
 
 #include <QApplication>
@@ -35,19 +34,40 @@ AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_InputMethodEnabled, true);
     setMinimumSize(640, 360);
-    QSettings settings;
-    fontSize_ = settings.value("editor/fontSize", 14).toInt();
-    currentFontFamily_ = settings.value("editor/fontFamily", QApplication::font().family()).toString();
-    bold_ = settings.value("editor/bold", false).toBool();
-    italic_ = settings.value("editor/italic", false).toBool();
-    underline_ = settings.value("editor/underline", false).toBool();
-    textAlignment_ = settings.value("editor/textAlignment", -1).toInt();
-    const auto saved = settings.value("editor/recentColors").toList();
-    for (const auto& v : saved) {
-        QColor c(v.toString());
-        if (c.isValid())
-            customColors_.append(c);
-    }
+
+    // Batch-load editor settings from QSettings (single registry read)
+    struct EditorPrefs {
+        int fontSize = 14;
+        QString fontFamily;
+        bool bold = false, italic = false, underline = false;
+        int textAlignment = -1;
+        QVector<QColor> recentColors;
+    };
+    static const EditorPrefs prefs = [] {
+        QSettings s;
+        EditorPrefs p;
+        p.fontSize = s.value("editor/fontSize", 14).toInt();
+        p.fontFamily = s.value("editor/fontFamily", QApplication::font().family()).toString();
+        p.bold = s.value("editor/bold", false).toBool();
+        p.italic = s.value("editor/italic", false).toBool();
+        p.underline = s.value("editor/underline", false).toBool();
+        p.textAlignment = s.value("editor/textAlignment", -1).toInt();
+        const auto saved = s.value("editor/recentColors").toList();
+        for (const auto& v : saved) {
+            QColor c(v.toString());
+            if (c.isValid())
+                p.recentColors.append(c);
+        }
+        return p;
+    }();
+
+    fontSize_ = prefs.fontSize;
+    currentFontFamily_ = prefs.fontFamily;
+    bold_ = prefs.bold;
+    italic_ = prefs.italic;
+    underline_ = prefs.underline;
+    textAlignment_ = prefs.textAlignment;
+    customColors_ = prefs.recentColors;
 }
 
 QPoint AnnotationCanvas::toImage(QPoint widgetPt) const

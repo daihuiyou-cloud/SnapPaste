@@ -101,7 +101,7 @@ qt5_add_translation(SNAPPASTE_QM_FILES ${SNAPPASTE_TS_FILES})
 add_dependencies(SnapPaste SnapPasteCore)
 
 if (WIN32)
-    target_compile_definitions(SnapPasteCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_compile_definitions(SnapPasteCore PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN _USE_MATH_DEFINES)
     target_link_libraries(SnapPasteCore PUBLIC user32 gdi32 shell32 shcore dwmapi ole32 oleaut32 uiautomationcore d3d11 dxgi windowsapp)
 endif()
 

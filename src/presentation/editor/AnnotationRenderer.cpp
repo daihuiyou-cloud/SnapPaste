@@ -1,4 +1,3 @@
-#define _USE_MATH_DEFINES
 #include "presentation/editor/AnnotationRenderer.h"
 #include "presentation/editor/ImageBlur.h"
 
@@ -138,6 +137,7 @@ void AnnotationRenderer::drawDraft(QPainter& painter,
 void AnnotationRenderer::invalidateCache()
 {
     cacheValid_ = false;
+    mosaicCachedRadius_ = -1;
 }
 
 const QImage& AnnotationRenderer::cacheImage() const
@@ -264,27 +264,38 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
     }
 
     if (annotation.textOutline) {
+        // drawText ignores pen width for text color, so render at 4 offsets
+        // to create a faux outline, then draw the actual text on top.
         painter->save();
-        painter->setPen(QPen(QColor(255, 255, 255, 200), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->setBrush(Qt::NoBrush);
-        painter->drawText(annotation.bounds, flags, annotation.text);
+        painter->setPen(QColor(255, 255, 255, 200));
+        auto b = annotation.bounds;
+        painter->drawText(b.adjusted(-1, -1, -1, -1), flags, annotation.text);
+        painter->drawText(b.adjusted( 1, -1,  1, -1), flags, annotation.text);
+        painter->drawText(b.adjusted(-1,  1, -1,  1), flags, annotation.text);
+        painter->drawText(b.adjusted( 1,  1,  1,  1), flags, annotation.text);
         painter->restore();
     }
     painter->setPen(QPen(annotation.color, 1));
     painter->drawText(annotation.bounds, flags, annotation.text);
 }
 
-void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation)
+void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation) const
 {
     if (!annotation.points.isEmpty()) {
         const int blockSize = qMax(4, annotation.strokeWidth * 4);
+        // Pre-blur entire source image once when using gaussian blur with points
+        if (annotation.blurRadius > 0 &&
+            (mosaicCachedRadius_ != annotation.blurRadius || mosaicBlurCache_.size() != sourceImage.size())) {
+            mosaicBlurCache_ = blurImage(sourceImage, annotation.blurRadius);
+            mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
+            mosaicCachedRadius_ = annotation.blurRadius;
+        }
         for (const auto& pt : annotation.points) {
             QRect blockRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
             const auto clipped = blockRect.intersected(sourceImage.rect());
             if (clipped.isEmpty()) continue;
             if (annotation.blurRadius > 0) {
-                auto region = sourceImage.copy(clipped);
-                painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+                painter->drawImage(clipped.topLeft(), mosaicBlurCache_.copy(clipped));
             } else {
                 constexpr int kBlock = 8;
                 const int bw = qMax(1, clipped.width() / kBlock);
@@ -299,8 +310,12 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
         const auto clipped = annotation.bounds.intersected(sourceImage.rect());
         if (clipped.isEmpty()) return;
         if (annotation.blurRadius > 0) {
-            auto region = sourceImage.copy(clipped);
-            painter->drawImage(clipped.topLeft(), blurImage(region, annotation.blurRadius));
+            if (mosaicCachedRadius_ != annotation.blurRadius || mosaicBlurCache_.size() != sourceImage.size()) {
+                mosaicBlurCache_ = blurImage(sourceImage, annotation.blurRadius);
+                mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
+                mosaicCachedRadius_ = annotation.blurRadius;
+            }
+            painter->drawImage(clipped.topLeft(), mosaicBlurCache_.copy(clipped));
         } else {
             constexpr int kBlockSize = 8;
             const int bw = qMax(1, clipped.width() / kBlockSize);
@@ -348,7 +363,7 @@ void AnnotationRenderer::drawCropAnnotation(QPainter* painter, const Annotation&
 }
 
 void AnnotationRenderer::drawAnnotation(QPainter* painter, const QImage& sourceImage,
-    const Annotation& annotation, int fontSize)
+    const Annotation& annotation, int fontSize) const
 {
     painter->setRenderHint(QPainter::Antialiasing, true);
 
