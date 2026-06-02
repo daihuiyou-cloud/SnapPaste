@@ -46,8 +46,8 @@ QRect CaptureSelectionHistory::previous()
     }
     if (cursor_ < 0) {
         cursor_ = 0;
-    } else {
-        cursor_ = (cursor_ + 1) % entries_.size();
+    } else if (cursor_ + 1 < entries_.size()) {
+        ++cursor_;
     }
     return entries_.at(cursor_);
 }
@@ -59,9 +59,9 @@ QRect CaptureSelectionHistory::next()
     }
     if (cursor_ < 0) {
         cursor_ = 0;
-        return entries_.at(0);
+    } else if (cursor_ > 0) {
+        --cursor_;
     }
-    cursor_ = (cursor_ - 1 + entries_.size()) % entries_.size();
     return entries_.at(cursor_);
 }
 
