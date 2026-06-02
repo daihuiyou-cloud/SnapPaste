@@ -1374,6 +1374,7 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
         if (resizing_ || moving_) {
             resizing_ = false;
             moving_ = false;
+            markModified();
             return;
         }
     }
