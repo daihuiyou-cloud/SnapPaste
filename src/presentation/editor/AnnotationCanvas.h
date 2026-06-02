@@ -165,7 +165,14 @@ private:
     void handleNudgeKey(int key);
     void handleFontSizeChange(int delta);
 
-    static constexpr int kMaxUndo = 50;
+    struct ImageSnapshot {
+        QImage image;
+        QImage baseImage;
+        int brightness = 0;
+        int contrast = 0;
+    };
+
+    static constexpr int kMaxUndo = 20;
 
     AnnotationRenderer renderer_;
     QImage image_;
@@ -174,7 +181,9 @@ private:
     int contrast_ = 0;
     QVector<Annotation> annotations_;
     QVector<QVector<Annotation>> undoStack_;
+    QVector<ImageSnapshot> imageHistory_;
     QVector<QVector<Annotation>> redoStack_;
+    QVector<ImageSnapshot> redoImageHistory_;
     AnnotationTool currentTool_ = AnnotationTool::Rectangle;
     QColor currentColor_{"#ff3b30"};
     QColor currentFillColor_;
@@ -199,9 +208,6 @@ private:
     QPoint panStart_;
     double zoomFactor_ = 1.0;
     bool modified_ = false;
-    QPoint cropUndoOffset_;
-    QImage preCropImage_;
-    QImage preAdjustImage_;
     int nextNumber_ = 1;
     int fontSize_ = 14;
     bool filled_ = false;

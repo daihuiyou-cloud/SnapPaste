@@ -73,9 +73,8 @@ void AnnotationCanvas::setImage(QImage image)
     nextNumber_ = 1;
     editingTextIndex_ = -1;
     preeditString_.clear();
-    preCropImage_ = {};
-    preAdjustImage_ = {};
-    cropUndoOffset_ = {};
+    imageHistory_.clear();
+    redoImageHistory_.clear();
     auto dpr = image_.devicePixelRatio();
     QSize logicalSize(image_.size() / dpr);
     setMinimumSize(logicalSize);
@@ -114,8 +113,6 @@ void AnnotationCanvas::adjustImage(int brightness, int contrast)
     contrast = qBound(-100, contrast, 100);
     if (brightness == brightness_ && contrast == contrast_) return;
     pushUndo();
-    redoStack_.clear();
-    preAdjustImage_ = image_;
     brightness_ = brightness;
     contrast_ = contrast;
     reapplyAdjustments();
@@ -132,8 +129,6 @@ void AnnotationCanvas::rotateImage(int degrees)
     else if (degrees == 270) transform.rotate(270);
     else return;
     pushUndo();
-    redoStack_.clear();
-    preAdjustImage_ = {};
     baseImage_ = baseImage_.transformed(transform, Qt::SmoothTransformation);
     annotations_.clear();
     selectedIndex_ = -1;
@@ -153,8 +148,6 @@ void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
         baseImage_ = baseImage_.mirrored(false, true);
     }
     pushUndo();
-    redoStack_.clear();
-    preAdjustImage_ = {};
     annotations_.clear();
     selectedIndex_ = -1;
     nextNumber_ = 1;
@@ -171,11 +164,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     physicalCrop = physicalCrop.intersected(image_.rect());
     if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
-    preCropImage_ = image_.copy();
-    preAdjustImage_ = {};
     pushUndo();
-    redoStack_.clear();
-    cropUndoOffset_ = -physicalCrop.topLeft();
     image_ = image_.copy(physicalCrop);
     renderer_.invalidateCache();
     annotations_.clear();
@@ -325,6 +314,8 @@ void AnnotationCanvas::setColor(const QColor& color)
 {
     currentColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].color = color;
         markModified();
     }
@@ -334,6 +325,8 @@ void AnnotationCanvas::setStrokeWidth(int width)
 {
     currentStrokeWidth_ = std::clamp(width, 1, 12);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].strokeWidth = currentStrokeWidth_;
         markModified();
     }
@@ -357,6 +350,8 @@ void AnnotationCanvas::setMosaicBlurred(bool blurred)
     mosaicBlurred_ = blurred;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].blurRadius = blurred ? currentStrokeWidth_ : 0;
         markModified();
     }
@@ -367,6 +362,8 @@ void AnnotationCanvas::setTextOutlineEnabled(bool enabled)
 {
     textOutlineEnabled_ = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         auto t = annotations_[selectedIndex_].tool;
         if (t == AnnotationTool::Text || t == AnnotationTool::Numbered) {
             annotations_[selectedIndex_].textOutline = enabled;
@@ -380,6 +377,8 @@ void AnnotationCanvas::setFilled(bool filled)
 {
     filled_ = filled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         auto& a = annotations_[selectedIndex_];
         if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse
             || a.tool == AnnotationTool::Arrow) {
@@ -395,6 +394,8 @@ QColor AnnotationCanvas::fillColor() const { return currentFillColor_; }
 void AnnotationCanvas::setFillColor(const QColor& color) {
     currentFillColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].fillColor = color;
         markModified();
         if (onSelectionChanged_) onSelectionChanged_();
@@ -405,6 +406,8 @@ void AnnotationCanvas::setTextBackgroundEnabled(bool enabled) {
     textBackgroundEnabled_ = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].textBackground = enabled;
         markModified();
     }
@@ -415,6 +418,8 @@ void AnnotationCanvas::setTextBackgroundColor(const QColor& color) {
     textBackgroundColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].textBackgroundColor = color;
         markModified();
     }
@@ -460,6 +465,8 @@ void AnnotationCanvas::setFontSize(int size, bool persist)
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && (annotations_[selectedIndex_].tool == AnnotationTool::Text
                        || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].textFontSize = size;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -485,6 +492,8 @@ void AnnotationCanvas::setFontFamily(const QString& family)
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].fontFamily = family;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -504,6 +513,8 @@ void AnnotationCanvas::setBold(bool b)
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].bold = b;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -523,6 +534,8 @@ void AnnotationCanvas::setItalic(bool i)
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].italic = i;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -542,6 +555,8 @@ void AnnotationCanvas::setUnderline(bool u)
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].underline = u;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -561,6 +576,8 @@ void AnnotationCanvas::setTextAlignment(int align)
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+            pushUndo();
+            redoStack_.clear();
             annotations_[selectedIndex_].textAlignment = align;
             updateTextBounds(selectedIndex_);
             markModified();
@@ -596,6 +613,8 @@ void AnnotationCanvas::setStrokeAlpha(int alpha)
 {
     strokeAlpha_ = std::clamp(alpha, 0, 255);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].color.setAlpha(strokeAlpha_);
         markModified();
     }
@@ -610,6 +629,8 @@ void AnnotationCanvas::setArrowStyle(ArrowStyle style)
     arrowStyle_ = style;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Arrow) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].arrowStyle = style;
         markModified();
     }
@@ -624,6 +645,8 @@ void AnnotationCanvas::setCornerRadius(int radius)
     cornerRadius_ = std::clamp(radius, 0, 40);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Rectangle) {
+        pushUndo();
+        redoStack_.clear();
         annotations_[selectedIndex_].cornerRadius = cornerRadius_;
         markModified();
     }
@@ -676,37 +699,26 @@ void AnnotationCanvas::undo()
     moving_ = false;
     resizing_ = false;
 
-    bool restoringCrop = !preCropImage_.isNull() && !cropUndoOffset_.isNull();
-    if (restoringCrop) {
-        image_ = preCropImage_;
-        preCropImage_ = {};
-        cropUndoOffset_ = {};
-        renderer_.invalidateCache();
-        auto logicalSize = image_.size() / image_.devicePixelRatio();
-        setMinimumSize(logicalSize);
-        resize(logicalSize);
-        updateWindowTitle();
-    } else if (!preAdjustImage_.isNull()) {
-        image_ = preAdjustImage_;
-        preAdjustImage_ = {};
-        brightness_ = 0;
-        contrast_ = 0;
-        renderer_.invalidateCache();
-        auto logicalSize = image_.size() / image_.devicePixelRatio();
-        setMinimumSize(logicalSize);
-        resize(logicalSize);
-        updateWindowTitle();
-    }
-
+    // Save current state for redo
     redoStack_.push_back(annotations_);
+    redoImageHistory_.push_back({image_, baseImage_, brightness_, contrast_});
+
+    // Restore annotations from undo stack
     annotations_ = undoStack_.takeLast();
-    if (!cropUndoOffset_.isNull()) {
-        for (auto& a : annotations_) {
-            a.bounds.translate(cropUndoOffset_);
-            for (auto& pt : a.points) pt += cropUndoOffset_;
-        }
-        cropUndoOffset_ = {};
-    }
+
+    // Restore image state from image history
+    auto snap = imageHistory_.takeLast();
+    image_ = snap.image;
+    baseImage_ = snap.baseImage;
+    brightness_ = snap.brightness;
+    contrast_ = snap.contrast;
+
+    renderer_.invalidateCache();
+    auto logicalSize = image_.size() / image_.devicePixelRatio();
+    setMinimumSize(logicalSize);
+    resize(logicalSize);
+    updateWindowTitle();
+
     int maxNumber = 0;
     for (const auto& a : annotations_) {
         if (a.number > maxNumber) maxNumber = a.number;
@@ -720,8 +732,12 @@ void AnnotationCanvas::undo()
 void AnnotationCanvas::pushUndo()
 {
     undoStack_.push_back(annotations_);
+    imageHistory_.push_back({image_, baseImage_, brightness_, contrast_});
+    redoStack_.clear();
+    redoImageHistory_.clear();
     if (undoStack_.size() > kMaxUndo) {
         undoStack_.removeFirst();
+        imageHistory_.removeFirst();
     }
 }
 
@@ -736,8 +752,29 @@ void AnnotationCanvas::redo()
     drawing_ = false;
     moving_ = false;
     resizing_ = false;
-    pushUndo();
+
+    // Save current state for undo (directly, not via pushUndo which clears redo)
+    undoStack_.push_back(annotations_);
+    imageHistory_.push_back({image_, baseImage_, brightness_, contrast_});
+    if (undoStack_.size() > kMaxUndo) {
+        undoStack_.removeFirst();
+        imageHistory_.removeFirst();
+    }
+
+    // Restore from redo stacks
     annotations_ = redoStack_.takeLast();
+    auto snap = redoImageHistory_.takeLast();
+    image_ = snap.image;
+    baseImage_ = snap.baseImage;
+    brightness_ = snap.brightness;
+    contrast_ = snap.contrast;
+
+    renderer_.invalidateCache();
+    auto logicalSize = image_.size() / image_.devicePixelRatio();
+    setMinimumSize(logicalSize);
+    resize(logicalSize);
+    updateWindowTitle();
+
     selectedIndex_ = -1;
     markModified();
     if (onSelectionChanged_) onSelectionChanged_();
@@ -786,6 +823,7 @@ void AnnotationCanvas::mouseDoubleClickEvent(QMouseEvent* event)
                 pushUndo();
                 redoStack_.clear();
                 annotations_[selectedIndex_].text = newText;
+                markModified();
                 update();
             }
         } else {
