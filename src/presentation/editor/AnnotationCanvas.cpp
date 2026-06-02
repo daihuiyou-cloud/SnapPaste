@@ -81,6 +81,7 @@ void AnnotationCanvas::setImage(QImage image)
     resize(logicalSize);
     updateWindowTitle();
     update();
+    emit zoomChanged(zoomFactor_);
 }
 
 void AnnotationCanvas::reapplyAdjustments()
@@ -213,8 +214,10 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     brightness_ = 0;
     contrast_ = 0;
     auto logicalSize = image_.size() / image_.devicePixelRatio();
-    setMinimumSize(logicalSize);
-    resize(logicalSize);
+    QSize zoomedSize(static_cast<int>(logicalSize.width() * zoomFactor_),
+                     static_cast<int>(logicalSize.height() * zoomFactor_));
+    setMinimumSize(zoomedSize);
+    resize(zoomedSize);
     updateWindowTitle();
     update();
     emit imageEdited(image_);
@@ -945,7 +948,10 @@ bool AnnotationCanvas::handleEraserPress(const QPoint& pos)
         if (renderer_.hitTestAnnotation(annotations_.at(i), pos)) {
             pushUndo();
             annotations_.removeAt(i);
+            if (selectedIndex_ == i) selectedIndex_ = -1;
+            else if (selectedIndex_ > i) --selectedIndex_;
             markModified();
+            emit selectionChanged();
             return true;
         }
     }
