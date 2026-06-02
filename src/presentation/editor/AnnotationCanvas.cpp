@@ -78,7 +78,6 @@ QPoint AnnotationCanvas::toImage(QPoint widgetPt) const
 
 void AnnotationCanvas::setImage(QImage image)
 {
-    zoomFactor_ = 1.0;
     if (image.format() != QImage::Format_ARGB32_Premultiplied)
         image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     baseImage_ = image;
@@ -98,7 +97,28 @@ void AnnotationCanvas::setImage(QImage image)
     auto dpr = image_.devicePixelRatio();
     QSize logicalSize(image_.size() / dpr);
     setMinimumSize(logicalSize);
-    resize(logicalSize);
+
+    // Auto-fit to viewport if image is larger than the scroll area;
+    // otherwise restore the last-used zoom from settings.
+    zoomFactor_ = 1.0;
+    auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
+    if (scrollArea && !image_.isNull()) {
+        auto vp = scrollArea->viewport()->size();
+        if (vp.width() > 0 && vp.height() > 0) {
+            double fit = qMin(static_cast<double>(vp.width()) / logicalSize.width(),
+                               static_cast<double>(vp.height()) / logicalSize.height());
+            if (fit < 1.0) {
+                zoomFactor_ = fit;
+            } else {
+                double saved = QSettings().value("editor/zoomFactor", 1.0).toDouble();
+                if (saved >= 0.1 && saved <= 5.0)
+                    zoomFactor_ = saved;
+            }
+        }
+    }
+    QSize zoomedSize(static_cast<int>(logicalSize.width() * zoomFactor_),
+                     static_cast<int>(logicalSize.height() * zoomFactor_));
+    resize(zoomedSize);
     updateWindowTitle();
     update();
     emit zoomChanged(zoomFactor_);
@@ -920,7 +940,7 @@ bool AnnotationCanvas::handlePickingColorPress(QMouseEvent* event)
         const auto dpr = image_.devicePixelRatio();
         QPoint physicalPos(static_cast<int>(pos.x() * dpr),
                            static_cast<int>(pos.y() * dpr));
-        currentColor_ = QColor::fromRgba(image_.pixel(physicalPos));
+        setColor(QColor::fromRgba(image_.pixel(physicalPos)));
     }
     emit pickingColorChanged(false);
     update();

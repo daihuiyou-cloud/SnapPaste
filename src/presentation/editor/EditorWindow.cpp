@@ -197,6 +197,9 @@ void EditorWindow::setupActions()
 
 void EditorWindow::closeEvent(QCloseEvent* event)
 {
+    if (canvas_) {
+        QSettings().setValue("editor/zoomFactor", canvas_->zoomFactor());
+    }
     if (canvas_ && canvas_->isModified()) {
         auto ret = QMessageBox::question(this, tr("Unsaved Changes"),
             tr("You have unsaved annotations. Save before closing?"),
