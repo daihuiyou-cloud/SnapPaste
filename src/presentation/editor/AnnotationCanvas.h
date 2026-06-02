@@ -14,6 +14,7 @@
 #include <functional>
 
 class QPainter;
+class QPixmap;
 class QScrollArea;
 
 namespace snappaste {
@@ -142,6 +143,7 @@ protected:
 
 private:
     void reapplyAdjustments();
+    void rebuildBackingCache();
     void handlePanningPress(QMouseEvent* event);
     bool handlePickingColorPress(QMouseEvent* event);
     bool handleSelectPress(const QPoint& pos);
@@ -231,6 +233,10 @@ private:
     QPointF mouseImagePos_;
     QColor mousePixelColor_;
     QVector<AnnotationTool> recentTools_;
+
+    QPixmap backingCache_;
+    double backingZoom_ = 0.0;
+    bool backingCacheDirty_ = true;
 };
 
 } // namespace snappaste

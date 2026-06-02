@@ -95,6 +95,7 @@ void AnnotationCanvas::setImage(QImage image)
     imageHistory_.clear();
     redoImageHistory_.clear();
     auto dpr = image_.devicePixelRatio();
+    backingCacheDirty_ = true;
     QSize logicalSize(image_.size() / dpr);
     setMinimumSize(logicalSize);
 
@@ -122,6 +123,31 @@ void AnnotationCanvas::setImage(QImage image)
     updateWindowTitle();
     update();
     emit zoomChanged(zoomFactor_);
+}
+
+void AnnotationCanvas::rebuildBackingCache()
+{
+    if (image_.isNull()) return;
+    QSize cacheSize = size();
+    if (cacheSize.isEmpty()) cacheSize = QSize(640, 360);
+
+    backingCache_ = QPixmap(cacheSize);
+    backingCache_.fill(QColor("#101418"));
+
+    QPainter p(&backingCache_);
+    p.setRenderHint(QPainter::SmoothPixmapTransform);
+    if (!image_.isNull()) {
+        p.save();
+        p.scale(zoomFactor_, zoomFactor_);
+        if (image_.hasAlphaChannel())
+            renderer_.drawCheckerboard(p, image_);
+        p.drawImage(QPoint(0, 0), image_);
+        renderer_.drawAnnotations(p, image_, annotations_, fontSize_);
+        p.restore();
+    }
+    p.end();
+    backingZoom_ = zoomFactor_;
+    backingCacheDirty_ = false;
 }
 
 void AnnotationCanvas::reapplyAdjustments()
@@ -274,6 +300,7 @@ void AnnotationCanvas::markModified()
 {
     modified_ = true;
     renderer_.invalidateCache();
+    backingCacheDirty_ = true;
     emit modified();
     updateWindowTitle();
     update();
@@ -1968,13 +1995,16 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.fillRect(rect(), QColor("#101418"));
     if (!image_.isNull()) {
+        // Use backing cache for static content (background, scaled image, annotations)
+        if (backingCacheDirty_ || backingZoom_ != zoomFactor_ ||
+            backingCache_.size() != size()) {
+            rebuildBackingCache();
+        }
+        painter.drawPixmap(QPoint(0, 0), backingCache_);
+
+        // Dynamic overlay: drawn fresh every frame
         painter.save();
         painter.scale(zoomFactor_, zoomFactor_);
-        if (image_.hasAlphaChannel()) {
-            renderer_.drawCheckerboard(painter, image_);
-        }
-        painter.drawImage(QPoint(0, 0), image_);
-        renderer_.drawAnnotations(painter, image_, annotations_, fontSize_);
         if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
             painter.setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
             painter.setBrush(Qt::NoBrush);

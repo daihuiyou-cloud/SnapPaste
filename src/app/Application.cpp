@@ -88,6 +88,11 @@ void Application::connectCoreSignals()
         for (auto it = pinWindows_.begin(); it != pinWindows_.end(); it = pinWindows_.begin()) {
             if (it->second) {
                 context_.pinViewModel().close(it->first);
+                auto slotIt = pinIdToSlot_.find(it->first);
+                if (slotIt != pinIdToSlot_.end()) {
+                    freePinSlot(slotIt->second);
+                }
+                pinIdToSlot_.erase(it->first);
                 pinWindows_.erase(it);
             }
         }
@@ -456,14 +461,20 @@ void Application::openPinWindow(PinnedItem item)
     auto pinWindow = std::make_unique<PinWindow>(item, context_.iconProvider());
     auto* window = pinWindow.get();
     pinWindows_[item.id] = std::move(pinWindow);
+    if (pendingPinSlot_ >= 0) {
+        pinIdToSlot_[item.id] = pendingPinSlot_;
+        pendingPinSlot_ = -1;
+    }
 
     connect(window, &PinWindow::stateChanged, &context_.pinViewModel(), &PinViewModel::updateState);
     connect(window, &PinWindow::closeRequested, this, [this](qint64 id) {
         context_.pinViewModel().close(id);
         QPointer<Application> guard(this);
-        QTimer::singleShot(0, this, [guard, id] {
+        QTimer::singleShot(0, this, [guard, id, slot = pinSlotFor(id)] {
             if (guard) {
                 guard->pinWindows_.erase(id);
+                guard->pinIdToSlot_.erase(id);
+                if (slot >= 0) guard->freePinSlot(slot);
             }
         });
     });
@@ -489,10 +500,32 @@ void Application::openPinWindow(PinnedItem item)
     }
 }
 
+int Application::allocatePinSlot()
+{
+    if (!freePinSlots_.empty()) {
+        int slot = *freePinSlots_.begin();
+        freePinSlots_.erase(freePinSlots_.begin());
+        return slot;
+    }
+    return (nextPinSlot_++) % kPinCascadeSlots;
+}
+
+void Application::freePinSlot(int slot)
+{
+    freePinSlots_.insert(slot);
+}
+
+int Application::pinSlotFor(qint64 id) const
+{
+    auto it = pinIdToSlot_.find(id);
+    return it != pinIdToSlot_.end() ? it->second : -1;
+}
+
 QPoint Application::cascadedPinPosition(const QPoint& basePosition)
 {
-    const auto slot = (nextPinSlot_++) % kPinCascadeSlots;
+    const auto slot = allocatePinSlot();
     const auto offset = slot * kPinCascadeOffset;
+    pendingPinSlot_ = slot;
     return basePosition + QPoint(offset, offset);
 }
 

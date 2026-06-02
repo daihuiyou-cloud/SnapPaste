@@ -18,6 +18,7 @@
 #include <atomic>
 #include <functional>
 #include <map>
+#include <set>
 #include <memory>
 #include <optional>
 
@@ -56,6 +57,9 @@ private:
     QString hotkeyDisplayString(const Hotkey& hk, const char* fallback) const;
     void applyCurrentTheme();
     void openPinWindow(PinnedItem item);
+    int allocatePinSlot();
+    void freePinSlot(int slot);
+    int pinSlotFor(qint64 id) const;
     QPoint cascadedPinPosition(const QPoint& basePosition);
     QPoint pinnedPositionFor(const QSize& imageSize,
                              const QPoint& preferredPosition,
@@ -79,7 +83,10 @@ private:
     PinSource lastPinnableSource_ = PinSource::Screenshot;
     bool preferLastPinnableImage_ = false;
     std::optional<QRect> lastCaptureRegion_;
+    std::map<qint64, int> pinIdToSlot_;
+    std::set<int> freePinSlots_;
     int nextPinSlot_ = 0;
+    int pendingPinSlot_ = -1;
     std::shared_ptr<std::atomic<bool>> alive_;
     std::shared_ptr<IOcrService> ocrService_;
     QPointer<OcrResultWindow> ocrWindow_;
