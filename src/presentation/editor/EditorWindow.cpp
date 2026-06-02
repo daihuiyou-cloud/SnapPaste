@@ -284,6 +284,7 @@ void EditorWindow::rebuildLayerList()
 
 void EditorWindow::syncPanelDefaults()
 {
+    if (!propsWidget_) return;
     updateColorWell(canvas_->color());
     updateFillColorWell(canvas_->fillColor());
     if (preview_)
@@ -300,6 +301,8 @@ void EditorWindow::syncPanelDefaults()
             btn->setChecked(canvas_->textOutlineEnabled());
         else if (key == "Blur")
             btn->setChecked(canvas_->mosaicBlurred());
+        else if (key == "Grid")
+            btn->setChecked(canvas_->gridEnabled());
     }
     if (auto* rs = findChild<QSlider*>("radiusSlider")) {
         int v = canvas_->cornerRadius();
@@ -998,7 +1001,9 @@ void EditorWindow::createToolPanel()
 
     auto updateFontSizeUI = [fontSizeVal, fontSizeSlider](int size) {
         fontSizeVal->setText(tr("%1px").arg(size));
+        fontSizeSlider->blockSignals(true);
         fontSizeSlider->setValue(size);
+        fontSizeSlider->blockSignals(false);
     };
 
     connect(fontSizeDec, &QToolButton::clicked, this, [this, updateFontSizeUI] {
@@ -1412,10 +1417,6 @@ void EditorWindow::createToolPanel()
     imageInfoLabel_->setStyleSheet("color: #5e5e63; font: 8px; padding: 0 2px;");
     layout->addWidget(imageInfoLabel_);
 
-    pixelInfoLabel_ = new QLabel(content);
-    pixelInfoLabel_->setStyleSheet("color: #5e5e63; font: 8px; padding: 0 2px;");
-    layout->addWidget(pixelInfoLabel_);
-
     layout->addSpacing(4);
 
     QVector<QToolButton*> actionButtons;
@@ -1492,6 +1493,8 @@ void EditorWindow::createToolPanel()
                     btn->setChecked(a.textOutline);
                 else if (key == "Blur")
                     btn->setChecked(a.blurRadius > 0);
+                else if (key == "Grid")
+                    btn->setChecked(canvas_->gridEnabled());
             }
             // Arrow style
             if (a.tool == AnnotationTool::Arrow) {

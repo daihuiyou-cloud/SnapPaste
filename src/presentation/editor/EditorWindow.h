@@ -57,7 +57,7 @@ private:
     QToolButton* fillColorBtn_ = nullptr;
     QLabel* contextHint_ = nullptr;
     QLabel* imageInfoLabel_ = nullptr;
-    QLabel* pixelInfoLabel_ = nullptr;
+
     QToolButton* undoBtn_ = nullptr;
     QToolButton* redoBtn_ = nullptr;
     QWidget* propsWidget_ = nullptr;
