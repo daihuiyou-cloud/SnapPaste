@@ -140,27 +140,11 @@ winrt::Windows::Globalization::Language createLanguageFromTag(const std::wstring
 
 WindowsOcrService::WindowsOcrService(ILogger& logger)
     : logger_(logger)
-    , apartmentInitialized_(false)
 {
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-    try {
-        winrt::init_apartment(winrt::apartment_type::single_threaded);
-        apartmentInitialized_ = true;
-    } catch (const winrt::hresult_error& e) {
-        logger_.warning("Failed to initialize WinRT apartment: " + QString::fromWCharArray(e.message().c_str()));
-    } catch (const std::exception& e) {
-        logger_.warning("Failed to initialize WinRT apartment: " + QString::fromLatin1(e.what()));
-    }
-#endif
 }
 
 WindowsOcrService::~WindowsOcrService()
 {
-#if defined(SNAPPASTE_HAS_WINRT_OCR)
-    if (apartmentInitialized_) {
-        winrt::uninit_apartment();
-    }
-#endif
 }
 
 void WindowsOcrService::cancel()
@@ -180,6 +164,12 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
     cancelled_ = false;
     const auto requestId = ++currentRequestId_;
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
+    struct ComGuard {
+        ComGuard() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
+        ~ComGuard() { winrt::uninit_apartment(); }
+    } comGuard;
+    Q_UNUSED(comGuard)
+
     if (source.isNull()) {
         return {false, {}, QObject::tr("No image is available for OCR."), {}, {}};
     }

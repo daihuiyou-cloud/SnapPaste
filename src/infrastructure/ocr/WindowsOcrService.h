@@ -26,7 +26,6 @@ private:
     ILogger& logger_;
     QString language_;
     QMutex mutex_;
-    bool apartmentInitialized_ = false;
     std::atomic<bool> cancelled_{false};
     std::atomic<int> currentRequestId_{0};
 };

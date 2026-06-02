@@ -1418,7 +1418,9 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
     if (draft_.tool == AnnotationTool::Arrow) {
         draft_.points = {start_, current_};
     }
-    if (draft_.bounds.width() > 2 || draft_.bounds.height() > 2 || draft_.tool == AnnotationTool::Pen || draft_.tool == AnnotationTool::Mosaic) {
+    if (draft_.bounds.width() > 2 || draft_.bounds.height() > 2
+        || (draft_.tool == AnnotationTool::Pen && draft_.points.size() >= 2)
+        || (draft_.tool == AnnotationTool::Mosaic && draft_.points.size() >= 2)) {
         pushUndo();
         annotations_.push_back(draft_);
         selectedIndex_ = annotations_.size() - 1;
