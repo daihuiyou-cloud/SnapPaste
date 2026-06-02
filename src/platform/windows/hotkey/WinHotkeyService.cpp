@@ -54,7 +54,6 @@ void WinHotkeyService::unregisterHotkey(HotkeyAction action)
         UnregisterHotKey(nullptr, idFor(action));
         registeredActions_.erase(action);
     }
-    callbacks_.erase(action);
 #else
     Q_UNUSED(action)
 #endif
