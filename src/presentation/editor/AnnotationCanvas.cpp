@@ -86,15 +86,22 @@ void AnnotationCanvas::setImage(QImage image)
 void AnnotationCanvas::reapplyAdjustments()
 {
     double contrastFactor = (contrast_ + 100.0) / 100.0;
+
+    // Precompute 256-entry lookup table for brightness + contrast transform.
+    // Eliminates per-pixel float arithmetic for RGB channels.
+    uint8_t lut[256];
+    for (int i = 0; i < 256; ++i) {
+        int v = static_cast<int>((i - 128) * contrastFactor + 128 + brightness_);
+        lut[i] = static_cast<uint8_t>(qBound(0, v, 255));
+    }
+
     image_ = baseImage_.copy();
     int w = image_.width(), h = image_.height();
     for (int y = 0; y < h; ++y) {
         auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
         for (int x = 0; x < w; ++x) {
-            int r = qBound(0, static_cast<int>((qRed(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
-            int g = qBound(0, static_cast<int>((qGreen(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
-            int b = qBound(0, static_cast<int>((qBlue(line[x]) - 128) * contrastFactor + 128 + brightness_), 255);
-            line[x] = qRgba(r, g, b, qAlpha(line[x]));
+            auto px = line[x];
+            line[x] = qRgba(lut[qRed(px)], lut[qGreen(px)], lut[qBlue(px)], qAlpha(px));
         }
     }
     auto logicalSize = image_.size() / image_.devicePixelRatio();
