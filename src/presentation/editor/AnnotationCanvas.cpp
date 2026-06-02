@@ -510,6 +510,7 @@ void AnnotationCanvas::setFontFamily(const QString& family)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].fontFamily = family;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && (annotations_[selectedIndex_].tool == AnnotationTool::Text
                        || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
@@ -531,6 +532,7 @@ void AnnotationCanvas::setBold(bool b)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].bold = b;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && (annotations_[selectedIndex_].tool == AnnotationTool::Text
                        || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
@@ -552,6 +554,7 @@ void AnnotationCanvas::setItalic(bool i)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].italic = i;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && (annotations_[selectedIndex_].tool == AnnotationTool::Text
                        || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
@@ -573,6 +576,7 @@ void AnnotationCanvas::setUnderline(bool u)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].underline = u;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
             pushUndo();
@@ -593,6 +597,7 @@ void AnnotationCanvas::setTextAlignment(int align)
         if (editingTextIndex_ >= 0) {
             annotations_[editingTextIndex_].textAlignment = align;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
             pushUndo();

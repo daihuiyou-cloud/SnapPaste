@@ -265,14 +265,9 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
 
     if (annotation.textOutline) {
         painter->save();
-        painter->setBrush(QColor(255, 255, 255, 200));
-        painter->setPen(Qt::NoPen);
-        QPainterPathStroker stroker;
-        stroker.setWidth(3.0);
-        QPainterPath path;
-        path.addText(annotation.bounds.topLeft() + QPoint(0, painter->fontMetrics().ascent()), font, annotation.text);
-        auto outline = stroker.createStroke(path);
-        painter->drawPath(outline);
+        painter->setPen(QPen(QColor(255, 255, 255, 200), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawText(annotation.bounds, flags, annotation.text);
         painter->restore();
     }
     painter->setPen(QPen(annotation.color, 1));
