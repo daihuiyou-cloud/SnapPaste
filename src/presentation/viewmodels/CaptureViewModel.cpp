@@ -6,7 +6,6 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMetaObject>
-#include <QPointer>
 #include <QRunnable>
 #include <QScreen>
 
@@ -40,6 +39,7 @@ CaptureViewModel::CaptureViewModel(CaptureWorkflow& workflow, EventHub& eventHub
     : QObject(parent)
     , workflow_(workflow)
     , eventHub_(eventHub)
+    , alive_(std::make_shared<std::atomic<bool>>(true))
 {
     workerPool_.setMaxThreadCount(1);
 }
@@ -47,6 +47,7 @@ CaptureViewModel::CaptureViewModel(CaptureWorkflow& workflow, EventHub& eventHub
 CaptureViewModel::~CaptureViewModel()
 {
     shuttingDown_.store(true);
+    *alive_ = false;
     workerPool_.clear();
     workerPool_.waitForDone();
 }
@@ -81,30 +82,30 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
     const auto segments = captureSegmentsFor(region);
     workerPool_.clear();
 
-    QPointer<CaptureViewModel> self(this);
-    auto task = [self, region, segments, requestId, onReady = std::move(onReady)]() mutable {
-        if (self.isNull()) return;
-        const auto result = self->workflow_.captureRegion(region, segments);
-        if (self.isNull() || self->shuttingDown_.load() || self->requestGeneration_.load() != requestId) {
+    auto weakAlive = alive_;
+    auto task = [weakAlive, region, segments, requestId, onReady = std::move(onReady), this]() mutable {
+        if (!*weakAlive) return;
+        const auto result = this->workflow_.captureRegion(region, segments);
+        if (!*weakAlive || this->shuttingDown_.load() || this->requestGeneration_.load() != requestId) {
             return;
         }
 
-        QMetaObject::invokeMethod(self.data(), [self, region, requestId, result, onReady = std::move(onReady)]() mutable {
-            if (self.isNull() || self->shuttingDown_.load() || self->requestGeneration_.load() != requestId) {
+        QMetaObject::invokeMethod(this, [weakAlive, region, requestId, result, onReady = std::move(onReady), this]() mutable {
+            if (!*weakAlive || this->shuttingDown_.load() || this->requestGeneration_.load() != requestId) {
                 return;
             }
 
             if (result.isError()) {
-                emit self->errorOccurred(result.error());
+                emit this->errorOccurred(result.error());
                 return;
             }
 
-            self->currentImage_ = result.value();
+            this->currentImage_ = result.value();
             const auto screen = QGuiApplication::screenAt(region.center());
-            self->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
-            emit self->imageReady(self->currentImage_);
+            this->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
+            emit this->imageReady(this->currentImage_);
             if (onReady) {
-                onReady(self->currentImage_);
+                onReady(this->currentImage_);
             }
         }, Qt::QueuedConnection);
     };

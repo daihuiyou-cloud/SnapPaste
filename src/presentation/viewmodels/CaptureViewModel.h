@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <functional>
+#include <memory>
 
 namespace snappaste {
 
@@ -43,6 +44,7 @@ private:
     QThreadPool workerPool_;
     std::atomic_bool shuttingDown_{false};
     std::atomic_int requestGeneration_{0};
+    std::shared_ptr<std::atomic<bool>> alive_;
 };
 
 } // namespace snappaste

@@ -15,6 +15,7 @@
 #include <QApplication>
 #include <QImage>
 #include <QPointer>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -30,6 +31,7 @@ class Application final : public QObject {
 public:
     explicit Application(QApplication& qtApplication, ILogger& logger);
 
+    ~Application() override;
     int run();
 
 private:
@@ -78,6 +80,7 @@ private:
     bool preferLastPinnableImage_ = false;
     std::optional<QRect> lastCaptureRegion_;
     int nextPinSlot_ = 0;
+    std::shared_ptr<std::atomic<bool>> alive_;
     std::shared_ptr<IOcrService> ocrService_;
     QPointer<OcrResultWindow> ocrWindow_;
 };
