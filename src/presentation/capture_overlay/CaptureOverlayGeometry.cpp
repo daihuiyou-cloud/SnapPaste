@@ -62,14 +62,8 @@ QRect insetIfFullScreen(QRect rect, const QRect& desktopBounds)
                                -kFullScreenSelectionInset);
     };
 
-    if (rect == desktopBounds) {
+    if (rect.contains(desktopBounds.adjusted(kFullScreenSelectionInset, kFullScreenSelectionInset, -kFullScreenSelectionInset, -kFullScreenSelectionInset))) {
         return inset(rect);
-    }
-
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen != nullptr && rect == screen->geometry()) {
-            return inset(rect);
-        }
     }
 
     return rect;

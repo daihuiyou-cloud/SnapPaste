@@ -358,8 +358,8 @@ void CaptureOverlay::mousePressEvent(QMouseEvent* event)
         state_ = State::CandidatePressed;
         pressGlobal_ = event->globalPos();
         pressedCandidate_ = candidate;
-        origin_ = pressGlobal_;
-        current_ = pressGlobal_;
+        origin_ = candidate.topLeft();
+        current_ = candidate.bottomRight();
         return;
     }
 
@@ -1057,25 +1057,31 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     const int half = kPixels / 2;
     auto pixels = pixelSampler_.sampleRegion(lastMouseGlobal_, half);
     if (!pixels.isNull()) {
-        const auto gridRect = QRect(rect.left() + kPad, rect.top() + kPad, kGrid, kGrid);
-        painter.drawImage(gridRect, pixels.scaled(kGrid, kGrid, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+        const auto pw = pixels.width();
+        const auto ph = pixels.height();
+        const auto actualGridW = pw * kZoom;
+        const auto actualGridH = ph * kZoom;
+        const auto gridRect = QRect(rect.left() + kPad, rect.top() + kPad, actualGridW, actualGridH);
+        painter.drawImage(gridRect, pixels.scaled(actualGridW, actualGridH, Qt::IgnoreAspectRatio, Qt::FastTransformation));
 
         painter.setRenderHint(QPainter::Antialiasing, false);
         painter.setPen(QPen(QColor(255, 255, 255, 30), 1));
-        for (int i = 1; i < kPixels; ++i) {
+        for (int i = 1; i < pw; ++i) {
             int x = gridRect.left() + i * kZoom;
             painter.drawLine(x, gridRect.top(), x, gridRect.bottom());
+        }
+        for (int i = 1; i < ph; ++i) {
             int y = gridRect.top() + i * kZoom;
             painter.drawLine(gridRect.left(), y, gridRect.right(), y);
         }
 
-        const auto cx = gridRect.left() + half * kZoom + kZoom / 2;
-        const auto cy = gridRect.top() + half * kZoom + kZoom / 2;
+        const auto cx = gridRect.left() + (pw / 2) * kZoom + kZoom / 2;
+        const auto cy = gridRect.top() + (ph / 2) * kZoom + kZoom / 2;
         painter.setPen(QPen(kLabelTextColor, 2));
-        painter.drawLine(gridRect.left() + half * kZoom, cy,
-                         gridRect.left() + half * kZoom + kZoom - 1, cy);
-        painter.drawLine(cx, gridRect.top() + half * kZoom,
-                         cx, gridRect.top() + half * kZoom + kZoom - 1);
+        painter.drawLine(gridRect.left() + (pw / 2) * kZoom, cy,
+                         gridRect.left() + (pw / 2) * kZoom + kZoom - 1, cy);
+        painter.drawLine(cx, gridRect.top() + (ph / 2) * kZoom,
+                         cx, gridRect.top() + (ph / 2) * kZoom + kZoom - 1);
     }
 
     painter.setPen(kLabelTextColor);
