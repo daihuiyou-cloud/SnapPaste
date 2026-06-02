@@ -950,8 +950,24 @@ bool AnnotationCanvas::handleSelectPress(const QPoint& pos)
 
 bool AnnotationCanvas::handleEraserPress(const QPoint& pos)
 {
+    int eraserRadius = currentStrokeWidth_;
+    QRect eraserRect(pos.x() - eraserRadius, pos.y() - eraserRadius,
+                     eraserRadius * 2, eraserRadius * 2);
     for (int i = annotations_.size() - 1; i >= 0; --i) {
-        if (renderer_.hitTestAnnotation(annotations_.at(i), pos)) {
+        const auto& a = annotations_.at(i);
+        bool hit = false;
+        if (a.tool == AnnotationTool::Pen) {
+            for (const auto& pt : a.points) {
+                if (eraserRect.contains(pt)) {
+                    hit = true;
+                    break;
+                }
+            }
+        } else {
+            hit = a.bounds.adjusted(-eraserRadius, -eraserRadius, eraserRadius, eraserRadius)
+                     .contains(pos);
+        }
+        if (hit) {
             pushUndo();
             annotations_.removeAt(i);
             if (selectedIndex_ == i) selectedIndex_ = -1;
@@ -1339,13 +1355,13 @@ void AnnotationCanvas::updateDrawingStroke(QMouseEvent* event)
 void AnnotationCanvas::mouseMoveEvent(QMouseEvent* event)
 {
     updateMouseInfo(event);
-    if (!drawing_) {
-        updateMoveCursor(event);
-    }
     if (panning_) {
         handleMovePan(event);
         event->accept();
         return;
+    }
+    if (!drawing_) {
+        updateMoveCursor(event);
     }
     if (currentTool_ == AnnotationTool::Select && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         handleMoveSelect(event);
