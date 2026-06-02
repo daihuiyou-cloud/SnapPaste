@@ -99,7 +99,11 @@ CaptureRecord SqliteHistoryRepository::readRecord(const QSqlQuery& query)
     record.devicePixelRatio = query.value(ColDevicePixelRatio).toDouble();
     record.format = query.value(ColFormat).toString();
     record.createdAt = QDateTime::fromString(query.value(ColCreatedAt).toString(), Qt::ISODate);
-    record.createdAt.setTimeSpec(Qt::UTC);
+    if (!record.createdAt.isValid()) {
+        record.createdAt = QDateTime::currentDateTimeUtc();
+    } else {
+        record.createdAt.setTimeSpec(Qt::UTC);
+    }
     record.sourceScreen = query.value(ColSourceScreen).toString();
     record.deleted = query.value(ColDeleted).toBool();
     return record;

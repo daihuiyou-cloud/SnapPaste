@@ -201,9 +201,17 @@ PinnedItem SqlitePinnedItemRepository::readItem(const QSqlQuery& query)
     item.state.devicePixelRatio = query.value(PColDevicePixelRatio).toDouble();
     item.image.setDevicePixelRatio(item.state.devicePixelRatio);
     item.createdAt = QDateTime::fromString(query.value(PColCreatedAt).toString(), Qt::ISODate);
-    item.createdAt.setTimeSpec(Qt::UTC);
+    if (!item.createdAt.isValid()) {
+        item.createdAt = QDateTime::currentDateTimeUtc();
+    } else {
+        item.createdAt.setTimeSpec(Qt::UTC);
+    }
     item.updatedAt = QDateTime::fromString(query.value(PColUpdatedAt).toString(), Qt::ISODate);
-    item.updatedAt.setTimeSpec(Qt::UTC);
+    if (!item.updatedAt.isValid()) {
+        item.updatedAt = QDateTime::currentDateTimeUtc();
+    } else {
+        item.updatedAt.setTimeSpec(Qt::UTC);
+    }
     return item;
 }
 
