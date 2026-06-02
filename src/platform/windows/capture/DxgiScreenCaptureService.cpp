@@ -450,7 +450,7 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
 #endif
 }
 
-Result<void> DxgiScreenCaptureService::ensureD3dDevice()
+Result<void> DxgiScreenCaptureService::ensureD3dDeviceImpl()
 {
     if (d3dDeviceValid_) {
         return Result<void>::success();
@@ -496,6 +496,12 @@ Result<void> DxgiScreenCaptureService::ensureD3dDevice()
     return Result<void>::success();
 }
 
+Result<void> DxgiScreenCaptureService::ensureD3dDevice()
+{
+    std::scoped_lock lock(mutex_);
+    return ensureD3dDeviceImpl();
+}
+
 Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegment& segment)
 {
     std::scoped_lock lock(mutex_);
@@ -503,10 +509,10 @@ Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegm
     for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
         if (attempt > 0) {
             d3dDeviceValid_ = false;
-            d3dDevice_.Reset();
             d3dContext_.Reset();
+            d3dDevice_.Reset();
         }
-        auto deviceResult = ensureD3dDevice();
+        auto deviceResult = ensureD3dDeviceImpl();
         if (deviceResult.isError()) {
             break;
         }

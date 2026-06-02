@@ -22,6 +22,7 @@ public:
 
 private:
     Result<QImage> captureWithDxgi(const ScreenCaptureSegment& segment);
+    Result<void> ensureD3dDeviceImpl();
     Result<void> ensureD3dDevice();
 
     std::mutex mutex_;
