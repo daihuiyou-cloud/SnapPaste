@@ -51,6 +51,7 @@ private:
     static void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation);
     static void drawHighlightAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawNumberedAnnotation(QPainter* painter, const Annotation& annotation);
+    static void drawCropAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation, int fontSize);
 
     mutable QImage annotationCache_;

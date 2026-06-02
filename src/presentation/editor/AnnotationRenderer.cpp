@@ -81,7 +81,7 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
     const QPoint& currentPos, const Annotation& draft,
     bool drawing, double zoomFactor)
 {
-    if (!drawing || draft.tool == AnnotationTool::Pen || draft.tool == AnnotationTool::Numbered || draft.tool == AnnotationTool::Crop) {
+    if (!drawing || draft.tool == AnnotationTool::Pen || draft.tool == AnnotationTool::Numbered) {
         return;
     }
     auto dims = draft.bounds.size();
@@ -345,6 +345,13 @@ void AnnotationRenderer::drawNumberedAnnotation(QPainter* painter, const Annotat
                       Qt::AlignCenter, QString::number(annotation.number));
 }
 
+void AnnotationRenderer::drawCropAnnotation(QPainter* painter, const Annotation& annotation)
+{
+    painter->setPen(QPen(QColor("#2fbf9f"), 2, Qt::DashLine));
+    painter->setBrush(Qt::NoBrush);
+    painter->drawRect(annotation.bounds);
+}
+
 void AnnotationRenderer::drawAnnotation(QPainter* painter, const QImage& sourceImage,
     const Annotation& annotation, int fontSize)
 {
@@ -377,6 +384,9 @@ void AnnotationRenderer::drawAnnotation(QPainter* painter, const QImage& sourceI
         break;
     case AnnotationTool::Numbered:
         drawNumberedAnnotation(painter, annotation);
+        break;
+    case AnnotationTool::Crop:
+        drawCropAnnotation(painter, annotation);
         break;
     case AnnotationTool::Select:
     case AnnotationTool::Eraser:
