@@ -504,7 +504,8 @@ void AnnotationCanvas::setFontFamily(const QString& family)
             annotations_[editingTextIndex_].fontFamily = family;
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
+                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
             pushUndo();
             annotations_[selectedIndex_].fontFamily = family;
             updateTextBounds(selectedIndex_);
@@ -524,7 +525,8 @@ void AnnotationCanvas::setBold(bool b)
             annotations_[editingTextIndex_].bold = b;
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
+                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
             pushUndo();
             annotations_[selectedIndex_].bold = b;
             updateTextBounds(selectedIndex_);
@@ -544,7 +546,8 @@ void AnnotationCanvas::setItalic(bool i)
             annotations_[editingTextIndex_].italic = i;
             updateTextBounds(editingTextIndex_);
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
+                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
             pushUndo();
             annotations_[selectedIndex_].italic = i;
             updateTextBounds(selectedIndex_);
@@ -1573,6 +1576,7 @@ void AnnotationCanvas::handleLayerReorderKey(int direction)
         qSwap(annotations_[selectedIndex_], annotations_[swap]);
         selectedIndex_ = swap;
         markModified();
+        emit selectionChanged();
     }
 }
 
@@ -2025,6 +2029,7 @@ void AnnotationCanvas::deleteAnnotation(int index)
     if (selectedIndex_ == index) selectedIndex_ = -1;
     else if (selectedIndex_ > index) --selectedIndex_;
     markModified();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::duplicateAnnotation(int index)
@@ -2040,6 +2045,7 @@ void AnnotationCanvas::duplicateAnnotation(int index)
     annotations_.push_back(std::move(dup));
     selectedIndex_ = annotations_.size() - 1;
     markModified();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::swapAnnotations(int i, int j)
@@ -2051,6 +2057,7 @@ void AnnotationCanvas::swapAnnotations(int i, int j)
     if (selectedIndex_ == i) selectedIndex_ = j;
     else if (selectedIndex_ == j) selectedIndex_ = i;
     markModified();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::setAnnotationVisible(int index, bool visible)
