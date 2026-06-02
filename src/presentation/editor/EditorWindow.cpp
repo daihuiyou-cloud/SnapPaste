@@ -144,9 +144,9 @@ void EditorWindow::setupActions()
     auto* pasteAction = new QAction(tr("Paste Image"), this);
     pasteAction->setShortcut(QKeySequence::Paste);
     connect(pasteAction, &QAction::triggered, this, [this] {
-        auto pix = QApplication::clipboard()->pixmap();
-        if (!pix.isNull()) {
-            canvas_->setImage(pix.toImage());
+        auto img = QApplication::clipboard()->image();
+        if (!img.isNull()) {
+            canvas_->setImage(img);
             statusBar()->showMessage(tr("Image pasted from clipboard"), 3000);
         }
     });

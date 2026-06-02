@@ -797,7 +797,7 @@ void CaptureOverlay::copySampledColor()
     if (!sampledColor_.has_value()) {
         return;
     }
-    QApplication::clipboard()->setText(sampledColor_->name(QColor::HexRgb).toUpper());
+    { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(sampledColor_->name(QColor::HexRgb).toUpper()); }
 }
 
 void CaptureOverlay::applyDrag(const QPoint& globalPosition)

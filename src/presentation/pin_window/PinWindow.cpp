@@ -261,7 +261,7 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
             int ix = qBound(0, event->pos().x() * img.width() / width(), img.width() - 1);
             int iy = qBound(0, event->pos().y() * img.height() / height(), img.height() - 1);
             QColor pixel = QColor::fromRgba(img.pixel(ix, iy));
-            QApplication::clipboard()->setText(pixel.name().toUpper());
+            { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(pixel.name().toUpper()); }
             QToolTip::showText(QCursor::pos(), tr("Copied %1").arg(pixel.name().toUpper()), this);
         }
     } else if (action == rotateLeftAction) {

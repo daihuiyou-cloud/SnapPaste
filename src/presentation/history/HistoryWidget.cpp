@@ -156,6 +156,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
                 QMessageBox::warning(this, tr("SnapPaste"), tr("Failed to load image."));
                 return;
             }
+            const QSignalBlocker blocker(QApplication::clipboard());
             QApplication::clipboard()->setImage(img);
         } else {
             QStringList fileList;
@@ -163,6 +164,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
             for (const auto& p : paths) {
                 fileList << QDir::toNativeSeparators(p);
             }
+            const QSignalBlocker blocker(QApplication::clipboard());
             QApplication::clipboard()->setText(fileList.join("\n"));
         }
     });
@@ -209,11 +211,13 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
                 if (img.isNull()) {
                     QMessageBox::warning(this, tr("SnapPaste"), tr("Failed to load image."));
                 } else {
+                    const QSignalBlocker blocker(QApplication::clipboard());
                     QApplication::clipboard()->setImage(img);
                 }
             } else {
                 QStringList fileList;
                 for (const auto& p : paths) fileList << QDir::toNativeSeparators(p);
+                const QSignalBlocker blocker(QApplication::clipboard());
                 QApplication::clipboard()->setText(fileList.join("\n"));
             }
         } else if (action == openAction) {

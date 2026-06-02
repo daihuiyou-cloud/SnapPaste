@@ -575,7 +575,7 @@ void OcrResultWindow::performCopy()
 {
     QString text = selectedText();
     if (text.isEmpty()) return;
-    QApplication::clipboard()->setText(text);
+    { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(text); }
 
     copyBtn_->setProperty("originalText", copyBtn_->text());
     copyBtn_->setText(tr("Copied!"));

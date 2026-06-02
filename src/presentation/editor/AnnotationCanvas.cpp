@@ -1473,7 +1473,7 @@ bool AnnotationCanvas::handleTextEditingKey(QKeyEvent* event)
 
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
         if (event->key() == Qt::Key_C) {
-            QApplication::clipboard()->setText(textAnn.text);
+            { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(textAnn.text); }
             event->accept();
             return true;
         }
@@ -1868,7 +1868,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         markModified();
         emit selectionChanged();
     } else if (action == copyImage) {
-        QApplication::clipboard()->setImage(renderedImage());
+        { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setImage(renderedImage()); }
     } else if (action == saveAs) {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
             tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));

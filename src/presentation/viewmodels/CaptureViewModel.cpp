@@ -136,7 +136,7 @@ void CaptureViewModel::copyCurrentImageToClipboard()
         return;
     }
 
-    QApplication::clipboard()->setImage(currentImage_);
+    { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setImage(currentImage_); }
     emit copied();
 }
 
