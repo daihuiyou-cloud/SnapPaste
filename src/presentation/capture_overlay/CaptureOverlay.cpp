@@ -434,7 +434,7 @@ void CaptureOverlay::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (state_ == State::Selecting) {
+    if (state_ == State::Selecting && !spaceRepositioning_) {
         const auto distance = event->globalPos() - origin_;
         if (std::abs(distance.x()) <= kDragThreshold && std::abs(distance.y()) <= kDragThreshold) {
             state_ = State::Idle;
@@ -469,15 +469,15 @@ void CaptureOverlay::mouseDoubleClickEvent(QMouseEvent* event)
         return;
     }
 
-    selection_ = desktopBounds();
+    selection_ = selectableRegion(desktopBounds(), availableGeometry());
     clearSmartCandidates();
     actionBar_->hide();
     selectionHistory_.add(selection_);
     state_ = State::ActionPending;
     event->accept();
-    hide();
-    emit hiddenAfterAction();
-    emit copyRequested(selection_);
+    confirmWithFade([this] {
+        emit copyRequested(selection_);
+    });
 }
 
 void CaptureOverlay::drawOverlayState(QPainter& painter)
@@ -513,9 +513,9 @@ void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalR
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
     painter.setPen(QPen(kSelectionShadowColor, 4));
-    painter.drawRect(localRegion.adjusted(-1, -1, 0, 0));
+    painter.drawRect(localRegion.adjusted(-1, -1, 1, 1));
     painter.setPen(QPen(kSelectionColor, 2));
-    painter.drawRect(localRegion.adjusted(0, 0, -1, -1));
+    painter.drawRect(localRegion);
 
     painter.setBrush(kSelectionColor);
     painter.setPen(QPen(kHandleBorderColor, 1));
