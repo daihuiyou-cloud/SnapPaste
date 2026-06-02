@@ -142,6 +142,7 @@ void AnnotationCanvas::rotateImage(int degrees)
     selectedIndex_ = -1;
     nextNumber_ = 1;
     reapplyAdjustments();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
@@ -160,6 +161,7 @@ void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
     selectedIndex_ = -1;
     nextNumber_ = 1;
     reapplyAdjustments();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::applyCrop(QRect cropRect)
@@ -975,6 +977,7 @@ bool AnnotationCanvas::handleNumberedPress(const QPoint& pos)
     annotations_.push_back(std::move(ann));
     selectedIndex_ = annotations_.size() - 1;
     markModified();
+    emit selectionChanged();
     return true;
 }
 
@@ -992,6 +995,7 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
             selectedIndex_ = i;
             editingTextIndex_ = i;
             update();
+            emit selectionChanged();
             return true;
         }
     }
@@ -1029,6 +1033,7 @@ bool AnnotationCanvas::handleTextPress(const QPoint& pos)
     selectedIndex_ = annotations_.size() - 1;
     editingTextIndex_ = selectedIndex_;
     markModified();
+    emit selectionChanged();
     setFocus();
     return true;
 }
@@ -1771,6 +1776,26 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         editingTextIndex_ = -1;
         cursorPos_ = 0;
         preeditString_.clear();
+        update();
+    }
+    // Hit-test at right-click position to update selection
+    QPoint clickPos = toImage(event->pos());
+    int hitIdx = -1;
+    for (int i = annotations_.size() - 1; i >= 0; --i) {
+        if (renderer_.hitTestAnnotation(annotations_.at(i), clickPos)) {
+            hitIdx = i;
+            break;
+        }
+    }
+    if (hitIdx >= 0) {
+        if (hitIdx != selectedIndex_) {
+            selectedIndex_ = hitIdx;
+            emit selectionChanged();
+            update();
+        }
+    } else if (selectedIndex_ >= 0) {
+        selectedIndex_ = -1;
+        emit selectionChanged();
         update();
     }
     QMenu menu;
