@@ -608,7 +608,7 @@ void EditorWindow::createToolPanel()
     connect(eyeAction_, &QAction::triggered, this, [this] {
         canvas_->setPickingColor(eyeAction_->isChecked());
     });
-    canvas_->setOnPickingColorChanged([this](bool picking) {
+    connect(canvas_, &AnnotationCanvas::pickingColorChanged, this, [this](bool picking) {
         eyeAction_->setChecked(picking);
     });
     colorMenu->addAction(eyeAction_);
@@ -1018,7 +1018,7 @@ void EditorWindow::createToolPanel()
     connect(fontSizeSlider, &QSlider::sliderReleased, this, [this] {
         QSettings().setValue("editor/fontSize", canvas_->fontSize());
     });
-    canvas_->setOnFontSizeChanged([updateFontSizeUI](int size) {
+    connect(canvas_, &AnnotationCanvas::fontSizeChanged, this, [updateFontSizeUI](int size) {
         updateFontSizeUI(size);
     });
 
@@ -1076,7 +1076,7 @@ void EditorWindow::createToolPanel()
     fontLayout->addLayout(bgRow);
 
     // Sync UI when text properties change programmatically
-    canvas_->setOnTextPropertiesChanged([this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup, bgToggle, updateBgColorIcon]() {
+    connect(canvas_, &AnnotationCanvas::textPropertiesChanged, this, [this, fontCombo, boldBtn, italicBtn, underlineBtn, alignGroup, bgToggle, updateBgColorIcon]() {
         auto idx = canvas_->selectedIndex();
         bool sel = (idx >= 0);
         const Annotation* a = sel ? &canvas_->annotationAt(idx) : nullptr;
@@ -1235,7 +1235,7 @@ void EditorWindow::createToolPanel()
         canvas_->zoomFit();
         updateZoomUI(canvas_->zoomFactor());
     });
-    canvas_->setOnZoomChanged([updateZoomUI](double factor) {
+    connect(canvas_, &AnnotationCanvas::zoomChanged, this, [updateZoomUI](double factor) {
         updateZoomUI(factor);
     });
 
@@ -1434,10 +1434,10 @@ void EditorWindow::createToolPanel()
     connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
 
     // Pixel info shown on canvas overlay; clear panel label
-    canvas_->setOnMouseInfoChanged([](QPointF, QColor) {});
+    // Pixel info handled by canvas overlay; no EditorWindow sync needed
 
     // -- State change (undo/redo counts etc.) --
-    canvas_->setOnModified([this] { refreshPanelUi(); rebuildLayerList(); });
+    connect(canvas_, &AnnotationCanvas::modified, this, [this] { refreshPanelUi(); rebuildLayerList(); });
 
     connect(actionButtons[2], &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
@@ -1473,7 +1473,7 @@ void EditorWindow::createToolPanel()
     });
 
     // Sync property panel when selection changes
-    canvas_->setOnSelectionChanged([this, preview, strokeGroup, arrowGroup, radiusSlider, radiusVal]() {
+    connect(canvas_, &AnnotationCanvas::selectionChanged, this, [this, preview, strokeGroup, arrowGroup, radiusSlider, radiusVal]() {
         rebuildLayerList();
         auto idx = canvas_->selectedIndex();
         if (idx >= 0) {

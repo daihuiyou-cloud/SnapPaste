@@ -42,7 +42,6 @@ public:
     void setStrokeWidth(int width);
     void updateBrushCursor();
     void setPickingColor(bool picking);
-    void setOnPickingColorChanged(std::function<void(bool)> cb);
     void setMosaicBlurred(bool blurred);
     void setTextOutlineEnabled(bool enabled);
     void setFilled(bool filled);
@@ -55,10 +54,8 @@ public:
     void updateTextBounds(int index);
     int fontSize() const;
     void setFontSize(int size, bool persist = true);
-    void setOnFontSizeChanged(std::function<void(int)> cb);
     int selectedIndex() const { return (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) ? selectedIndex_ : -1; }
     const Annotation& annotationAt(int index) const { return annotations_.at(index); }
-    void setOnSelectionChanged(std::function<void()> cb);
 
     QString fontFamily() const;
     void setFontFamily(const QString& family);
@@ -70,18 +67,15 @@ public:
     void setUnderline(bool u);
     int textAlignment() const;
     void setTextAlignment(int align);
-    void setOnTextPropertiesChanged(std::function<void()> cb);
     void syncTextPropertiesUI();
 
     double cropAspectRatio() const;
     void setCropAspectRatio(double ratio);
-    void setOnCropAspectRatioChanged(std::function<void(double)> cb);
 
     double zoomFactor() const;
     QSize imageSize() const;
     QColor color() const;
     int strokeWidth() const;
-    void setOnZoomChanged(std::function<void(double)> cb);
     const QVector<QColor>& recentColors() const;
     void addRecentColor(const QColor& color);
     void undo();
@@ -90,15 +84,12 @@ public:
 
     int strokeAlpha() const;
     void setStrokeAlpha(int alpha);
-    void setOnStrokeAlphaChanged(std::function<void(int)> cb);
 
     ArrowStyle arrowStyle() const;
     void setArrowStyle(ArrowStyle style);
-    void setOnArrowStyleChanged(std::function<void(int)> cb);
 
     int cornerRadius() const;
     void setCornerRadius(int radius);
-    void setOnCornerRadiusChanged(std::function<void(int)> cb);
 
     bool gridEnabled() const;
     void setGridEnabled(bool enabled);
@@ -108,8 +99,6 @@ public:
 
     QPointF mouseImagePos() const;
     QColor mousePixelColor() const;
-    void setOnMouseInfoChanged(std::function<void(QPointF, QColor)> cb);
-    void setOnModified(std::function<void()> cb);
 
     const QVector<AnnotationTool>& recentTools() const;
 
@@ -125,6 +114,17 @@ public:
 signals:
     void imageEdited(const QImage& image);
     void toolChanged(AnnotationTool tool);
+    void fontSizeChanged(int size);
+    void pickingColorChanged(bool picking);
+    void zoomChanged(double factor);
+    void strokeAlphaChanged(int alpha);
+    void arrowStyleChanged(int style);
+    void cornerRadiusChanged(int radius);
+    void mouseInfoChanged(QPointF pos, QColor color);
+    void textPropertiesChanged();
+    void cropAspectRatioChanged(double ratio);
+    void modified();
+    void selectionChanged();
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -228,17 +228,6 @@ private:
     QPointF mouseImagePos_;
     QColor mousePixelColor_;
     QVector<AnnotationTool> recentTools_;
-    std::function<void(int)> onFontSizeChanged_;
-    std::function<void(bool)> onPickingColorChanged_;
-    std::function<void(double)> onZoomChanged_;
-    std::function<void(int)> onStrokeAlphaChanged_;
-    std::function<void(int)> onArrowStyleChanged_;
-    std::function<void(int)> onCornerRadiusChanged_;
-    std::function<void(QPointF, QColor)> onMouseInfoChanged_;
-    std::function<void()> onTextPropertiesChanged_;
-    std::function<void(double)> onCropAspectRatioChanged_;
-    std::function<void()> onModified_;
-    std::function<void()> onSelectionChanged_;
 };
 
 } // namespace snappaste

@@ -172,12 +172,31 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
     pushUndo();
+
+    // 保留位于裁剪框内的标注，丢弃完全在框外的标注
+    // 平移保留标注的坐标以适应新的图像空间
+    {
+        QPoint offset = -physicalCrop.topLeft();
+        QVector<Annotation> kept;
+        kept.reserve(annotations_.size());
+        int newSelected = -1;
+        int maxNumber = 0;
+        for (int i = 0; i < annotations_.size(); ++i) {
+            auto& a = annotations_[i];
+            if (!physicalCrop.intersects(a.bounds)) continue;
+            a.bounds.translate(offset);
+            for (auto& pt : a.points) pt += offset;
+            if (i == selectedIndex_) newSelected = kept.size();
+            if (a.number > maxNumber) maxNumber = a.number;
+            kept.push_back(std::move(a));
+        }
+        annotations_ = std::move(kept);
+        selectedIndex_ = newSelected;
+        nextNumber_ = maxNumber + 1;
+    }
+
     image_ = image_.copy(physicalCrop);
     renderer_.invalidateCache();
-    annotations_.clear();
-    annotations_.squeeze();
-    selectedIndex_ = -1;
-    nextNumber_ = 1;
     markModified();
 
     auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
@@ -209,7 +228,7 @@ void AnnotationCanvas::markModified()
 {
     modified_ = true;
     renderer_.invalidateCache();
-    if (onModified_) onModified_();
+    emit modified();
     updateWindowTitle();
     update();
 }
@@ -236,7 +255,7 @@ void AnnotationCanvas::zoomAt(double factor, QPoint center)
     }
     updateWindowTitle();
     update();
-    if (onZoomChanged_) onZoomChanged_(zoomFactor_);
+    emit zoomChanged(zoomFactor_);
 }
 
 void AnnotationCanvas::updateWindowTitle()
@@ -346,11 +365,9 @@ void AnnotationCanvas::setPickingColor(bool picking)
 {
     pickingColor_ = picking;
     setCursor(picking ? Qt::CrossCursor : Qt::ArrowCursor);
-    if (onPickingColorChanged_) onPickingColorChanged_(picking);
+    emit pickingColorChanged(picking);
     update();
 }
-
-void AnnotationCanvas::setOnPickingColorChanged(std::function<void(bool)> cb) { onPickingColorChanged_ = std::move(cb); }
 
 void AnnotationCanvas::setMosaicBlurred(bool blurred)
 {
@@ -391,7 +408,7 @@ void AnnotationCanvas::setFilled(bool filled)
             || a.tool == AnnotationTool::Arrow) {
             a.filled = filled;
             markModified();
-            if (onSelectionChanged_) onSelectionChanged_();
+            emit selectionChanged();
         }
     }
     update();
@@ -405,7 +422,7 @@ void AnnotationCanvas::setFillColor(const QColor& color) {
         redoStack_.clear();
         annotations_[selectedIndex_].fillColor = color;
         markModified();
-        if (onSelectionChanged_) onSelectionChanged_();
+        emit selectionChanged();
     }
     update();
 }
@@ -482,12 +499,11 @@ void AnnotationCanvas::setFontSize(int size, bool persist)
             markModified();
         }
         update();
-        if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+        emit fontSizeChanged(fontSize_);
         if (persist)
             QSettings().setValue("editor/fontSize", fontSize_);
     }
 }
-void AnnotationCanvas::setOnFontSizeChanged(std::function<void(int)> cb) { onFontSizeChanged_ = std::move(cb); }
 
 QString AnnotationCanvas::fontFamily() const { return currentFontFamily_; }
 void AnnotationCanvas::setFontFamily(const QString& family)
@@ -506,7 +522,7 @@ void AnnotationCanvas::setFontFamily(const QString& family)
             markModified();
         }
         update();
-        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        emit textPropertiesChanged();
         QSettings().setValue("editor/fontFamily", family);
     }
 }
@@ -527,7 +543,7 @@ void AnnotationCanvas::setBold(bool b)
             markModified();
         }
         update();
-        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        emit textPropertiesChanged();
         QSettings().setValue("editor/bold", b);
     }
 }
@@ -548,7 +564,7 @@ void AnnotationCanvas::setItalic(bool i)
             markModified();
         }
         update();
-        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        emit textPropertiesChanged();
         QSettings().setValue("editor/italic", i);
     }
 }
@@ -569,7 +585,7 @@ void AnnotationCanvas::setUnderline(bool u)
             markModified();
         }
         update();
-        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        emit textPropertiesChanged();
         QSettings().setValue("editor/underline", u);
     }
 }
@@ -590,31 +606,25 @@ void AnnotationCanvas::setTextAlignment(int align)
             markModified();
         }
         update();
-        if (onTextPropertiesChanged_) onTextPropertiesChanged_();
+        emit textPropertiesChanged();
         QSettings().setValue("editor/textAlignment", align);
     }
 }
-void AnnotationCanvas::setOnTextPropertiesChanged(std::function<void()> cb) { onTextPropertiesChanged_ = std::move(cb); }
 
-void AnnotationCanvas::syncTextPropertiesUI() { if (onTextPropertiesChanged_) onTextPropertiesChanged_(); }
-
-void AnnotationCanvas::setOnSelectionChanged(std::function<void()> cb) { onSelectionChanged_ = std::move(cb); }
+void AnnotationCanvas::syncTextPropertiesUI() { emit textPropertiesChanged(); }
 
 double AnnotationCanvas::cropAspectRatio() const { return cropAspectRatio_; }
 void AnnotationCanvas::setCropAspectRatio(double ratio)
 {
     cropAspectRatio_ = std::max(0.0, ratio);
-    if (onCropAspectRatioChanged_) onCropAspectRatioChanged_(cropAspectRatio_);
+    emit cropAspectRatioChanged(cropAspectRatio_);
     update();
 }
-void AnnotationCanvas::setOnCropAspectRatioChanged(std::function<void(double)> cb) { onCropAspectRatioChanged_ = std::move(cb); }
 
 double AnnotationCanvas::zoomFactor() const { return zoomFactor_; }
 QSize AnnotationCanvas::imageSize() const { return image_.size(); }
 QColor AnnotationCanvas::color() const { return currentColor_; }
 int AnnotationCanvas::strokeWidth() const { return currentStrokeWidth_; }
-void AnnotationCanvas::setOnZoomChanged(std::function<void(double)> cb) { onZoomChanged_ = std::move(cb); }
-
 int AnnotationCanvas::strokeAlpha() const { return strokeAlpha_; }
 void AnnotationCanvas::setStrokeAlpha(int alpha)
 {
@@ -625,10 +635,9 @@ void AnnotationCanvas::setStrokeAlpha(int alpha)
         annotations_[selectedIndex_].color.setAlpha(strokeAlpha_);
         markModified();
     }
-    if (onStrokeAlphaChanged_) onStrokeAlphaChanged_(strokeAlpha_);
+    emit strokeAlphaChanged(strokeAlpha_);
     update();
 }
-void AnnotationCanvas::setOnStrokeAlphaChanged(std::function<void(int)> cb) { onStrokeAlphaChanged_ = std::move(cb); }
 
 ArrowStyle AnnotationCanvas::arrowStyle() const { return arrowStyle_; }
 void AnnotationCanvas::setArrowStyle(ArrowStyle style)
@@ -641,10 +650,9 @@ void AnnotationCanvas::setArrowStyle(ArrowStyle style)
         annotations_[selectedIndex_].arrowStyle = style;
         markModified();
     }
-    if (onArrowStyleChanged_) onArrowStyleChanged_(static_cast<int>(style));
+    emit arrowStyleChanged(static_cast<int>(style));
     update();
 }
-void AnnotationCanvas::setOnArrowStyleChanged(std::function<void(int)> cb) { onArrowStyleChanged_ = std::move(cb); }
 
 int AnnotationCanvas::cornerRadius() const { return cornerRadius_; }
 void AnnotationCanvas::setCornerRadius(int radius)
@@ -657,10 +665,9 @@ void AnnotationCanvas::setCornerRadius(int radius)
         annotations_[selectedIndex_].cornerRadius = cornerRadius_;
         markModified();
     }
-    if (onCornerRadiusChanged_) onCornerRadiusChanged_(cornerRadius_);
+    emit cornerRadiusChanged(cornerRadius_);
     update();
 }
-void AnnotationCanvas::setOnCornerRadiusChanged(std::function<void(int)> cb) { onCornerRadiusChanged_ = std::move(cb); }
 
 bool AnnotationCanvas::gridEnabled() const { return gridEnabled_; }
 void AnnotationCanvas::setGridEnabled(bool enabled)
@@ -671,9 +678,6 @@ void AnnotationCanvas::setGridEnabled(bool enabled)
 
 QPointF AnnotationCanvas::mouseImagePos() const { return mouseImagePos_; }
 QColor AnnotationCanvas::mousePixelColor() const { return mousePixelColor_; }
-void AnnotationCanvas::setOnMouseInfoChanged(std::function<void(QPointF, QColor)> cb) { onMouseInfoChanged_ = std::move(cb); }
-void AnnotationCanvas::setOnModified(std::function<void()> cb) { onModified_ = std::move(cb); }
-
 const QVector<AnnotationTool>& AnnotationCanvas::recentTools() const { return recentTools_; }
 
 int AnnotationCanvas::undoCount() const { return undoStack_.size(); }
@@ -733,7 +737,7 @@ void AnnotationCanvas::undo()
     nextNumber_ = maxNumber + 1;
     selectedIndex_ = -1;
     markModified();
-    if (onSelectionChanged_) onSelectionChanged_();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::pushUndo()
@@ -784,7 +788,7 @@ void AnnotationCanvas::redo()
 
     selectedIndex_ = -1;
     markModified();
-    if (onSelectionChanged_) onSelectionChanged_();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::dragEnterEvent(QDragEnterEvent* event)
@@ -888,7 +892,7 @@ bool AnnotationCanvas::handlePickingColorPress(QMouseEvent* event)
                            static_cast<int>(pos.y() * dpr));
         currentColor_ = QColor::fromRgba(image_.pixel(physicalPos));
     }
-    if (onPickingColorChanged_) onPickingColorChanged_(false);
+    emit pickingColorChanged(false);
     update();
     return true;
 }
@@ -932,13 +936,13 @@ bool AnnotationCanvas::handleSelectPress(const QPoint& pos)
             moving_ = true;
             moveOffset_ = annotations_[i].bounds.topLeft() - pos;
             update();
-            if (onSelectionChanged_) onSelectionChanged_();
+            emit selectionChanged();
             return true;
         }
     }
     selectedIndex_ = -1;
     update();
-    if (onSelectionChanged_) onSelectionChanged_();
+    emit selectionChanged();
     return true;
 }
 
@@ -1038,7 +1042,7 @@ bool AnnotationCanvas::handleExistingAnnotationPress(const QPoint& pos)
             if (i != selectedIndex_) {
                 selectedIndex_ = i;
                 update();
-                if (onSelectionChanged_) onSelectionChanged_();
+                emit selectionChanged();
             }
             return true;
         }
@@ -1095,7 +1099,7 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
                 annotations_.removeAt(editingTextIndex_);
                 if (selectedIndex_ >= editingTextIndex_) selectedIndex_--;
                 markModified();
-                if (onSelectionChanged_) onSelectionChanged_();
+                emit selectionChanged();
             }
             editingTextIndex_ = -1;
             cursorPos_ = 0;
@@ -1127,7 +1131,7 @@ void AnnotationCanvas::mousePressEvent(QMouseEvent* event)
 
 void AnnotationCanvas::updateMouseInfo(QMouseEvent* event)
 {
-    if (onMouseInfoChanged_ && !image_.isNull()) {
+    if (!image_.isNull()) {
         mouseImagePos_ = QPointF(toImage(event->pos()));
         auto dpr = image_.devicePixelRatio();
         QPoint px(static_cast<int>(mouseImagePos_.x() * dpr),
@@ -1135,7 +1139,7 @@ void AnnotationCanvas::updateMouseInfo(QMouseEvent* event)
         QRect imgRect(QPoint(0, 0), image_.size());
         if (imgRect.contains(px)) {
             mousePixelColor_ = QColor::fromRgba(image_.pixel(px));
-            onMouseInfoChanged_(mouseImagePos_, mousePixelColor_);
+            emit mouseInfoChanged(mouseImagePos_, mousePixelColor_);
         }
     }
 }
@@ -1397,7 +1401,7 @@ void AnnotationCanvas::mouseReleaseEvent(QMouseEvent* event)
         annotations_.push_back(draft_);
         selectedIndex_ = annotations_.size() - 1;
         markModified();
-        if (onSelectionChanged_) onSelectionChanged_();
+        emit selectionChanged();
         if (currentTool_ != AnnotationTool::Select && currentTool_ != AnnotationTool::Text
             && currentTool_ != AnnotationTool::Numbered && currentTool_ != AnnotationTool::Mosaic
             && currentTool_ != AnnotationTool::Eraser) {
@@ -1549,7 +1553,7 @@ void AnnotationCanvas::handleZoomFit()
             zoomFactor_ = fit;
             updateWindowTitle();
             update();
-            if (onZoomChanged_) onZoomChanged_(zoomFactor_);
+            emit zoomChanged(zoomFactor_);
         }
     }
 }
@@ -1573,7 +1577,7 @@ void AnnotationCanvas::handleDuplicateKey()
     annotations_.push_back(std::move(dup));
     selectedIndex_ = annotations_.size() - 1;
     markModified();
-    if (onSelectionChanged_) onSelectionChanged_();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::handleLayerReorderKey(int direction)
@@ -1619,7 +1623,7 @@ void AnnotationCanvas::handleFontSizeChange(int delta)
         }
         markModified();
         update();
-        if (onFontSizeChanged_) onFontSizeChanged_(fontSize_);
+        emit fontSizeChanged(fontSize_);
         QSettings().setValue("editor/fontSize", fontSize_);
     }
 }
@@ -1843,7 +1847,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
                 zoomFactor_ = fit;
     updateWindowTitle();
     update();
-    if (onZoomChanged_) onZoomChanged_(zoomFactor_);
+    emit zoomChanged(zoomFactor_);
 }
         }
     } else if (action == clearAll) {
@@ -2030,7 +2034,7 @@ void AnnotationCanvas::selectAnnotation(int index)
     cursorPos_ = 0;
     preeditString_.clear();
     update();
-    if (onSelectionChanged_) onSelectionChanged_();
+    emit selectionChanged();
 }
 
 void AnnotationCanvas::deleteAnnotation(int index)
