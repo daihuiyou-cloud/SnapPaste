@@ -165,6 +165,8 @@ private:
     void handleNudgeKey(int key);
     void handleFontSizeChange(int delta);
 
+    void pushUndoSnapshot(bool clearRedo);
+
     struct ImageSnapshot {
         QImage image;
         QImage baseImage;
