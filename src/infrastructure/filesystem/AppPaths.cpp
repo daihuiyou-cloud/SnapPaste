@@ -45,8 +45,7 @@ bool AppPaths::ensureDirectory(const QString& path)
     if (path.isEmpty()) {
         return false;
     }
-    QDir dir(path);
-    return dir.exists() || dir.mkpath(".");
+    return QDir().mkpath(path);
 }
 
 } // namespace snappaste

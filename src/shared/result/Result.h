@@ -20,8 +20,8 @@ public:
 
     bool isOk() const noexcept { return ok_; }
     bool isError() const noexcept { return !ok_; }
-    const T& value() const noexcept { return value_; }
-    T& value() noexcept { return value_; }
+    const T& value() const noexcept { Q_ASSERT(ok_); return value_; }
+    T& value() noexcept { Q_ASSERT(ok_); return value_; }
     const QString& error() const noexcept { return error_; }
 
 private:
