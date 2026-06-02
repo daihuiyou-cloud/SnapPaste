@@ -88,8 +88,11 @@ private slots:
 
         QCOMPARE(history.previous(), QRect(20, 20, 10, 10));
         QCOMPARE(history.previous(), QRect(0, 0, 10, 10));
-        QCOMPARE(history.previous(), QRect(20, 20, 10, 10));
-        QCOMPARE(history.next(), QRect(0, 0, 10, 10));
+        QCOMPARE(history.previous(), QRect(0, 0, 10, 10));
+        QCOMPARE(history.next(), QRect(20, 20, 10, 10));
+        QCOMPARE(history.next(), QRect(20, 20, 10, 10));
+        QCOMPARE(history.previous(), QRect(0, 0, 10, 10));
+        QCOMPARE(history.next(), QRect(20, 20, 10, 10));
     }
 
     void captureActionBarAnchorsInsideAvailableGeometry()
