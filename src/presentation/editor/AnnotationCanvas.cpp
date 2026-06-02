@@ -480,9 +480,11 @@ void AnnotationCanvas::setFontSize(int size, bool persist)
     size = qBound(8, size, 72);
     if (size != fontSize_) {
         fontSize_ = size;
-        if (editingTextIndex_ >= 0) {
+        if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
+            pushUndo();
             annotations_[editingTextIndex_].textFontSize = size;
             updateTextBounds(editingTextIndex_);
+            markModified();
         } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
                    && (annotations_[selectedIndex_].tool == AnnotationTool::Text
                        || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
@@ -844,6 +846,7 @@ void AnnotationCanvas::mouseDoubleClickEvent(QMouseEvent* event)
             selectedIndex_ = -1;
             markModified();
             update();
+            emit selectionChanged();
         }
         event->accept();
         return;
@@ -862,6 +865,7 @@ void AnnotationCanvas::mouseDoubleClickEvent(QMouseEvent* event)
             if (ok && !newText.isEmpty() && newText != annotations_[i].text) {
                 pushUndo();
                 annotations_[i].text = newText;
+                markModified();
                 update();
             }
             return;
@@ -1561,6 +1565,7 @@ void AnnotationCanvas::handleAnnotationDeleteKey()
 
 void AnnotationCanvas::handleDuplicateKey()
 {
+    if (selectedIndex_ < 0 || selectedIndex_ >= annotations_.size()) return;
     editingTextIndex_ = -1;
     cursorPos_ = 0;
     preeditString_.clear();
@@ -1611,9 +1616,14 @@ void AnnotationCanvas::handleFontSizeChange(int delta)
     if (newSize >= 8 && newSize <= 72) {
         pushUndo();
         fontSize_ = newSize;
-        if (editingTextIndex_ >= 0) {
+        if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
             annotations_[editingTextIndex_].textFontSize = fontSize_;
             updateTextBounds(editingTextIndex_);
+        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
+                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
+            annotations_[selectedIndex_].textFontSize = fontSize_;
+            updateTextBounds(selectedIndex_);
         }
         markModified();
         update();
@@ -1675,7 +1685,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
         }
         if (event->key() == Qt::Key_A && !annotations_.isEmpty()) {
             selectedIndex_ = annotations_.size() - 1;
-            markModified();
+            update();
+            emit selectionChanged();
             event->accept(); return;
         }
         if (event->modifiers().testFlag(Qt::ShiftModifier)
@@ -1705,7 +1716,8 @@ void AnnotationCanvas::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Down:
     case Qt::Key_Left:
     case Qt::Key_Right:
-        if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
+            && editingTextIndex_ < 0) {
             handleNudgeKey(event->key());
             event->accept(); return;
         }
@@ -1789,6 +1801,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         annotations_.removeAt(selectedIndex_);
         selectedIndex_ = -1;
         markModified();
+        emit selectionChanged();
     } else if (action == duplicateAnn && selectedIndex_ >= 0) {
         pushUndo();
         auto dup = annotations_.at(selectedIndex_);
@@ -1797,16 +1810,19 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
         annotations_.push_back(std::move(dup));
         selectedIndex_ = annotations_.size() - 1;
         markModified();
+        emit selectionChanged();
     } else if (action == bringForward && selectedIndex_ >= 0 && selectedIndex_ < annotations_.size() - 1) {
         pushUndo();
         qSwap(annotations_[selectedIndex_], annotations_[selectedIndex_ + 1]);
         selectedIndex_++;
         markModified();
+        emit selectionChanged();
     } else if (action == sendBackward && selectedIndex_ > 0 && selectedIndex_ < annotations_.size()) {
         pushUndo();
         qSwap(annotations_[selectedIndex_], annotations_[selectedIndex_ - 1]);
         selectedIndex_--;
         markModified();
+        emit selectionChanged();
     } else if (action == copyImage) {
         QApplication::clipboard()->setImage(renderedImage());
     } else if (action == saveAs) {
@@ -1850,6 +1866,7 @@ void AnnotationCanvas::contextMenuEvent(QContextMenuEvent* event)
                 annotations_.clear();
                 selectedIndex_ = -1;
                 markModified();
+                emit selectionChanged();
             }
         }
     }
@@ -1985,7 +2002,7 @@ QVariant AnnotationCanvas::inputMethodQuery(Qt::InputMethodQuery query) const
             font.setItalic(a.italic);
             font.setUnderline(a.underline);
             QFontMetrics fm(font);
-            int textWidth = fm.horizontalAdvance(a.text + preeditString_);
+            int textWidth = fm.horizontalAdvance(a.text.left(cursorPos_) + preeditString_);
             int cx = static_cast<int>((a.bounds.left() + 4 + textWidth) * zoomFactor_);
             int cy = static_cast<int>((a.bounds.top() + 4) * zoomFactor_);
             int ch = static_cast<int>(fm.height() * zoomFactor_);
