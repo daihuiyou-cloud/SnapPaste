@@ -68,11 +68,11 @@ void HistoryViewModel::deleteByRow(int row)
     const auto& record = records_.at(row);
 
     if (!QFile::remove(record.filePath) && QFileInfo::exists(record.filePath)) {
-        qWarning() << "Failed to remove file:" << record.filePath;
+        qWarning("Failed to remove file: %s", qPrintable(record.filePath));
     }
     if (!record.thumbnailPath.isEmpty()) {
         if (!QFile::remove(record.thumbnailPath) && QFileInfo::exists(record.thumbnailPath)) {
-            qWarning() << "Failed to remove thumbnail:" << record.thumbnailPath;
+            qWarning("Failed to remove thumbnail: %s", qPrintable(record.thumbnailPath));
         }
     }
 

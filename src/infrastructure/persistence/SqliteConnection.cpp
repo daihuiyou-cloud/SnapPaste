@@ -1,6 +1,7 @@
 ﻿#include <QCoreApplication>
 #include "infrastructure/persistence/SqliteConnection.h"
 
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QUuid>
 
@@ -40,10 +41,10 @@ Result<QSqlDatabase> SqliteConnection::database()
 
         QSqlQuery query(db);
         if (!query.exec("PRAGMA journal_mode = WAL")) {
-            qWarning() << "Failed to set SQLite WAL journal mode:" << query.lastError().text();
+            qWarning("Failed to set SQLite WAL journal mode: %s", qPrintable(query.lastError().text()));
         }
         if (!query.exec("PRAGMA busy_timeout = 3000")) {
-            qWarning() << "Failed to set SQLite busy timeout:" << query.lastError().text();
+            qWarning("Failed to set SQLite busy timeout: %s", qPrintable(query.lastError().text()));
         }
 
         auto migrateResult = migrator_.migrate(db);
