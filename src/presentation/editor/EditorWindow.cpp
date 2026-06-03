@@ -145,8 +145,7 @@ void EditorWindow::setupActions()
     connect(pasteAction, &QAction::triggered, this, [this] {
         auto img = QApplication::clipboard()->image();
         if (!img.isNull()) {
-            canvas_->setImage(img);
-            statusBar()->showMessage(tr("Image pasted from clipboard"), 3000);
+            setImage(img);
         }
     });
     addAction(pasteAction);
@@ -197,9 +196,6 @@ void EditorWindow::setupActions()
 
 void EditorWindow::closeEvent(QCloseEvent* event)
 {
-    if (canvas_) {
-        QSettings().setValue("editor/zoomFactor", canvas_->zoomFactor());
-    }
     if (canvas_ && canvas_->isModified()) {
         auto ret = QMessageBox::question(this, tr("Unsaved Changes"),
             tr("You have unsaved annotations. Save before closing?"),
@@ -208,15 +204,16 @@ void EditorWindow::closeEvent(QCloseEvent* event)
             emit imageEdited(canvas_->renderedImage());
             emit saveRequested();
             canvas_->clearModified();
-            event->accept();
         } else if (ret == QMessageBox::Discard) {
-            event->accept();
         } else {
             event->ignore();
+            return;
         }
-    } else {
-        event->accept();
     }
+    if (canvas_) {
+        QSettings().setValue("editor/zoomFactor", canvas_->zoomFactor());
+    }
+    event->accept();
 }
 
 void EditorWindow::setImage(const QImage& image)
@@ -508,14 +505,14 @@ void EditorWindow::buildToolSection(QVBoxLayout* layout, QWidget* content, const
 void EditorWindow::buildActionSection(QVBoxLayout* layout, QWidget* content, const QString& toolStyle, QVector<QToolButton*>& actionButtons)
 {
     struct ActionDef { QIcon icon; const char* text; const char* tip; QToolButton** ptr; };
-    undoBtn_ = nullptr; redoBtn_ = nullptr;
+    undoBtn_ = redoBtn_ = copyBtn_ = pinBtn_ = saveBtn_ = exportBtn_ = nullptr;
     const ActionDef actionDefs[] = {
         {iconProvider_.icon(IconName::Undo), QT_TRANSLATE_NOOP("EditorWindow", "Undo"), QT_TRANSLATE_NOOP("EditorWindow", "Undo (Ctrl+Z)"), &undoBtn_},
         {iconProvider_.icon(IconName::Redo), QT_TRANSLATE_NOOP("EditorWindow", "Redo"), QT_TRANSLATE_NOOP("EditorWindow", "Redo (Ctrl+Y)"), &redoBtn_},
-        {iconProvider_.icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), nullptr},
-        {iconProvider_.icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), nullptr},
-        {iconProvider_.icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), nullptr},
-        {iconProvider_.icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), nullptr},
+        {iconProvider_.icon(IconName::Copy), QT_TRANSLATE_NOOP("EditorWindow", "Copy"), QT_TRANSLATE_NOOP("EditorWindow", "Copy (Ctrl+Shift+C)"), &copyBtn_},
+        {iconProvider_.icon(IconName::Pin), QT_TRANSLATE_NOOP("EditorWindow", "Pin"), QT_TRANSLATE_NOOP("EditorWindow", "Pin (F3)"), &pinBtn_},
+        {iconProvider_.icon(IconName::Save), QT_TRANSLATE_NOOP("EditorWindow", "Save"), QT_TRANSLATE_NOOP("EditorWindow", "Save (Ctrl+S)"), &saveBtn_},
+        {iconProvider_.icon(IconName::Export), QT_TRANSLATE_NOOP("EditorWindow", "Export..."), QT_TRANSLATE_NOOP("EditorWindow", "Export (Ctrl+Shift+S)"), &exportBtn_},
     };
 
     auto* actionsGrid = new QGridLayout();
@@ -615,6 +612,9 @@ void EditorWindow::createToolPanel()
     });
     connect(canvas_, &AnnotationCanvas::pickingColorChanged, this, [this](bool picking) {
         eyeAction_->setChecked(picking);
+        if (!picking) {
+            updateColorWell(canvas_->color());
+        }
     });
     colorMenu->addAction(eyeAction_);
     connect(colorMenu, &QMenu::aboutToShow, this, &EditorWindow::rebuildColorMenu);
@@ -940,11 +940,13 @@ void EditorWindow::createToolPanel()
     alignGroup->addButton(alignCenter, 1);
     alignGroup->addButton(alignRight, 2);
     int curAlign = canvas_->textAlignment();
-    if (curAlign < 0) curAlign = 0;
-    if (curAlign == (Qt::AlignHCenter | Qt::AlignTop)) curAlign = 1;
-    else if (curAlign == (Qt::AlignRight | Qt::AlignTop)) curAlign = 2;
-    else curAlign = 0;
-    alignGroup->button(curAlign)->setChecked(true);
+    int alignId = 0;
+    if (curAlign > 0) {
+        if (curAlign & Qt::AlignHCenter) alignId = 1;
+        else if (curAlign & Qt::AlignRight) alignId = 2;
+    }
+    if (auto* btn = alignGroup->button(alignId))
+        btn->setChecked(true);
     connect(alignGroup, qOverload<int>(&QButtonGroup::buttonClicked), this, [this](int id) {
         int align = -1;
         switch (id) {
@@ -1433,36 +1435,33 @@ void EditorWindow::createToolPanel()
     refreshPanelUi();
 
     // -- Connections --
-    connect(actionButtons[0], &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
-    connect(actionButtons[1], &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
-
-    // Pixel info shown on canvas overlay; clear panel label
-    // Pixel info handled by canvas overlay; no EditorWindow sync needed
+    connect(undoBtn_, &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
+    connect(redoBtn_, &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
 
     // -- State change (undo/redo counts etc.) --
     connect(canvas_, &AnnotationCanvas::modified, this, [this] { refreshPanelUi(); rebuildLayerList(); });
 
-    connect(actionButtons[2], &QToolButton::clicked, this, [this] {
+    connect(copyBtn_, &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
         emit copyRequested();
         statusBar()->showMessage(tr("Copied to clipboard"), 3000);
         canvas_->setFocus();
     });
-    connect(actionButtons[3], &QToolButton::clicked, this, [this] {
+    connect(pinBtn_, &QToolButton::clicked, this, [this] {
         auto img = canvas_->renderedImage();
         emit imageEdited(img);
         emit pinRequested(img);
         statusBar()->showMessage(tr("Image pinned"), 3000);
         canvas_->setFocus();
     });
-    connect(actionButtons[4], &QToolButton::clicked, this, [this] {
+    connect(saveBtn_, &QToolButton::clicked, this, [this] {
         canvas_->clearModified();
         emit imageEdited(canvas_->renderedImage());
         emit saveRequested();
         statusBar()->showMessage(tr("Saved"), 3000);
         canvas_->setFocus();
     });
-    connect(actionButtons[5], &QToolButton::clicked, this, [this] {
+    connect(exportBtn_, &QToolButton::clicked, this, [this] {
         auto path = QFileDialog::getSaveFileName(this, tr("Save As"), QString(),
             tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
         if (!path.isEmpty()) {

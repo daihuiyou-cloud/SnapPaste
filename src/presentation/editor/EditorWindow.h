@@ -60,6 +60,10 @@ private:
 
     QToolButton* undoBtn_ = nullptr;
     QToolButton* redoBtn_ = nullptr;
+    QToolButton* copyBtn_ = nullptr;
+    QToolButton* pinBtn_ = nullptr;
+    QToolButton* saveBtn_ = nullptr;
+    QToolButton* exportBtn_ = nullptr;
     QWidget* propsWidget_ = nullptr;
     QWidget* preview_ = nullptr;
     QWidget* arrowWidget_ = nullptr;
