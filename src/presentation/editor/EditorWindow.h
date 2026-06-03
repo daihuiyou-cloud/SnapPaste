@@ -97,6 +97,7 @@ private:
     QSlider* contrastSlider_ = nullptr;
     QSlider* zoomSlider_ = nullptr;
     QLabel* zoomVal_ = nullptr;
+    bool imageAdjustStarted_ = false;
 
     void rebuildLayerList();
 };

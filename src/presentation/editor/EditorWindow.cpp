@@ -1314,18 +1314,21 @@ void EditorWindow::buildImageAdjustSection(QVBoxLayout* layout, QWidget* content
         [this](int) {},
         [](int v) { return v > 0 ? tr("+%1").arg(v) : QString::number(v); });
 
-    connect(brightSlider_, &QSlider::sliderPressed, this, [this] {
-        canvas_->beginImageAdjust();
-    });
-    connect(contrastSlider_, &QSlider::sliderPressed, this, [this] {
-        canvas_->beginImageAdjust();
-    });
-
     auto doAdjust = [this] {
+        if (!imageAdjustStarted_) {
+            imageAdjustStarted_ = true;
+            canvas_->beginImageAdjust();
+        }
         canvas_->previewAdjustImage(brightSlider_->value(), contrastSlider_->value());
     };
     connect(brightSlider_, &QSlider::valueChanged, this, doAdjust);
     connect(contrastSlider_, &QSlider::valueChanged, this, doAdjust);
+    connect(brightSlider_, &QSlider::sliderReleased, this, [this] {
+        imageAdjustStarted_ = false;
+    });
+    connect(contrastSlider_, &QSlider::sliderReleased, this, [this] {
+        imageAdjustStarted_ = false;
+    });
 
     layout->addSpacing(10);
 }
