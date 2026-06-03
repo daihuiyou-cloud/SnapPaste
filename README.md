@@ -171,8 +171,11 @@ presentation -> domain -> infrastructure -> platform/windows
 ### OCR
 
 - 使用 Windows SDK **WinRT `Windows.Media.Ocr`** API。
-- 后台线程处理，支持预处理（灰度化、锐化、Otsu 二值化、自动放大小字）。
-- 多次触发 OCR 时，先前的请求自动失效，仅显示最新的识别结果。
+- **专用后台线程**：`WindowsOcrService` 内部维护一个常驻工作线程，COM 初始化和 `OcrEngine` 实例仅初始化一次，后续 OCR 调用复用。
+- **引擎缓存**：`OcrEngine` 按语言缓存，切换语言时自动重建，连续 OCR 避免重复创建开销。
+- **异步回调**：`recognizeTextAsync()` 在工作线程完成后通过 `QMetaObject::invokeMethod` 将结果派发到主线程，避免中间线程阻塞。
+- **请求级取消**：每个 OCR 任务在投递时捕获当前 `requestId`，执行时与 `currentRequestId_` 比对；`cancel()` 仅递增计数器即可使所有未执行任务失效，无竞态。
+- **预处理**：仅做灰度化 + 条件快速缩放（针对极小文字），去掉对比度无益的二值化和锐化处理。
 
 ### 事件通信
 
@@ -196,4 +199,9 @@ SnapPaste 会在用户本地应用数据目录下保存配置、数据库、截�
 
 ## 当前状态
 
-项目版本为 `0.1.0`。当前实现面向 Windows，不包含跨平台抽象层；`platform/windows/` 是唯一平台实现目录。构建系统支持单元测试和集成测试的独立开关。
+项目版本为 `0.2.0`。当前实现面向 Windows，不包含跨平台抽象层；`platform/windows/` 是唯一平台实现目录。构建系统支持单元测试和集成测试的独立开关。
+
+### 近期优化
+
+- **OCR 性能**：引入专用工作线程 + OcrEngine 缓存 + 异步回调接口，消除每次 OCR 的 COM 初始化和引擎创建开销；撤销无益的二值化/锐化预处理；`cancel()` 改用 `requestId` 比对机制，消除竞态。
+- **截图性能**：缓存 `chipButtons` 和常用控件指针，消除 `syncPanelDefaults` 中的重复 `findChild`/`findChildren` 调用。
