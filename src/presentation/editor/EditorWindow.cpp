@@ -106,6 +106,7 @@ const char* kToolStyle =
     "  font-family: 'Microsoft YaHei UI','Segoe UI',sans-serif;"
     "  padding: 4px 6px; text-align: left; border: none; border-radius: 4px; }"
     "QToolButton:hover { background: rgba(255,255,255,0.06); }"
+    "QToolButton:pressed { background: rgba(47,191,159,0.12); }"
     "QToolButton:checked { background: rgba(47,191,159,0.15); color: #2fbf9f; }";
 
 const char* kSelStyle =
@@ -158,11 +159,6 @@ EditorWindow::EditorWindow(IIconProvider& iconProvider, QWidget* parent)
 {
     setWindowTitle(tr("SnapPaste Editor"));
     resize(980, 680);
-
-    statusBar()->setStyleSheet(
-        "QStatusBar { border-top: 1px solid rgba(255,255,255,0.08);"
-        "  background: #1a1e23; font: 11px; color: #8e8e93; }"
-        "QStatusBar::item { border: none; }");
 
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidget(canvas_);

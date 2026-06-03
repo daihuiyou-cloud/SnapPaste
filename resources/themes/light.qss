@@ -163,3 +163,11 @@ QToolTip {
     padding: 4px 8px;
     font-size: 11px;
 }
+
+QStatusBar {
+    background: #eef0f3;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    font-size: 11px;
+    color: #6c727a;
+}
+QStatusBar::item { border: none; }
