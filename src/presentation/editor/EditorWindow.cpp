@@ -342,8 +342,8 @@ void EditorWindow::syncPanelDefaults()
     updateFillColorWell(canvas_->fillColor());
     if (preview_)
         static_cast<StrokePreview*>(preview_)->showStroke(canvas_->color(), canvas_->strokeWidth());
-    if (auto* sg = findChild<QButtonGroup*>("strokeGroup")) {
-        for (auto* btn : sg->buttons())
+    if (strokeGroup_) {
+        for (auto* btn : strokeGroup_->buttons())
             btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
     }
     for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
@@ -357,14 +357,14 @@ void EditorWindow::syncPanelDefaults()
         else if (key == "Grid")
             btn->setChecked(canvas_->gridEnabled());
     }
-    if (auto* rs = findChild<QSlider*>("radiusSlider")) {
+    if (radiusSlider_) {
         int v = canvas_->cornerRadius();
-        rs->setValue(v);
-        if (auto* rv = findChild<QLabel*>("radiusVal"))
-            rv->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
+        radiusSlider_->setValue(v);
+        if (radiusVal_)
+            radiusVal_->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
     }
-    if (auto* ag = findChild<QButtonGroup*>("arrowGroup")) {
-        if (auto* abtn = ag->button(static_cast<int>(canvas_->arrowStyle())))
+    if (arrowGroup_) {
+        if (auto* abtn = arrowGroup_->button(static_cast<int>(canvas_->arrowStyle())))
             abtn->setChecked(true);
     }
     canvas_->syncTextPropertiesUI();
@@ -756,9 +756,9 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
 
     struct StrokePreset { QString label; int width; };
     const StrokePreset strokes[] = {{tr("S"), 2}, {tr("M"), 4}, {tr("L"), 8}};
-    auto* strokeGroup = new QButtonGroup(content);
-    strokeGroup->setObjectName("strokeGroup");
-    strokeGroup->setExclusive(true);
+    strokeGroup_ = new QButtonGroup(content);
+    strokeGroup_->setObjectName("strokeGroup");
+    strokeGroup_->setExclusive(true);
     auto* widthRow = new QHBoxLayout();
     widthRow->setContentsMargins(0, 0, 0, 0);
     widthRow->setSpacing(4);
@@ -772,7 +772,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
         btn->setStyleSheet(kSelStyle);
         btn->setProperty("width", s.width);
         if (s.width == 4) btn->setChecked(true);
-        strokeGroup->addButton(btn);
+        strokeGroup_->addButton(btn);
         connect(btn, &QToolButton::clicked, this, [this, s] {
             canvas_->setStrokeWidth(s.width);
             static_cast<StrokePreview*>(preview_)->showStroke(canvas_->color(), canvas_->strokeWidth());
@@ -838,9 +838,9 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
     const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("EditorWindow", "Tri"), QT_TRANSLATE_NOOP("EditorWindow", "Triangular arrowhead"), 0},
                                   {QT_TRANSLATE_NOOP("EditorWindow", "Circle"), QT_TRANSLATE_NOOP("EditorWindow", "Circular endpoint"), 1},
                                   {QT_TRANSLATE_NOOP("EditorWindow", "Square"), QT_TRANSLATE_NOOP("EditorWindow", "Square endpoint"), 2}};
-    auto* arrowGroup = new QButtonGroup(content);
-    arrowGroup->setObjectName("arrowGroup");
-    arrowGroup->setExclusive(true);
+    arrowGroup_ = new QButtonGroup(content);
+    arrowGroup_->setObjectName("arrowGroup");
+    arrowGroup_->setExclusive(true);
     for (const auto& ad : arrowDefs) {
         auto* btn = new QToolButton(content);
         btn->setText(tr(ad.text));
@@ -850,7 +850,7 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
         btn->setStyleSheet(kChipStyle);
         btn->setToolTip(tr(ad.tip));
         if (ad.value == 0) btn->setChecked(true);
-        arrowGroup->addButton(btn, ad.value);
+        arrowGroup_->addButton(btn, ad.value);
         connect(btn, &QToolButton::clicked, this, [this, val = ad.value] {
             canvas_->setArrowStyle(static_cast<ArrowStyle>(val));
         });
@@ -866,24 +866,24 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
     auto* radiusLbl = new QLabel(tr("Radius"), content);
     radiusLbl->setFixedWidth(34);
     radiusLbl->setStyleSheet(kSliderLabelStyle);
-    auto* radiusSlider = new QSlider(Qt::Horizontal, content);
-    radiusSlider->setObjectName("radiusSlider");
-    radiusSlider->setRange(0, 40);
-    radiusSlider->setValue(0);
-    radiusSlider->setFixedHeight(22);
-    radiusSlider->setStyleSheet(kSliderStyle);
-    auto* radiusVal = new QLabel(tr("Off"), content);
-    radiusVal->setObjectName("radiusVal");
-    radiusVal->setFixedWidth(30);
-    radiusVal->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    radiusVal->setStyleSheet(kSliderValStyle);
-    connect(radiusSlider, &QSlider::valueChanged, this, [this, radiusVal](int v) {
+    radiusSlider_ = new QSlider(Qt::Horizontal, content);
+    radiusSlider_->setObjectName("radiusSlider");
+    radiusSlider_->setRange(0, 40);
+    radiusSlider_->setValue(0);
+    radiusSlider_->setFixedHeight(22);
+    radiusSlider_->setStyleSheet(kSliderStyle);
+    radiusVal_ = new QLabel(tr("Off"), content);
+    radiusVal_->setObjectName("radiusVal");
+    radiusVal_->setFixedWidth(30);
+    radiusVal_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    radiusVal_->setStyleSheet(kSliderValStyle);
+    connect(radiusSlider_, &QSlider::valueChanged, this, [this](int v) {
         canvas_->setCornerRadius(v);
-        radiusVal->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
+        radiusVal_->setText(v > 0 ? tr("%1px").arg(v) : tr("Off"));
     });
     radiusRow->addWidget(radiusLbl);
-    radiusRow->addWidget(radiusSlider);
-    radiusRow->addWidget(radiusVal);
+    radiusRow->addWidget(radiusSlider_);
+    radiusRow->addWidget(radiusVal_);
     radiusWidget_->setVisible(false);
     layout->addWidget(radiusWidget_);
 
@@ -1568,8 +1568,8 @@ void EditorWindow::wireToolPanelConnections()
             updateFillColorWell(a.fillColor);
             if (preview_)
                 static_cast<StrokePreview*>(preview_)->showStroke(a.color, a.strokeWidth);
-            if (auto* sg = findChild<QButtonGroup*>("strokeGroup")) {
-                for (auto* btn : sg->buttons())
+            if (strokeGroup_) {
+                for (auto* btn : strokeGroup_->buttons())
                     btn->setChecked(btn->property("width").toInt() == a.strokeWidth);
             }
             for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
@@ -1584,15 +1584,15 @@ void EditorWindow::wireToolPanelConnections()
                     btn->setChecked(canvas_->gridEnabled());
             }
             if (a.tool == AnnotationTool::Arrow) {
-                if (auto* ag = findChild<QButtonGroup*>("arrowGroup")) {
-                    auto* abtn = ag->button(static_cast<int>(a.arrowStyle));
+                if (arrowGroup_) {
+                    auto* abtn = arrowGroup_->button(static_cast<int>(a.arrowStyle));
                     if (abtn) abtn->setChecked(true);
                 }
             }
-            if (auto* rs = findChild<QSlider*>("radiusSlider")) {
-                rs->setValue(a.cornerRadius);
-                if (auto* rv = findChild<QLabel*>("radiusVal"))
-                    rv->setText(a.cornerRadius > 0 ? tr("%1px").arg(a.cornerRadius) : tr("Off"));
+            if (radiusSlider_) {
+                radiusSlider_->setValue(a.cornerRadius);
+                if (radiusVal_)
+                    radiusVal_->setText(a.cornerRadius > 0 ? tr("%1px").arg(a.cornerRadius) : tr("Off"));
             }
             canvas_->syncTextPropertiesUI();
         } else {

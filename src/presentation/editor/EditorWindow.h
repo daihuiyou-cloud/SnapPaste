@@ -6,6 +6,7 @@
 #include <functional>
 
 #include <QAction>
+#include <QButtonGroup>
 #include <QCloseEvent>
 #include <QImage>
 #include <QLabel>
@@ -98,6 +99,12 @@ private:
     QSlider* zoomSlider_ = nullptr;
     QLabel* zoomVal_ = nullptr;
     bool imageAdjustStarted_ = false;
+
+    // Cached widget pointers (avoid findChild in hot path)
+    QButtonGroup* strokeGroup_ = nullptr;
+    QButtonGroup* arrowGroup_ = nullptr;
+    QSlider* radiusSlider_ = nullptr;
+    QLabel* radiusVal_ = nullptr;
 
     void rebuildLayerList();
 };
