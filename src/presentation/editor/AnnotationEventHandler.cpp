@@ -631,12 +631,20 @@ bool AnnotationEventHandler::handleTextEditingKey(QKeyEvent* event)
     int editIdx = toolManager_.editingTextIndex();
     auto& textAnn = toolManager_.annotationsMut()[editIdx];
 
+    if (handleTextConfirmCancel(event, textAnn, editIdx)) return true;
+    if (handleTextCtrlShortcuts(event, textAnn, editIdx)) return true;
+    if (handleTextNavigation(event, textAnn)) return true;
+    if (handleTextDeletion(event, textAnn, editIdx)) return true;
+    if (handleTextInput(event, textAnn, editIdx)) return true;
+
+    return false;
+}
+
+bool AnnotationEventHandler::handleTextConfirmCancel(QKeyEvent* event, Annotation& textAnn, int editIdx)
+{
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            toolManager_.setEditingTextIndex(-1);
-            toolManager_.setCursorPos(0);
-            toolManager_.setPreeditString(QString());
-            canvas_.update();
+            finishTextEditing();
             event->accept();
             return true;
         }
@@ -654,88 +662,87 @@ bool AnnotationEventHandler::handleTextEditingKey(QKeyEvent* event)
             toolManager_.annotationsMut().removeAt(editIdx);
             toolManager_.setSelectedIndex(-1);
         }
-        toolManager_.setEditingTextIndex(-1);
-        toolManager_.setCursorPos(0);
-        toolManager_.setPreeditString(QString());
+        finishTextEditing();
         canvas_.markModified();
         event->accept();
         return true;
     }
+    return false;
+}
 
-    if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        if (event->key() == Qt::Key_C) {
-            { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(textAnn.text); }
-            event->accept();
-            return true;
-        }
-        if (event->key() == Qt::Key_V) {
-            QString clipText = QApplication::clipboard()->text();
-            if (!clipText.isEmpty()) {
-                textAnn.text.insert(toolManager_.cursorPos(), clipText);
-                toolManager_.setCursorPos(toolManager_.cursorPos() + clipText.length());
-                toolManager_.updateTextBounds(editIdx);
-                canvas_.markModified();
-            }
-            event->accept();
-            return true;
-        }
-        if (event->key() == Qt::Key_A) {
-            toolManager_.setCursorPos(textAnn.text.length());
-            canvas_.update();
-            event->accept();
-            return true;
-        }
-    }
+bool AnnotationEventHandler::handleTextCtrlShortcuts(QKeyEvent* event, Annotation& textAnn, int editIdx)
+{
+    if (!event->modifiers().testFlag(Qt::ControlModifier)) return false;
 
-    if (event->key() == Qt::Key_Left) {
-        int cp = toolManager_.cursorPos();
-        if (cp > 0) toolManager_.setCursorPos(cp - 1);
-        canvas_.update();
-        event->accept();
-        return true;
+    switch (event->key()) {
+    case Qt::Key_C:
+        { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(textAnn.text); }
+        event->accept(); return true;
+    case Qt::Key_V: {
+        QString clipText = QApplication::clipboard()->text();
+        if (!clipText.isEmpty()) {
+            textAnn.text.insert(toolManager_.cursorPos(), clipText);
+            toolManager_.setCursorPos(toolManager_.cursorPos() + clipText.length());
+            toolManager_.updateTextBounds(editIdx);
+            canvas_.markModified();
+        }
+        event->accept(); return true;
     }
-    if (event->key() == Qt::Key_Right) {
-        int cp = toolManager_.cursorPos();
-        if (cp < textAnn.text.length()) toolManager_.setCursorPos(cp + 1);
-        canvas_.update();
-        event->accept();
-        return true;
-    }
-    if (event->key() == Qt::Key_Home) {
-        toolManager_.setCursorPos(0);
-        canvas_.update();
-        event->accept();
-        return true;
-    }
-    if (event->key() == Qt::Key_End) {
+    case Qt::Key_A:
         toolManager_.setCursorPos(textAnn.text.length());
         canvas_.update();
-        event->accept();
-        return true;
+        event->accept(); return true;
     }
+    return false;
+}
+
+bool AnnotationEventHandler::handleTextNavigation(QKeyEvent* event, Annotation& textAnn)
+{
+    switch (event->key()) {
+    case Qt::Key_Left:
+        if (toolManager_.cursorPos() > 0)
+            toolManager_.setCursorPos(toolManager_.cursorPos() - 1);
+        canvas_.update(); event->accept(); return true;
+    case Qt::Key_Right:
+        if (toolManager_.cursorPos() < textAnn.text.length())
+            toolManager_.setCursorPos(toolManager_.cursorPos() + 1);
+        canvas_.update(); event->accept(); return true;
+    case Qt::Key_Home:
+        toolManager_.setCursorPos(0);
+        canvas_.update(); event->accept(); return true;
+    case Qt::Key_End:
+        toolManager_.setCursorPos(textAnn.text.length());
+        canvas_.update(); event->accept(); return true;
+    }
+    return false;
+}
+
+bool AnnotationEventHandler::handleTextDeletion(QKeyEvent* event, Annotation& textAnn, int editIdx)
+{
+    int cp = toolManager_.cursorPos();
 
     if (event->key() == Qt::Key_Backspace) {
-        int cp = toolManager_.cursorPos();
         if (cp > 0) {
             toolManager_.setCursorPos(cp - 1);
             textAnn.text.remove(toolManager_.cursorPos(), 1);
             toolManager_.updateTextBounds(editIdx);
             canvas_.markModified();
         }
-        event->accept();
-        return true;
+        event->accept(); return true;
     }
     if (event->key() == Qt::Key_Delete) {
-        int cp = toolManager_.cursorPos();
         if (cp < textAnn.text.length()) {
             textAnn.text.remove(cp, 1);
             toolManager_.updateTextBounds(editIdx);
             canvas_.markModified();
         }
-        event->accept();
-        return true;
+        event->accept(); return true;
     }
+    return false;
+}
 
+bool AnnotationEventHandler::handleTextInput(QKeyEvent* event, Annotation& textAnn, int editIdx)
+{
     QString text = event->text();
     if (!text.isEmpty() && text[0].isPrint()) {
         textAnn.text.insert(toolManager_.cursorPos(), text);
@@ -745,8 +752,15 @@ bool AnnotationEventHandler::handleTextEditingKey(QKeyEvent* event)
         event->accept();
         return true;
     }
-
     return false;
+}
+
+void AnnotationEventHandler::finishTextEditing()
+{
+    toolManager_.setEditingTextIndex(-1);
+    toolManager_.setCursorPos(0);
+    toolManager_.setPreeditString(QString());
+    canvas_.update();
 }
 
 void AnnotationEventHandler::handleAnnotationDeleteKey()
@@ -834,111 +848,142 @@ void AnnotationEventHandler::keyPressEvent(QKeyEvent* event)
     int editIdx = toolManager_.editingTextIndex();
     if (editIdx >= 0 && editIdx < toolManager_.annotationCount()
         && toolManager_.annotationAt(editIdx).tool == AnnotationTool::Text) {
-        if (handleTextEditingKey(event)) {
-            return;
-        }
+        if (handleTextEditingKey(event)) return;
     }
 
-    if (event->key() == Qt::Key_Escape) {
-        if (toolManager_.pickingColor()) {
-            toolManager_.setPickingColor(false);
-            event->accept();
-            return;
-        }
-        if (toolManager_.drawing()) {
-            toolManager_.setDrawing(false);
-            canvas_.update();
-            event->accept();
-            return;
-        }
-    }
+    if (handleEscapeKey(event)) return;
+    if (handleDeleteKey(event)) return;
+    if (handleCtrlShortcuts(event)) return;
+    if (handleToolShortcuts(event)) return;
+    if (handleNudgeOrFontSize(event)) return;
 
+    if (onKeyPressDefault) onKeyPressDefault(event);
+}
+
+bool AnnotationEventHandler::handleEscapeKey(QKeyEvent* event)
+{
+    if (event->key() != Qt::Key_Escape) return false;
+    if (toolManager_.pickingColor()) {
+        toolManager_.setPickingColor(false);
+        event->accept();
+        return true;
+    }
+    if (toolManager_.drawing()) {
+        toolManager_.setDrawing(false);
+        canvas_.update();
+        event->accept();
+        return true;
+    }
+    return false;
+}
+
+bool AnnotationEventHandler::handleDeleteKey(QKeyEvent* event)
+{
+    if (event->key() != Qt::Key_Delete && event->key() != Qt::Key_Backspace) return false;
     int sel = toolManager_.selectedIndex();
-    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
-        && sel >= 0 && sel < toolManager_.annotationCount()
+    if (sel >= 0 && sel < toolManager_.annotationCount()
         && toolManager_.editingTextIndex() < 0) {
         handleAnnotationDeleteKey();
         event->accept();
-        return;
+        return true;
     }
-    if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        if (event->key() == Qt::Key_Equal || event->key() == Qt::Key_Plus) {
-            canvas_.zoomAt(toolManager_.zoomFactor() * 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-            event->accept(); return;
-        }
-        if (event->key() == Qt::Key_Minus) {
-            canvas_.zoomAt(toolManager_.zoomFactor() / 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-            event->accept(); return;
-        }
-        if (event->key() == Qt::Key_0) {
-            canvas_.zoomAt(1.0, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-            event->accept(); return;
-        }
-        if (event->key() == Qt::Key_9) {
-            handleZoomFit();
-            event->accept(); return;
-        }
-        if (event->key() == Qt::Key_D && sel >= 0) {
-            handleDuplicateKey();
-            event->accept(); return;
-        }
-        if (event->key() == Qt::Key_A && toolManager_.annotationCount() > 0) {
+    return false;
+}
+
+bool AnnotationEventHandler::handleCtrlShortcuts(QKeyEvent* event)
+{
+    if (!event->modifiers().testFlag(Qt::ControlModifier)) return false;
+
+    switch (event->key()) {
+    case Qt::Key_Equal: case Qt::Key_Plus:
+        canvas_.zoomAt(toolManager_.zoomFactor() * 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
+        event->accept(); return true;
+    case Qt::Key_Minus:
+        canvas_.zoomAt(toolManager_.zoomFactor() / 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
+        event->accept(); return true;
+    case Qt::Key_0:
+        canvas_.zoomAt(1.0, QPoint(canvas_.width() / 2, canvas_.height() / 2));
+        event->accept(); return true;
+    case Qt::Key_9:
+        handleZoomFit();
+        event->accept(); return true;
+    case Qt::Key_D: {
+        int sel = toolManager_.selectedIndex();
+        if (sel >= 0) { handleDuplicateKey(); event->accept(); return true; }
+        break;
+    }
+    case Qt::Key_A:
+        if (toolManager_.annotationCount() > 0) {
             toolManager_.setSelectedIndex(toolManager_.annotationCount() - 1);
             canvas_.update();
             if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-            event->accept(); return;
+            event->accept(); return true;
         }
-        if (event->modifiers().testFlag(Qt::ShiftModifier)
-            && (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)
-            && sel >= 0 && sel < toolManager_.annotationCount()) {
-            int dir = (event->key() == Qt::Key_Up) ? 1 : -1;
-            handleLayerReorderKey(dir);
-            event->accept(); return;
+        break;
+    case Qt::Key_Up: case Qt::Key_Down:
+        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            int sel = toolManager_.selectedIndex();
+            if (sel >= 0 && sel < toolManager_.annotationCount()) {
+                int dir = (event->key() == Qt::Key_Up) ? 1 : -1;
+                handleLayerReorderKey(dir);
+                event->accept(); return true;
+            }
         }
-        // Handle Ctrl+Z / Ctrl+Y
-        if (event->key() == Qt::Key_Z && !event->modifiers().testFlag(Qt::ShiftModifier)) {
-            toolManager_.undo();
-            event->accept(); return;
+        break;
+    case Qt::Key_Z:
+        if (!event->modifiers().testFlag(Qt::ShiftModifier)) {
+            toolManager_.undo(); event->accept(); return true;
         }
-        if (event->key() == Qt::Key_Y || (event->key() == Qt::Key_Z && event->modifiers().testFlag(Qt::ShiftModifier))) {
-            toolManager_.redo();
-            event->accept(); return;
-        }
-        if (onKeyPressDefault) onKeyPressDefault(event);
-        return;
+        break;
+    case Qt::Key_Y:
+        toolManager_.redo(); event->accept(); return true;
     }
+    // Shift+Z for redo
+    if (event->key() == Qt::Key_Z && event->modifiers().testFlag(Qt::ShiftModifier)) {
+        toolManager_.redo(); event->accept(); return true;
+    }
+    if (onKeyPressDefault) onKeyPressDefault(event);
+    return true;
+}
+
+bool AnnotationEventHandler::handleToolShortcuts(QKeyEvent* event)
+{
     switch (event->key()) {
-    case Qt::Key_R: toolManager_.setTool(AnnotationTool::Rectangle); event->accept(); return;
-    case Qt::Key_E: toolManager_.setTool(AnnotationTool::Ellipse); event->accept(); return;
-    case Qt::Key_A: toolManager_.setTool(AnnotationTool::Arrow); event->accept(); return;
-    case Qt::Key_L: toolManager_.setTool(AnnotationTool::Line); event->accept(); return;
-    case Qt::Key_P: toolManager_.setTool(AnnotationTool::Pen); event->accept(); return;
-    case Qt::Key_T: toolManager_.setTool(AnnotationTool::Text); event->accept(); return;
-    case Qt::Key_H: toolManager_.setTool(AnnotationTool::Highlight); event->accept(); return;
-    case Qt::Key_N: toolManager_.setTool(AnnotationTool::Numbered); event->accept(); return;
-    case Qt::Key_M: toolManager_.setTool(AnnotationTool::Mosaic); event->accept(); return;
-    case Qt::Key_V: toolManager_.setTool(AnnotationTool::Select); event->accept(); return;
-    case Qt::Key_X: toolManager_.setTool(AnnotationTool::Eraser); event->accept(); return;
-    case Qt::Key_C: toolManager_.setTool(AnnotationTool::Crop); event->accept(); return;
-    case Qt::Key_Up:
-    case Qt::Key_Down:
-    case Qt::Key_Left:
-    case Qt::Key_Right:
+    case Qt::Key_R: toolManager_.setTool(AnnotationTool::Rectangle); event->accept(); return true;
+    case Qt::Key_E: toolManager_.setTool(AnnotationTool::Ellipse); event->accept(); return true;
+    case Qt::Key_A: toolManager_.setTool(AnnotationTool::Arrow); event->accept(); return true;
+    case Qt::Key_L: toolManager_.setTool(AnnotationTool::Line); event->accept(); return true;
+    case Qt::Key_P: toolManager_.setTool(AnnotationTool::Pen); event->accept(); return true;
+    case Qt::Key_T: toolManager_.setTool(AnnotationTool::Text); event->accept(); return true;
+    case Qt::Key_H: toolManager_.setTool(AnnotationTool::Highlight); event->accept(); return true;
+    case Qt::Key_N: toolManager_.setTool(AnnotationTool::Numbered); event->accept(); return true;
+    case Qt::Key_M: toolManager_.setTool(AnnotationTool::Mosaic); event->accept(); return true;
+    case Qt::Key_V: toolManager_.setTool(AnnotationTool::Select); event->accept(); return true;
+    case Qt::Key_X: toolManager_.setTool(AnnotationTool::Eraser); event->accept(); return true;
+    case Qt::Key_C: toolManager_.setTool(AnnotationTool::Crop); event->accept(); return true;
+    }
+    return false;
+}
+
+bool AnnotationEventHandler::handleNudgeOrFontSize(QKeyEvent* event)
+{
+    int sel = toolManager_.selectedIndex();
+    switch (event->key()) {
+    case Qt::Key_Up: case Qt::Key_Down: case Qt::Key_Left: case Qt::Key_Right:
         if (sel >= 0 && sel < toolManager_.annotationCount()
             && toolManager_.editingTextIndex() < 0) {
             handleNudgeKey(event->key());
-            event->accept(); return;
+            event->accept(); return true;
         }
         break;
     case Qt::Key_BracketLeft:
         handleFontSizeChange(-2);
-        event->accept(); return;
+        event->accept(); return true;
     case Qt::Key_BracketRight:
         handleFontSizeChange(2);
-        event->accept(); return;
-    default: break;
+        event->accept(); return true;
     }
-    if (onKeyPressDefault) onKeyPressDefault(event);
+    return false;
 }
 
 // --- Context menu ---
@@ -955,57 +1000,81 @@ void AnnotationEventHandler::contextMenuEvent(QContextMenuEvent* event)
         toolManager_.setPreeditString(QString());
         canvas_.update();
     }
-    QPoint clickPos = toImage(event->pos());
-    int hitIdx = -1;
+
+    int hitIdx = resolveContextHit(event->pos());
+    if (hitIdx >= 0) selectContextHit(hitIdx);
+    else clearContextSelection();
+
+    ContextMenuActions actions;
+    QMenu menu;
+    buildContextMenu(menu, actions);
+    executeContextAction(menu.exec(event->globalPos()), actions);
+}
+
+int AnnotationEventHandler::resolveContextHit(QPoint widgetPos) const
+{
+    QPoint clickPos = toImage(widgetPos);
     for (int i = toolManager_.annotationCount() - 1; i >= 0; --i) {
-        if (AnnotationRenderer::hitTestAnnotation(toolManager_.annotationAt(i), clickPos)) {
-            hitIdx = i;
-            break;
-        }
+        if (AnnotationRenderer::hitTestAnnotation(toolManager_.annotationAt(i), clickPos))
+            return i;
     }
-    if (hitIdx >= 0) {
-        if (hitIdx != toolManager_.selectedIndex()) {
-            toolManager_.setSelectedIndex(hitIdx);
-            if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-            canvas_.update();
-        }
-    } else if (toolManager_.selectedIndex() >= 0) {
+    return -1;
+}
+
+void AnnotationEventHandler::selectContextHit(int hitIdx)
+{
+    if (hitIdx != toolManager_.selectedIndex()) {
+        toolManager_.setSelectedIndex(hitIdx);
+        if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
+        canvas_.update();
+    }
+}
+
+void AnnotationEventHandler::clearContextSelection()
+{
+    if (toolManager_.selectedIndex() >= 0) {
         toolManager_.setSelectedIndex(-1);
         if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
         canvas_.update();
     }
-    QMenu menu;
-    auto* copyImage = menu.addAction(canvas_.tr("Copy Image\tCtrl+C"));
-    auto* saveAs = menu.addAction(canvas_.tr("Export..."));
-    QAction* deleteAnn = nullptr;
-    QAction* duplicateAnn = nullptr;
-    QAction* bringForward = nullptr;
-    QAction* sendBackward = nullptr;
+}
+
+void AnnotationEventHandler::buildContextMenu(QMenu& menu, ContextMenuActions& actions)
+{
+    actions.copyImage = menu.addAction(canvas_.tr("Copy Image\tCtrl+C"));
+    actions.saveAs = menu.addAction(canvas_.tr("Export..."));
+
     int sel = toolManager_.selectedIndex();
     if (sel >= 0) {
         menu.addSeparator();
-        deleteAnn = menu.addAction(canvas_.tr("Delete Annotation\tDel"));
-        duplicateAnn = menu.addAction(canvas_.tr("Duplicate Annotation"));
+        actions.deleteAnn = menu.addAction(canvas_.tr("Delete Annotation\tDel"));
+        actions.duplicateAnn = menu.addAction(canvas_.tr("Duplicate Annotation"));
         if (sel < toolManager_.annotationCount() - 1)
-            bringForward = menu.addAction(canvas_.tr("Bring Forward\tCtrl+Shift+Up"));
+            actions.bringForward = menu.addAction(canvas_.tr("Bring Forward\tCtrl+Shift+Up"));
         if (sel > 0)
-            sendBackward = menu.addAction(canvas_.tr("Send Backward\tCtrl+Shift+Down"));
+            actions.sendBackward = menu.addAction(canvas_.tr("Send Backward\tCtrl+Shift+Down"));
     }
+
     menu.addSeparator();
-    auto* zoomIn = menu.addAction(canvas_.tr("Zoom In\tCtrl++"));
-    auto* zoomOut = menu.addAction(canvas_.tr("Zoom Out\tCtrl+-"));
-    auto* zoom100 = menu.addAction(canvas_.tr("Actual Size (100%)\tCtrl+0"));
-    auto* zoomFitAction = menu.addAction(canvas_.tr("Fit to Window\tCtrl+9"));
+    actions.zoomIn = menu.addAction(canvas_.tr("Zoom In\tCtrl++"));
+    actions.zoomOut = menu.addAction(canvas_.tr("Zoom Out\tCtrl+-"));
+    actions.zoom100 = menu.addAction(canvas_.tr("Actual Size (100%)\tCtrl+0"));
+    actions.zoomFitAction = menu.addAction(canvas_.tr("Fit to Window\tCtrl+9"));
     menu.addSeparator();
-    auto* clearAll = menu.addAction(canvas_.tr("Clear All Annotations"));
-    auto* action = menu.exec(event->globalPos());
-    if (action == deleteAnn && sel >= 0) {
+    actions.clearAll = menu.addAction(canvas_.tr("Clear All Annotations"));
+}
+
+void AnnotationEventHandler::executeContextAction(QAction* action, ContextMenuActions& actions)
+{
+    int sel = toolManager_.selectedIndex();
+
+    if (action == actions.deleteAnn && sel >= 0) {
         toolManager_.pushUndo();
         toolManager_.annotationsMut().removeAt(sel);
         toolManager_.setSelectedIndex(-1);
         canvas_.markModified();
         if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-    } else if (action == duplicateAnn && sel >= 0) {
+    } else if (action == actions.duplicateAnn && sel >= 0) {
         toolManager_.pushUndo();
         auto dup = toolManager_.annotationAt(sel);
         dup.bounds.translate(10, 10);
@@ -1014,35 +1083,33 @@ void AnnotationEventHandler::contextMenuEvent(QContextMenuEvent* event)
         toolManager_.setSelectedIndex(toolManager_.annotationCount() - 1);
         canvas_.markModified();
         if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-    } else if (action == bringForward && sel >= 0 && sel < toolManager_.annotationCount() - 1) {
+    } else if (action == actions.bringForward && sel >= 0 && sel < toolManager_.annotationCount() - 1) {
         toolManager_.pushUndo();
         qSwap(toolManager_.annotationsMut()[sel], toolManager_.annotationsMut()[sel + 1]);
         toolManager_.setSelectedIndex(sel + 1);
         canvas_.markModified();
         if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-    } else if (action == sendBackward && sel > 0 && sel < toolManager_.annotationCount()) {
+    } else if (action == actions.sendBackward && sel > 0 && sel < toolManager_.annotationCount()) {
         toolManager_.pushUndo();
         qSwap(toolManager_.annotationsMut()[sel], toolManager_.annotationsMut()[sel - 1]);
         toolManager_.setSelectedIndex(sel - 1);
         canvas_.markModified();
         if (toolManager_.onSelectionChanged) toolManager_.onSelectionChanged();
-    } else if (action == copyImage) {
+    } else if (action == actions.copyImage) {
         { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setImage(canvas_.renderedImage()); }
-    } else if (action == saveAs) {
+    } else if (action == actions.saveAs) {
         auto path = QFileDialog::getSaveFileName(&canvas_, canvas_.tr("Save As"), QString(),
             canvas_.tr("PNG (*.png);;JPEG (*.jpg *.jpeg)"));
-        if (!path.isEmpty()) {
-            canvas_.renderedImage().save(path);
-        }
-    } else if (action == zoomIn) {
+        if (!path.isEmpty()) canvas_.renderedImage().save(path);
+    } else if (action == actions.zoomIn) {
         canvas_.zoomAt(toolManager_.zoomFactor() * 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-    } else if (action == zoomOut) {
+    } else if (action == actions.zoomOut) {
         canvas_.zoomAt(toolManager_.zoomFactor() / 1.15, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-    } else if (action == zoom100) {
+    } else if (action == actions.zoom100) {
         canvas_.zoomAt(1.0, QPoint(canvas_.width() / 2, canvas_.height() / 2));
-    } else if (action == zoomFitAction) {
+    } else if (action == actions.zoomFitAction) {
         handleZoomFit();
-    } else if (action == clearAll) {
+    } else if (action == actions.clearAll) {
         if (toolManager_.annotationCount() > 0) {
             auto ret = QMessageBox::question(&canvas_, canvas_.tr("Clear All Annotations"),
                 canvas_.tr("Are you sure you want to clear all annotations?"),

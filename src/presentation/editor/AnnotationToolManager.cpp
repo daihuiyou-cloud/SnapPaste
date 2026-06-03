@@ -170,112 +170,71 @@ void AnnotationToolManager::setFontSize(int size, bool persist)
     }
 }
 
+namespace {
+
+using ApplyTextFn = std::function<void(Annotation&)>;
+
+template<typename T>
+void applyTextProperty(T& member, const T& value, AnnotationToolManager& mgr,
+                       ApplyTextFn fn, const char* settingsKey)
+{
+    if (member == value) return;
+    member = value;
+
+    int editIdx = mgr.editingTextIndex();
+    auto& anns = mgr.annotationsMut();
+
+    if (editIdx >= 0) {
+        fn(anns[editIdx]);
+        mgr.updateTextBounds(editIdx);
+        if (mgr.onModified) mgr.onModified();
+    } else {
+        int sel = mgr.selectedIndex();
+        if (sel >= 0 && sel < static_cast<int>(anns.size())
+            && (anns[sel].tool == AnnotationTool::Text
+                || anns[sel].tool == AnnotationTool::Numbered)) {
+            mgr.pushUndo();
+            fn(anns[sel]);
+            mgr.updateTextBounds(sel);
+            if (mgr.onModified) mgr.onModified();
+        }
+    }
+
+    if (mgr.onUpdateRequired) mgr.onUpdateRequired();
+    if (mgr.onTextPropertiesChanged) mgr.onTextPropertiesChanged();
+    QSettings().setValue(settingsKey, QVariant::fromValue(value));
+}
+
+} // namespace
+
 void AnnotationToolManager::setFontFamily(const QString& family)
 {
-    if (family != currentFontFamily_) {
-        currentFontFamily_ = family;
-        if (editingTextIndex_ >= 0) {
-            annotations_[editingTextIndex_].fontFamily = family;
-            updateTextBounds(editingTextIndex_);
-            if (onModified) onModified();
-        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
-                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
-            pushUndo();
-            annotations_[selectedIndex_].fontFamily = family;
-            updateTextBounds(selectedIndex_);
-            if (onModified) onModified();
-        }
-        if (onUpdateRequired) onUpdateRequired();
-        if (onTextPropertiesChanged) onTextPropertiesChanged();
-        QSettings().setValue("editor/fontFamily", family);
-    }
+    applyTextProperty(currentFontFamily_, family, *this,
+        [&family](Annotation& a) { a.fontFamily = family; }, "editor/fontFamily");
 }
 
 void AnnotationToolManager::setBold(bool b)
 {
-    if (b != bold_) {
-        bold_ = b;
-        if (editingTextIndex_ >= 0) {
-            annotations_[editingTextIndex_].bold = b;
-            updateTextBounds(editingTextIndex_);
-            if (onModified) onModified();
-        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
-                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
-            pushUndo();
-            annotations_[selectedIndex_].bold = b;
-            updateTextBounds(selectedIndex_);
-            if (onModified) onModified();
-        }
-        if (onUpdateRequired) onUpdateRequired();
-        if (onTextPropertiesChanged) onTextPropertiesChanged();
-        QSettings().setValue("editor/bold", b);
-    }
+    applyTextProperty(bold_, b, *this,
+        [b](Annotation& a) { a.bold = b; }, "editor/bold");
 }
 
 void AnnotationToolManager::setItalic(bool i)
 {
-    if (i != italic_) {
-        italic_ = i;
-        if (editingTextIndex_ >= 0) {
-            annotations_[editingTextIndex_].italic = i;
-            updateTextBounds(editingTextIndex_);
-            if (onModified) onModified();
-        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && (annotations_[selectedIndex_].tool == AnnotationTool::Text
-                       || annotations_[selectedIndex_].tool == AnnotationTool::Numbered)) {
-            pushUndo();
-            annotations_[selectedIndex_].italic = i;
-            updateTextBounds(selectedIndex_);
-            if (onModified) onModified();
-        }
-        if (onUpdateRequired) onUpdateRequired();
-        if (onTextPropertiesChanged) onTextPropertiesChanged();
-        QSettings().setValue("editor/italic", i);
-    }
+    applyTextProperty(italic_, i, *this,
+        [i](Annotation& a) { a.italic = i; }, "editor/italic");
 }
 
 void AnnotationToolManager::setUnderline(bool u)
 {
-    if (u != underline_) {
-        underline_ = u;
-        if (editingTextIndex_ >= 0) {
-            annotations_[editingTextIndex_].underline = u;
-            updateTextBounds(editingTextIndex_);
-            if (onModified) onModified();
-        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
-            pushUndo();
-            annotations_[selectedIndex_].underline = u;
-            updateTextBounds(selectedIndex_);
-            if (onModified) onModified();
-        }
-        if (onUpdateRequired) onUpdateRequired();
-        if (onTextPropertiesChanged) onTextPropertiesChanged();
-        QSettings().setValue("editor/underline", u);
-    }
+    applyTextProperty(underline_, u, *this,
+        [u](Annotation& a) { a.underline = u; }, "editor/underline");
 }
 
 void AnnotationToolManager::setTextAlignment(int align)
 {
-    if (align != textAlignment_) {
-        textAlignment_ = align;
-        if (editingTextIndex_ >= 0) {
-            annotations_[editingTextIndex_].textAlignment = align;
-            updateTextBounds(editingTextIndex_);
-            if (onModified) onModified();
-        } else if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
-                   && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
-            pushUndo();
-            annotations_[selectedIndex_].textAlignment = align;
-            updateTextBounds(selectedIndex_);
-            if (onModified) onModified();
-        }
-        if (onUpdateRequired) onUpdateRequired();
-        if (onTextPropertiesChanged) onTextPropertiesChanged();
-        QSettings().setValue("editor/textAlignment", align);
-    }
+    applyTextProperty(textAlignment_, align, *this,
+        [align](Annotation& a) { a.textAlignment = align; }, "editor/textAlignment");
 }
 
 void AnnotationToolManager::setTextOutlineEnabled(bool enabled)

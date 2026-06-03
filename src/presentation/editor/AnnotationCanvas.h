@@ -154,16 +154,6 @@ private:
     void rebuildBackingCache();
     void wireCallbacks();
 
-    struct ImageSnapshot {
-        QImage image;
-        QImage baseImage;
-        int brightness = 0;
-        int contrast = 0;
-        double zoomFactor = 1.0;
-    };
-
-    static constexpr int kMaxUndo = 20;
-
     AnnotationRenderer renderer_;
     AnnotationToolManager toolManager_;
     AnnotationEventHandler eventHandler_;

@@ -14,8 +14,12 @@ class QMouseEvent;
 class QContextMenuEvent;
 class QWheelEvent;
 class QInputMethodEvent;
+class QAction;
+class QMenu;
 
 namespace snappaste {
+
+struct Annotation;
 
 class AnnotationCanvas;
 class AnnotationToolManager;
@@ -69,6 +73,12 @@ private:
     void updateDrawingStroke(QMouseEvent* event);
 
     bool handleTextEditingKey(QKeyEvent* event);
+    bool handleTextConfirmCancel(QKeyEvent* event, Annotation& textAnn, int editIdx);
+    bool handleTextCtrlShortcuts(QKeyEvent* event, Annotation& textAnn, int editIdx);
+    bool handleTextNavigation(QKeyEvent* event, Annotation& textAnn);
+    bool handleTextDeletion(QKeyEvent* event, Annotation& textAnn, int editIdx);
+    bool handleTextInput(QKeyEvent* event, Annotation& textAnn, int editIdx);
+    void finishTextEditing();
 
     void handleAnnotationDeleteKey();
     void handleDuplicateKey();
@@ -76,6 +86,33 @@ private:
     void handleNudgeKey(int key);
     void handleFontSizeChange(int delta);
     void handleZoomFit();
+
+    // Key event sub-handlers
+    bool handleEscapeKey(QKeyEvent* event);
+    bool handleDeleteKey(QKeyEvent* event);
+    bool handleCtrlShortcuts(QKeyEvent* event);
+    bool handleToolShortcuts(QKeyEvent* event);
+    bool handleNudgeOrFontSize(QKeyEvent* event);
+
+    // Context menu helpers
+    struct ContextMenuActions {
+        QAction* copyImage = nullptr;
+        QAction* saveAs = nullptr;
+        QAction* deleteAnn = nullptr;
+        QAction* duplicateAnn = nullptr;
+        QAction* bringForward = nullptr;
+        QAction* sendBackward = nullptr;
+        QAction* zoomIn = nullptr;
+        QAction* zoomOut = nullptr;
+        QAction* zoom100 = nullptr;
+        QAction* zoomFitAction = nullptr;
+        QAction* clearAll = nullptr;
+    };
+    int resolveContextHit(QPoint widgetPos) const;
+    void selectContextHit(int hitIdx);
+    void clearContextSelection();
+    void buildContextMenu(QMenu& menu, ContextMenuActions& actions);
+    void executeContextAction(QAction* action, ContextMenuActions& actions);
 
     AnnotationCanvas& canvas_;
     AnnotationToolManager& toolManager_;
