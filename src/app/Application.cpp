@@ -25,6 +25,7 @@
 #include <QScreen>
 #include <QSignalBlocker>
 #include <QStringList>
+#include <QThreadPool>
 #include <QTimer>
 
 #include <algorithm>
@@ -294,7 +295,12 @@ void Application::ocrRegion(const QRect& region)
         QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus(tr("OCR processing..."));
-        std::thread worker([weakAlive, ocrService, image, guard]() {
+        struct OcrTask : QRunnable {
+            std::function<void()> fn;
+            OcrTask(std::function<void()> fn) : fn(std::move(fn)) { setAutoDelete(true); }
+            void run() override { fn(); }
+        };
+        QThreadPool::globalInstance()->start(new OcrTask([weakAlive, ocrService, image, guard]() {
             if (!*weakAlive) return;
             const auto outcome = ocrService->recognizeText(image);
             QMetaObject::invokeMethod(qApp, [weakAlive, outcome, guard]() {
@@ -317,8 +323,7 @@ void Application::ocrRegion(const QRect& region)
                 guard->showStatus(
                     tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);
-        });
-        worker.detach();
+        }));
     });
 }
 
