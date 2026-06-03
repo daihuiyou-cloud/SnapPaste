@@ -25,7 +25,6 @@
 #include <QScreen>
 #include <QSignalBlocker>
 #include <QStringList>
-#include <QThreadPool>
 #include <QTimer>
 
 #include <algorithm>
@@ -291,39 +290,30 @@ void Application::ocrRegion(const QRect& region)
             ocrService_->cancel();
         }
         auto weakAlive = alive_;
-        auto ocrService = ocrService_;
         QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus(tr("OCR processing..."));
-        struct OcrTask : QRunnable {
-            std::function<void()> fn;
-            OcrTask(std::function<void()> fn) : fn(std::move(fn)) { setAutoDelete(true); }
-            void run() override { fn(); }
-        };
-        QThreadPool::globalInstance()->start(new OcrTask([weakAlive, ocrService, image, guard]() {
-            if (!*weakAlive) return;
-            const auto outcome = ocrService->recognizeText(image);
-            QMetaObject::invokeMethod(qApp, [weakAlive, outcome, guard]() {
-                if (!*weakAlive || guard.isNull()) return;
-                QApplication::restoreOverrideCursor();
-                if (!outcome.ok) {
-                    guard->showStatus(outcome.message);
-                    return;
-                }
 
-                auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
-                guard->ocrWindow_ = win;
+        ocrService_->recognizeTextAsync(image, [weakAlive, guard](OcrResult outcome) {
+            if (!*weakAlive || guard.isNull()) return;
+            QApplication::restoreOverrideCursor();
+            if (!outcome.ok) {
+                guard->showStatus(outcome.message);
+                return;
+            }
+
+            auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
+            guard->ocrWindow_ = win;
 #pragma warning(push)
 #pragma warning(disable: 4573)
-                QObject::connect(win, &QObject::destroyed, win, [guard] {
-                    if (guard) guard->ocrWindow_.clear();
-                });
-                QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
+            QObject::connect(win, &QObject::destroyed, win, [guard] {
+                if (guard) guard->ocrWindow_.clear();
+            });
+            QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
 #pragma warning(pop)
-                guard->showStatus(
-                    tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
-            }, Qt::QueuedConnection);
-        }));
+            guard->showStatus(
+                tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
+        });
     });
 }
 

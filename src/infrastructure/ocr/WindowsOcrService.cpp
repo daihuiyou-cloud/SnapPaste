@@ -3,6 +3,9 @@
 #include <climits>
 #include <cstring>
 
+#include <QCoreApplication>
+#include <QMetaObject>
+
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
 #include <unknwn.h>
 #include <winrt/Windows.Foundation.h>
@@ -111,6 +114,24 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
     }
     queueCv_.notify_one();
     return future.get();
+}
+
+void WindowsOcrService::recognizeTextAsync(const QImage& image, std::function<void(OcrResult)> callback)
+{
+    const auto requestId = currentRequestId_.load();
+    QImage copy = image;
+    std::packaged_task<OcrResult()> task([this, copy, requestId, cb = std::move(callback)] {
+        auto result = recognizeTextImpl(copy, requestId);
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [result, cb = std::move(cb)] {
+            cb(result);
+        }, Qt::QueuedConnection);
+        return result;
+    });
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        tasks_.push(std::move(task));
+    }
+    queueCv_.notify_one();
 }
 
 OcrResult WindowsOcrService::recognizeTextImpl(const QImage& source, int requestId)

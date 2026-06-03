@@ -25,6 +25,7 @@ public:
     ~WindowsOcrService() override;
 
     OcrResult recognizeText(const QImage& image) override;
+    void recognizeTextAsync(const QImage& image, std::function<void(OcrResult)> callback) override;
     void setLanguage(const QString& bcp47Tag) override;
     void cancel() override;
 
