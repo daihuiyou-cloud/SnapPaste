@@ -39,6 +39,14 @@ constexpr int kThumbnailMaxSize = 200;
 constexpr int kSnapThreshold = 12;
 constexpr int kSnapMargin = 6;
 
+const QColor kPinAccent("#2fbf9f");
+const QColor kZoomTextColor(255, 255, 255, 160);
+const QColor kClickThroughFill(20, 26, 33, 18);
+const QColor kControlOverlay(20, 26, 33, 28);
+const QColor kControlBorder(255, 255, 255, 110);
+const QColor kOverflowBg(20, 26, 33, 200);
+const QColor kOverflowText("#bcbec6");
+
 } // namespace
 
 PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* parent)
@@ -718,7 +726,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     painter.drawImage(rect(), renderedImage());
 
     if (thumbnailMode_) {
-        painter.setPen(QColor("#2fbf9f"));
+        painter.setPen(kPinAccent);
         auto pinFont = QApplication::font();
         pinFont.setPointSize(9);
         pinFont.setBold(true);
@@ -728,7 +736,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
 
     const int zoomPct = static_cast<int>(std::round(item_.state.transform.scale * 100));
     if (zoomPct != 100 || thumbnailMode_) {
-        painter.setPen(QColor(255, 255, 255, 160));
+        painter.setPen(kZoomTextColor);
         auto zoomFont = QApplication::font();
         zoomFont.setPointSize(10);
         painter.setFont(zoomFont);
@@ -738,19 +746,19 @@ void PinWindow::paintEvent(QPaintEvent* event)
     }
 
     if (item_.state.options.clickThrough) {
-        QPen dashPen(QColor("#2fbf9f"), 2, Qt::DashLine);
+        QPen dashPen(kPinAccent, 2, Qt::DashLine);
         dashPen.setDashPattern({6, 4});
         painter.setPen(dashPen);
-        painter.setBrush(QColor(20, 26, 33, 18));
+        painter.setBrush(kClickThroughFill);
         painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
     }
 
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;
     if (showControls) {
-        painter.fillRect(rect(), QColor(20, 26, 33, 28));
-        painter.setPen(QPen(QColor("#2fbf9f"), 2));
+        painter.fillRect(rect(), kControlOverlay);
+        painter.setPen(QPen(kPinAccent, 2));
         painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
-        painter.setPen(QPen(QColor(255, 255, 255, 110), 1));
+        painter.setPen(QPen(kControlBorder, 1));
         painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
 
         if (PinToolbar::fits(width(), height())) {
@@ -760,10 +768,10 @@ void PinWindow::paintEvent(QPaintEvent* event)
                              item_.state.options.alwaysOnTop);
         } else {
             const auto ob = PinToolbar::overflowRect(width(), height());
-            painter.setBrush(QColor(20, 26, 33, 200));
+            painter.setBrush(kOverflowBg);
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(ob, 3, 3);
-            painter.setPen(QColor("#bcbec6"));
+            painter.setPen(kOverflowText);
             painter.setFont(QFont("Segoe UI", 10, QFont::Bold));
             painter.drawText(ob, Qt::AlignCenter, tr("..."));
         }

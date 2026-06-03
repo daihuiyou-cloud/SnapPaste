@@ -33,6 +33,13 @@ const QColor kLabelTextColor("#f4fbff");
 const QColor kCandidateColor(47, 191, 159, 155);
 const QColor kCandidateFillColor(47, 191, 159, 22);
 
+const QColor kHintTextColor(255, 255, 255, 80);
+const QColor kOverlayMask(kOverlayMaskAlpha);
+const QColor kSizeLabelBorder(255, 255, 255, 36);
+const QColor kSizeLabelBg(14, 20, 26, 200);
+const QColor kMagnifierBg(14, 20, 26, 224);
+const QColor kGridLineColor(255, 255, 255, 30);
+
 } // namespace
 
 CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
@@ -486,7 +493,7 @@ void CaptureOverlay::drawOverlayState(QPainter& painter)
     if (candidate.isValid()) {
         drawCandidate(painter, candidate);
         drawMagnifier(painter);
-        painter.setPen(QColor(255, 255, 255, 80));
+        painter.setPen(kHintTextColor);
         auto hintFont = QApplication::font();
         hintFont.setPointSize(11);
         painter.setFont(hintFont);
@@ -495,7 +502,7 @@ void CaptureOverlay::drawOverlayState(QPainter& painter)
     } else {
         if (state_ == State::Idle) {
             drawMagnifier(painter);
-            painter.setPen(QColor(255, 255, 255, 80));
+            painter.setPen(kHintTextColor);
             auto hintFont = QApplication::font();
             hintFont.setPointSize(11);
             painter.setFont(hintFont);
@@ -546,7 +553,7 @@ void CaptureOverlay::paintEvent(QPaintEvent* event)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.fillRect(rect(), QColor(0, 0, 0, kOverlayMaskAlpha));
+    painter.fillRect(rect(), kOverlayMask);
 
     const auto globalRegion = selectedRegion();
     if (!globalRegion.isValid()) {
@@ -1006,8 +1013,8 @@ void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, 
         }
     }
 
-    painter.setPen(QPen(QColor(255, 255, 255, 36), 1));
-    painter.setBrush(QColor(14, 20, 26, 200));
+    painter.setPen(QPen(kSizeLabelBorder, 1));
+    painter.setBrush(kSizeLabelBg);
     painter.drawRoundedRect(label, kSizeLabelRadius, kSizeLabelRadius);
     painter.setPen(kLabelTextColor);
     painter.drawText(label, Qt::AlignCenter, text);
@@ -1051,7 +1058,7 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     }
 
     painter.setPen(QPen(kSelectionColor, 1));
-    painter.setBrush(QColor(14, 20, 26, 224));
+    painter.setBrush(kMagnifierBg);
     painter.drawRoundedRect(rect, 6, 6);
 
     const int half = kPixels / 2;
@@ -1065,7 +1072,7 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
         painter.drawImage(gridRect, pixels.scaled(actualGridW, actualGridH, Qt::IgnoreAspectRatio, Qt::FastTransformation));
 
         painter.setRenderHint(QPainter::Antialiasing, false);
-        painter.setPen(QPen(QColor(255, 255, 255, 30), 1));
+        painter.setPen(QPen(kGridLineColor, 1));
         for (int i = 1; i < pw; ++i) {
             int x = gridRect.left() + i * kZoom;
             painter.drawLine(x, gridRect.top(), x, gridRect.bottom());
