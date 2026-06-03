@@ -12,6 +12,13 @@
 
 namespace snappaste {
 
+namespace {
+    const QColor kCanvasBg("#1f2329");
+    const QColor kAccentColor("#2fbf9f");
+    const QColor kWhite("#ffffff");
+    const QColor kInfoBg(0, 0, 0, 180);
+}
+
 AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     : QWidget(parent)
     , toolManager_()
@@ -190,7 +197,7 @@ void AnnotationCanvas::rebuildBackingCache()
     if (backingCache_.size() != cacheSize) {
         backingCache_ = QPixmap(cacheSize);
     }
-    backingCache_.fill(QColor("#1f2329"));
+    backingCache_.fill(kCanvasBg);
 
     QPainter p(&backingCache_);
     p.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -571,7 +578,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
     Q_UNUSED(event)
 
     QPainter painter(this);
-    painter.fillRect(rect(), QColor("#1f2329"));
+    painter.fillRect(rect(), kCanvasBg);
     if (!image_.isNull()) {
         double zf = toolManager_.zoomFactor();
         // Use backing cache for static content
@@ -586,11 +593,11 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         painter.scale(zf, zf);
         int sel = toolManager_.selectedIndex();
         if (sel >= 0 && sel < toolManager_.annotationCount()) {
-            painter.setPen(QPen(QColor("#2fbf9f"), 1, Qt::DashLine));
+            painter.setPen(QPen(kAccentColor, 1, Qt::DashLine));
             painter.setBrush(Qt::NoBrush);
             painter.drawRect(toolManager_.annotationAt(sel).bounds.adjusted(-3, -3, 3, 3));
             painter.setPen(Qt::NoPen);
-            painter.setBrush(QColor("#2fbf9f"));
+            painter.setBrush(kAccentColor);
             const auto r = toolManager_.annotationAt(sel).bounds;
             const QPoint corners[] = {r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()};
             for (const auto& c : corners) {
@@ -599,7 +606,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
             const QPoint midpoints[] = {
                 QPoint(r.center().x(), r.top()), QPoint(r.right(), r.center().y()),
                 QPoint(r.center().x(), r.bottom()), QPoint(r.left(), r.center().y())};
-            painter.setBrush(QColor("#ffffff"));
+            painter.setBrush(kWhite);
             for (const auto& m : midpoints) {
                 painter.drawRect(QRect(m.x() - 3, m.y() - 3, 6, 6));
             }
@@ -641,7 +648,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
             if (oy + overlayH > height()) oy = static_cast<int>(mouseImgPos.y() * zf) - overlayH - 6;
             QRect bgRect(ox, oy, overlayW, overlayH);
             painter.setPen(Qt::NoPen);
-            painter.setBrush(QColor(0, 0, 0, 180));
+            painter.setBrush(kInfoBg);
             painter.drawRoundedRect(bgRect, 3, 3);
             painter.setPen(Qt::white);
             painter.setBrush(Qt::NoBrush);

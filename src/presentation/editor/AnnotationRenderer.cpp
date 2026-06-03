@@ -10,6 +10,11 @@
 
 namespace snappaste {
 
+namespace {
+    const QColor kCheckerLight("#555555");
+    const QColor kCheckerDark("#333333");
+}
+
 void AnnotationRenderer::drawCheckerboard(QPainter& painter, const QImage& sourceImage)
 {
     int tile = 8;
@@ -19,7 +24,7 @@ void AnnotationRenderer::drawCheckerboard(QPainter& painter, const QImage& sourc
     for (int y = 0; y < logicalH; y += tile) {
         for (int x = 0; x < logicalW; x += tile) {
             bool light = ((x / tile) + (y / tile)) % 2 == 0;
-            painter.fillRect(x, y, tile, tile, light ? QColor("#555555") : QColor("#333333"));
+            painter.fillRect(x, y, tile, tile, light ? kCheckerLight : kCheckerDark);
         }
     }
 }

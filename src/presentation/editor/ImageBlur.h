@@ -4,6 +4,6 @@
 
 namespace snappaste {
 
-QImage blurImage(QImage source, int radius);
+QImage blurImage(const QImage& source, int radius);
 
 }
