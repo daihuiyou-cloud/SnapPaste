@@ -121,8 +121,8 @@ const char* kChipStyle =
     "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
     "QToolButton:checked { background: #2fbf9f; color: #fff; border-color: #2fbf9f; }";
 
-const char* kSliderLabelStyle = "color: #8e8e93; font: 9px; padding: 0;";
-const char* kSliderValStyle = "color: #bcbec6; font: 9px; padding: 0;";
+const char* kSliderLabelStyle = "color: #8e8e93; font: 10px; padding: 0;";
+const char* kSliderValStyle = "color: #bcbec6; font: 10px; padding: 0;";
 const char* kSliderGroove = "QSlider::groove:horizontal { height: 3px; background: rgba(255,255,255,0.08); border-radius: 1px; margin: 0; }";
 const char* kSliderHandle = "QSlider::handle:horizontal { width: 10px; height: 10px; margin: -4px 0; background: #2fbf9f; border-radius: 5px; }";
 const char* kSliderSub = "QSlider::sub-page:horizontal { background: #2fbf9f; border-radius: 1px; }";
@@ -594,20 +594,20 @@ void EditorWindow::createToolPanel()
 
     auto* content = new QWidget(scrollArea);
     auto* layout = new QVBoxLayout(content);
-    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setContentsMargins(10, 12, 10, 12);
     layout->setSpacing(0);
 
     QVector<QToolButton*> toolButtons;
     buildToolSection(layout, content, kToolStyle, toolButtons);
 
-    layout->addSpacing(8);
+    layout->addSpacing(10);
     {
         auto* line = new QFrame(content);
         line->setFrameShape(QFrame::HLine);
-        line->setStyleSheet("QFrame { color: rgba(255,255,255,0.06); max-height: 1px; }");
+        line->setStyleSheet("QFrame { color: rgba(255,255,255,0.08); max-height: 1px; }");
         layout->addWidget(line);
     }
-    layout->addSpacing(6);
+    layout->addSpacing(10);
 
     buildColorSection(layout, content);
     buildStrokeSection(layout, content);
@@ -615,7 +615,7 @@ void EditorWindow::createToolPanel()
     buildFontSection(layout, content);
     buildCropSection(layout, content);
 
-    layout->addSpacing(6);
+    layout->addSpacing(10);
 
     buildZoomSection(layout, content);
     buildImageAdjustSection(layout, content);
@@ -743,7 +743,7 @@ void EditorWindow::buildColorSection(QVBoxLayout* layout, QWidget* content)
 
 void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
 {
-    layout->addSpacing(4);
+    layout->addSpacing(6);
 
     preview_ = new StrokePreview(content);
 
@@ -759,7 +759,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
         auto* btn = new QToolButton(content);
         btn->setText(s.label);
         btn->setToolTip(tr("Stroke: %1px").arg(s.width));
-        btn->setFixedHeight(24);
+        btn->setFixedHeight(28);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
         btn->setStyleSheet(kSelStyle);
@@ -794,7 +794,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
         auto* btn = new QToolButton(content);
         btn->setText(QCoreApplication::translate("EditorWindow", p.text));
         btn->setToolTip(QCoreApplication::translate("EditorWindow", p.tip));
-        btn->setFixedHeight(22);
+        btn->setFixedHeight(26);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setCheckable(true);
         btn->setChecked(p.defaultOn);
@@ -809,7 +809,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
     propsWidget_->setLayout(chipRow);
     layout->addWidget(propsWidget_);
 
-    layout->addSpacing(4);
+    layout->addSpacing(6);
 
     addSliderRow(layout, content, tr("Opacity"), 0, 255, 255,
         [this](int v) { canvas_->setStrokeAlpha(v); },
@@ -838,7 +838,7 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
         auto* btn = new QToolButton(content);
         btn->setText(tr(ad.text));
         btn->setCheckable(true);
-        btn->setFixedHeight(22);
+        btn->setFixedHeight(26);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setStyleSheet(kChipStyle);
         if (ad.value == 0) btn->setChecked(true);
@@ -862,7 +862,7 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
     radiusSlider->setObjectName("radiusSlider");
     radiusSlider->setRange(0, 40);
     radiusSlider->setValue(0);
-    radiusSlider->setFixedHeight(18);
+    radiusSlider->setFixedHeight(22);
     radiusSlider->setStyleSheet(kSliderStyle);
     auto* radiusVal = new QLabel(tr("Off"), content);
     radiusVal->setObjectName("radiusVal");
@@ -879,7 +879,7 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
     radiusWidget_->setVisible(false);
     layout->addWidget(radiusWidget_);
 
-    layout->addSpacing(4);
+    layout->addSpacing(6);
 }
 
 QSlider* EditorWindow::addSliderRow(QVBoxLayout* layout, QWidget* content,
@@ -896,10 +896,10 @@ QSlider* EditorWindow::addSliderRow(QVBoxLayout* layout, QWidget* content,
     auto* slider = new QSlider(Qt::Horizontal, content);
     slider->setRange(min, max);
     slider->setValue(def);
-    slider->setFixedHeight(18);
+    slider->setFixedHeight(22);
     slider->setStyleSheet(kSliderStyle);
     auto* val = new QLabel(fmt(def), content);
-    val->setFixedWidth(30);
+    val->setFixedWidth(32);
     val->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     val->setStyleSheet(kSliderValStyle);
     connect(slider, &QSlider::valueChanged, this, [val, onChanged, fmt](int v) {
@@ -929,7 +929,7 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
         "QFontComboBox:hover { border-color: #2fbf9f; }"
         "QFontComboBox::drop-down { border: none; width: 16px; }"
         "QFontComboBox QAbstractItemView { font: 9px; }");
-    fontCombo->setFixedHeight(22);
+    fontCombo->setFixedHeight(26);
     connect(fontCombo, &QFontComboBox::currentFontChanged, this, [this](const QFont& f) {
         canvas_->setFontFamily(f.family());
     });
@@ -945,7 +945,7 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
         btn->setToolTip(tip);
         btn->setCheckable(true);
         btn->setChecked(checked);
-        btn->setFixedSize(28, 24);
+        btn->setFixedSize(30, 28);
         btn->setStyleSheet(kSelStyle);
         return btn;
     };
@@ -967,7 +967,7 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
         btn->setText(text);
         btn->setToolTip(tip);
         btn->setCheckable(true);
-        btn->setFixedSize(28, 24);
+        btn->setFixedSize(30, 28);
         btn->setStyleSheet(kSelStyle);
         return btn;
     };
@@ -1009,31 +1009,31 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
 
     auto* fontLabel = new QLabel(tr("Font"), content);
     fontLabel->setFixedWidth(34);
-    fontLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    fontLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
 
     auto* fontSizeDec = new QToolButton(content);
     fontSizeDec->setText(tr("-"));
     fontSizeDec->setToolTip(tr("Decrease font size ( [ )"));
-    fontSizeDec->setFixedSize(24, 24);
+    fontSizeDec->setFixedSize(28, 28);
     fontSizeDec->setStyleSheet(kSelStyle);
 
     auto* fontSizeSlider = new QSlider(Qt::Horizontal, content);
     fontSizeSlider->setRange(8, 72);
     fontSizeSlider->setValue(canvas_->fontSize());
-    fontSizeSlider->setFixedHeight(18);
+    fontSizeSlider->setFixedHeight(22);
     fontSizeSlider->setStyleSheet(kSliderStyle);
     fontSizeSlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     auto* fontSizeVal = new QLabel(tr("%1px").arg(canvas_->fontSize()), content);
-    fontSizeVal->setFixedWidth(28);
+    fontSizeVal->setFixedWidth(32);
     fontSizeVal->setToolTip(tr("Font size for Text / Numbered tools"));
     fontSizeVal->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    fontSizeVal->setStyleSheet("color: #bcbec6; font: 9px; padding: 0;");
+    fontSizeVal->setStyleSheet("color: #bcbec6; font: 10px; padding: 0;");
 
     auto* fontSizeInc = new QToolButton(content);
     fontSizeInc->setText(tr("+"));
     fontSizeInc->setToolTip(tr("Increase font size ( ] )"));
-    fontSizeInc->setFixedSize(24, 24);
+    fontSizeInc->setFixedSize(28, 28);
     fontSizeInc->setStyleSheet(kSelStyle);
 
     fontSizeRow->addWidget(fontLabel);
@@ -1078,7 +1078,7 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
 
     auto* bgLabel = new QLabel(tr("BG"), content);
     bgLabel->setFixedWidth(34);
-    bgLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    bgLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
 
     auto* bgToggle = new QToolButton(content);
     bgToggle->setText(tr("On"));
@@ -1149,7 +1149,7 @@ void EditorWindow::buildFontSection(QVBoxLayout* layout, QWidget* content)
     fontWidget_->setVisible(false);
     layout->addWidget(fontWidget_);
 
-    layout->addSpacing(6);
+    layout->addSpacing(8);
 }
 
 void EditorWindow::buildCropSection(QVBoxLayout* layout, QWidget* content)
@@ -1160,7 +1160,7 @@ void EditorWindow::buildCropSection(QVBoxLayout* layout, QWidget* content)
     cropLayout->setSpacing(4);
 
     auto* cropLabel = new QLabel(tr("Aspect Ratio"), content);
-    cropLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    cropLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
     cropLayout->addWidget(cropLabel);
 
     struct RatioDef { const char* text; double value; };
@@ -1181,7 +1181,7 @@ void EditorWindow::buildCropSection(QVBoxLayout* layout, QWidget* content)
         auto label = QCoreApplication::translate("EditorWindow", ratios[i].text);
         btn->setText(label);
         btn->setCheckable(true);
-        btn->setFixedHeight(22);
+        btn->setFixedHeight(26);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setStyleSheet(kChipStyle);
         if (i == 0) btn->setChecked(true);
@@ -1209,36 +1209,36 @@ void EditorWindow::buildZoomSection(QVBoxLayout* layout, QWidget* content)
 
     auto* zoomLabel = new QLabel(tr("Zoom"), content);
     zoomLabel->setFixedWidth(34);
-    zoomLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    zoomLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
 
     auto* zoomOut = new QToolButton(content);
     zoomOut->setText(tr("-"));
     zoomOut->setToolTip(tr("Zoom out"));
-    zoomOut->setFixedSize(24, 24);
+    zoomOut->setFixedSize(26, 28);
     zoomOut->setStyleSheet(kSelStyle);
 
     auto* zoomIn = new QToolButton(content);
     zoomIn->setText(tr("+"));
     zoomIn->setToolTip(tr("Zoom in"));
-    zoomIn->setFixedSize(24, 24);
+    zoomIn->setFixedSize(26, 28);
     zoomIn->setStyleSheet(kSelStyle);
 
     auto* zoomReset = new QToolButton(content);
     zoomReset->setText(tr("1:1"));
     zoomReset->setToolTip(tr("Reset zoom to 100% (Ctrl+0)"));
-    zoomReset->setFixedSize(32, 24);
+    zoomReset->setFixedSize(34, 28);
     zoomReset->setStyleSheet(kZoomBtnStyle);
 
     auto* zoomFit = new QToolButton(content);
     zoomFit->setText(tr("Fit"));
     zoomFit->setToolTip(tr("Fit to window (Ctrl+9)"));
-    zoomFit->setFixedSize(32, 24);
+    zoomFit->setFixedSize(34, 28);
     zoomFit->setStyleSheet(kZoomBtnStyle);
 
     zoomSlider_ = new QSlider(Qt::Horizontal, content);
     zoomSlider_->setRange(10, 500);
     zoomSlider_->setValue(100);
-    zoomSlider_->setFixedHeight(18);
+    zoomSlider_->setFixedHeight(22);
     zoomSlider_->setStyleSheet(kSliderStyle);
     zoomSlider_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
@@ -1291,13 +1291,13 @@ void EditorWindow::buildZoomSection(QVBoxLayout* layout, QWidget* content)
     zoomRow->addWidget(zoomFit);
     layout->addLayout(zoomRow);
 
-    layout->addSpacing(8);
+    layout->addSpacing(10);
 }
 
 void EditorWindow::buildImageAdjustSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* adjustLabel = new QLabel(tr("Adjust"), content);
-    adjustLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    adjustLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
     layout->addWidget(adjustLabel);
 
     brightSlider_ = addSliderRow(layout, content, tr("Bright"), -100, 100, 0,
@@ -1315,13 +1315,13 @@ void EditorWindow::buildImageAdjustSection(QVBoxLayout* layout, QWidget* content
         canvas_->adjustImage(brightSlider_->value(), contrastSlider_->value());
     });
 
-    layout->addSpacing(8);
+    layout->addSpacing(10);
 }
 
 void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* transformLabel = new QLabel(tr("Transform"), content);
-    transformLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    transformLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
     layout->addWidget(transformLabel);
 
     auto addTransformBtn = [this, content](const QIcon& icon, const QString& tip) -> QToolButton* {
@@ -1358,13 +1358,13 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformRow->addWidget(flipV);
     layout->addLayout(transformRow);
 
-    layout->addSpacing(8);
+    layout->addSpacing(10);
 }
 
 void EditorWindow::buildLayerSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* layerLabel = new QLabel(tr("Layers"), content);
-    layerLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
+    layerLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
     layout->addWidget(layerLabel);
 
     layout->addSpacing(2);
