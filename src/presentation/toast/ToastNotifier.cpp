@@ -60,7 +60,7 @@ ToastNotifier::~ToastNotifier()
     delete toast_;
 }
 
-void ToastNotifier::showMessage(const QString& message, const QPoint& referencePosition,
+void ToastNotifier::showMessage(const QString& message, const QPoint& /*referencePosition*/,
                                 std::function<void()> onClick)
 {
     pending_.push({message, std::move(onClick)});

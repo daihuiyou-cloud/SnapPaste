@@ -44,7 +44,7 @@ AnnotationToolManager::AnnotationToolManager()
     customColors_ = prefs.recentColors;
 }
 
-void AnnotationToolManager::setImage(const QImage& image, double zoom)
+void AnnotationToolManager::setImage(const QImage& /*image*/, double zoom)
 {
     annotations_.clear();
     undoStack_.clear();

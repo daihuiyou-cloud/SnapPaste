@@ -1167,7 +1167,6 @@ QVariant AnnotationEventHandler::inputMethodQuery(Qt::InputMethodQuery query) co
     if (editIdx >= 0 && editIdx < toolManager_.annotationCount()
         && toolManager_.annotationAt(editIdx).tool == AnnotationTool::Text) {
         const auto& a = toolManager_.annotationAt(editIdx);
-        const auto& img = toolManager_.image();
         switch (query) {
         case Qt::ImCursorRectangle: {
             QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily);
