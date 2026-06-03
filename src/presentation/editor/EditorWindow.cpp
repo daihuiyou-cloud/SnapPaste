@@ -1393,17 +1393,27 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformRow->addWidget(flipV);
     layout->addLayout(transformRow);
 
-    // Keyboard shortcuts for transform operations
+    // Keyboard shortcuts for transform operations (disabled during text editing)
     auto* rotCwShortcut = new QShortcut(QKeySequence(Qt::Key_R), this);
-    connect(rotCwShortcut, &QShortcut::activated, rotCw, &QToolButton::click);
+    connect(rotCwShortcut, &QShortcut::activated, this, [this, rotCw] {
+        if (canvas_->toolManager().editingTextIndex() < 0) rotCw->click();
+    });
     auto* rotCcwShortcut = new QShortcut(QKeySequence(Qt::SHIFT + Qt::Key_R), this);
-    connect(rotCcwShortcut, &QShortcut::activated, rotCcw, &QToolButton::click);
+    connect(rotCcwShortcut, &QShortcut::activated, this, [this, rotCcw] {
+        if (canvas_->toolManager().editingTextIndex() < 0) rotCcw->click();
+    });
     auto* rot180Shortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_R), this);
-    connect(rot180Shortcut, &QShortcut::activated, rot180, &QToolButton::click);
+    connect(rot180Shortcut, &QShortcut::activated, this, [this, rot180] {
+        if (canvas_->toolManager().editingTextIndex() < 0) rot180->click();
+    });
     auto* flipHShortcut = new QShortcut(QKeySequence(Qt::Key_H), this);
-    connect(flipHShortcut, &QShortcut::activated, flipH, &QToolButton::click);
+    connect(flipHShortcut, &QShortcut::activated, this, [this, flipH] {
+        if (canvas_->toolManager().editingTextIndex() < 0) flipH->click();
+    });
     auto* flipVShortcut = new QShortcut(QKeySequence(Qt::Key_V), this);
-    connect(flipVShortcut, &QShortcut::activated, flipV, &QToolButton::click);
+    connect(flipVShortcut, &QShortcut::activated, this, [this, flipV] {
+        if (canvas_->toolManager().editingTextIndex() < 0) flipV->click();
+    });
 
     layout->addSpacing(10);
 }
