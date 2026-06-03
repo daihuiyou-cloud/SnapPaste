@@ -34,7 +34,7 @@ const QColor kCandidateColor(47, 191, 159, 155);
 const QColor kCandidateFillColor(47, 191, 159, 22);
 
 const QColor kHintTextColor(255, 255, 255, 80);
-const QColor kOverlayMask(kOverlayMaskAlpha);
+const QColor kOverlayMask(0, 0, 0, kOverlayMaskAlpha);
 const QColor kSizeLabelBorder(255, 255, 255, 36);
 const QColor kSizeLabelBg(14, 20, 26, 200);
 const QColor kMagnifierBg(14, 20, 26, 224);
