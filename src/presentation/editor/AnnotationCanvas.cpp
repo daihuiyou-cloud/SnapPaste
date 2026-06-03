@@ -218,21 +218,24 @@ void AnnotationCanvas::rebuildBackingCache()
 
 void AnnotationCanvas::reapplyAdjustments()
 {
-    double contrastFactor = (contrast_ + 100.0) / 100.0;
-
-    quint8 lut[256];
-    for (int i = 0; i < 256; ++i) {
-        int v = static_cast<int>((i - 128) * contrastFactor + 128 + brightness_);
-        lut[i] = static_cast<quint8>(qBound(0, v, 255));
-    }
-
     image_ = baseImage_.copy();
-    int w = image_.width(), h = image_.height();
-    for (int y = 0; y < h; ++y) {
-        auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
-        for (int x = 0; x < w; ++x) {
-            auto px = line[x];
-            line[x] = qRgba(lut[qRed(px)], lut[qGreen(px)], lut[qBlue(px)], qAlpha(px));
+
+    if (brightness_ != 0 || contrast_ != 0) {
+        double contrastFactor = (contrast_ + 100.0) / 100.0;
+
+        quint8 lut[256];
+        for (int i = 0; i < 256; ++i) {
+            int v = static_cast<int>((i - 128) * contrastFactor + 128 + brightness_);
+            lut[i] = static_cast<quint8>(qBound(0, v, 255));
+        }
+
+        int w = image_.width(), h = image_.height();
+        for (int y = 0; y < h; ++y) {
+            auto* line = reinterpret_cast<QRgb*>(image_.scanLine(y));
+            for (int x = 0; x < w; ++x) {
+                auto px = line[x];
+                line[x] = qRgba(lut[qRed(px)], lut[qGreen(px)], lut[qBlue(px)], qAlpha(px));
+            }
         }
     }
     toolManager_.setImageDirect(image_);
