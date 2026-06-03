@@ -8,6 +8,8 @@
 #include <QSettings>
 #include <QWheelEvent>
 
+#include <algorithm>
+
 namespace snappaste {
 
 AnnotationCanvas::AnnotationCanvas(QWidget* parent)
@@ -185,7 +187,9 @@ void AnnotationCanvas::rebuildBackingCache()
     QSize cacheSize = size();
     if (cacheSize.isEmpty()) cacheSize = QSize(640, 360);
 
-    backingCache_ = QPixmap(cacheSize);
+    if (backingCache_.size() != cacheSize) {
+        backingCache_ = QPixmap(cacheSize);
+    }
     backingCache_.fill(QColor("#1f2329"));
 
     QPainter p(&backingCache_);
@@ -228,9 +232,19 @@ void AnnotationCanvas::reapplyAdjustments()
     auto logicalSize = image_.size() / image_.devicePixelRatio();
     setMinimumSize(logicalSize);
     resize(logicalSize);
+
+    // Annotation cache (non-mosaic) is independent of image pixels; keep it valid
+    const auto& annotations = toolManager_.annotations();
+    bool hasMosaic = std::any_of(annotations.begin(), annotations.end(),
+        [](const Annotation& a) { return a.tool == AnnotationTool::Mosaic; });
+    if (hasMosaic) {
+        renderer_.invalidateCache();
+    }
+
+    modified_ = true;
+    backingCacheDirty_ = true;
+    emit modified();
     updateWindowTitle();
-    renderer_.invalidateCache();
-    markModified();
     update();
 }
 
