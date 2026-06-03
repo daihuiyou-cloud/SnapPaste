@@ -177,7 +177,7 @@ void AnnotationCanvas::rebuildBackingCache()
     if (cacheSize.isEmpty()) cacheSize = QSize(640, 360);
 
     backingCache_ = QPixmap(cacheSize);
-    backingCache_.fill(QColor("#101418"));
+    backingCache_.fill(QColor("#1f2329"));
 
     QPainter p(&backingCache_);
     p.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -537,7 +537,7 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
     Q_UNUSED(event)
 
     QPainter painter(this);
-    painter.fillRect(rect(), QColor("#101418"));
+    painter.fillRect(rect(), QColor("#1f2329"));
     if (!image_.isNull()) {
         double zf = toolManager_.zoomFactor();
         // Use backing cache for static content

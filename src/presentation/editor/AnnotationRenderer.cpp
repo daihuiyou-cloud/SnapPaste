@@ -19,7 +19,7 @@ void AnnotationRenderer::drawCheckerboard(QPainter& painter, const QImage& sourc
     for (int y = 0; y < logicalH; y += tile) {
         for (int x = 0; x < logicalW; x += tile) {
             bool light = ((x / tile) + (y / tile)) % 2 == 0;
-            painter.fillRect(x, y, tile, tile, light ? QColor("#cccccc") : QColor("#888888"));
+            painter.fillRect(x, y, tile, tile, light ? QColor("#555555") : QColor("#333333"));
         }
     }
 }

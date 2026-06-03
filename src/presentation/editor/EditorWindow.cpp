@@ -112,6 +112,7 @@ const char* kSelStyle =
     "QToolButton { font: bold 10px; color: #999; background: transparent;"
     "  border: none; border-radius: 4px; padding: 3px 5px; }"
     "QToolButton:hover { background: rgba(47,191,159,0.1); color: #2fbf9f; }"
+    "QToolButton:pressed { background: rgba(47,191,159,0.2); }"
     "QToolButton:checked { color: #fff; background: #2fbf9f; }"
     "QToolButton:hover:checked { background: #269d84; }";
 
@@ -119,6 +120,7 @@ const char* kChipStyle =
     "QToolButton { font: 9px; color: #999; background: rgba(255,255,255,0.04);"
     "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
     "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
+    "QToolButton:pressed { background: rgba(47,191,159,0.25); }"
     "QToolButton:checked { background: #2fbf9f; color: #fff; border-color: #2fbf9f; }";
 
 const char* kSliderLabelStyle = "color: #8e8e93; font: 10px; padding: 0;";
@@ -131,12 +133,14 @@ const QString kSliderStyle = QString(kSliderGroove) + kSliderHandle + kSliderSub
 const char* kZoomBtnStyle =
     "QToolButton { font: 8px; color: #999; background: transparent;"
     "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
-    "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }";
+    "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
+    "QToolButton:pressed { background: rgba(255,255,255,0.1); }";
 
 const char* kSmallBtnStyle =
     "QToolButton { font: 9px; color: #999; background: rgba(255,255,255,0.04);"
     "  border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 4px; }"
-    "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }";
+    "QToolButton:hover { border-color: #2fbf9f; color: #2fbf9f; }"
+    "QToolButton:pressed { background: rgba(255,255,255,0.1); }";
 
 const QColor kFixedColors[] = {
     QColor("#ff3b30"), QColor("#ff9500"), QColor("#ffcc00"),
@@ -154,6 +158,11 @@ EditorWindow::EditorWindow(IIconProvider& iconProvider, QWidget* parent)
 {
     setWindowTitle(tr("SnapPaste Editor"));
     resize(980, 680);
+
+    statusBar()->setStyleSheet(
+        "QStatusBar { border-top: 1px solid rgba(255,255,255,0.08);"
+        "  background: #1a1e23; font: 11px; color: #8e8e93; }"
+        "QStatusBar::item { border: none; }");
 
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidget(canvas_);
@@ -604,7 +613,7 @@ void EditorWindow::createToolPanel()
     {
         auto* line = new QFrame(content);
         line->setFrameShape(QFrame::HLine);
-        line->setStyleSheet("QFrame { color: rgba(255,255,255,0.08); max-height: 1px; }");
+        line->setStyleSheet("QFrame { background: rgba(255,255,255,0.08); max-height: 1px; }");
         layout->addWidget(line);
     }
     layout->addSpacing(10);
@@ -1297,7 +1306,8 @@ void EditorWindow::buildZoomSection(QVBoxLayout* layout, QWidget* content)
 void EditorWindow::buildImageAdjustSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* adjustLabel = new QLabel(tr("Adjust"), content);
-    adjustLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
+    adjustLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0 0 0 6px;"
+        "border-left: 2px solid rgba(47,191,159,0.3);");
     layout->addWidget(adjustLabel);
 
     brightSlider_ = addSliderRow(layout, content, tr("Bright"), -100, 100, 0,
@@ -1321,7 +1331,8 @@ void EditorWindow::buildImageAdjustSection(QVBoxLayout* layout, QWidget* content
 void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* transformLabel = new QLabel(tr("Transform"), content);
-    transformLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
+    transformLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0 0 0 6px;"
+        "border-left: 2px solid rgba(47,191,159,0.3);");
     layout->addWidget(transformLabel);
 
     auto addTransformBtn = [this, content](const QIcon& icon, const QString& tip) -> QToolButton* {
@@ -1364,7 +1375,8 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
 void EditorWindow::buildLayerSection(QVBoxLayout* layout, QWidget* content)
 {
     auto* layerLabel = new QLabel(tr("Layers"), content);
-    layerLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
+    layerLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0 0 0 6px;"
+        "border-left: 2px solid rgba(47,191,159,0.3);");
     layout->addWidget(layerLabel);
 
     layout->addSpacing(2);
