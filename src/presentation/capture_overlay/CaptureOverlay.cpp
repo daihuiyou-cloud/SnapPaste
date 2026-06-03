@@ -41,6 +41,16 @@ const QColor kSizeLabelBg(14, 20, 26, 200);
 const QColor kMagnifierBg(14, 20, 26, 224);
 const QColor kGridLineColor(255, 255, 255, 30);
 
+const QFont& kHintFont()
+{
+    static const QFont f = [] {
+        QFont font = QApplication::font();
+        font.setPointSize(11);
+        return font;
+    }();
+    return f;
+}
+
 } // namespace
 
 CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
@@ -495,18 +505,14 @@ void CaptureOverlay::drawOverlayState(QPainter& painter)
         drawCandidate(painter, candidate);
         drawMagnifier(painter);
         painter.setPen(kHintTextColor);
-        auto hintFont = QApplication::font();
-        hintFont.setPointSize(11);
-        painter.setFont(hintFont);
+        painter.setFont(kHintFont());
         painter.drawText(rect().adjusted(0, 0, 0, -8), Qt::AlignBottom | Qt::AlignHCenter,
             tr("Tab / Arrow keys to cycle  ·  Enter to capture"));
     } else {
         if (state_ == State::Idle) {
             drawMagnifier(painter);
             painter.setPen(kHintTextColor);
-            auto hintFont = QApplication::font();
-            hintFont.setPointSize(11);
-            painter.setFont(hintFont);
+            painter.setFont(kHintFont());
             painter.drawText(rect().adjusted(0, 0, 0, -24), Qt::AlignBottom | Qt::AlignHCenter,
                 tr("Drag to select area  ·  Double-click to capture full screen"));
         }
@@ -537,9 +543,7 @@ void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalR
     drawSizeLabel(painter, localRegion, globalRegion.size());
     if (state_ == State::Ready && !lastMouseGlobal_.isNull()) {
         painter.setPen(kLabelTextColor);
-        auto coordFont = QApplication::font();
-        coordFont.setPointSize(11);
-        painter.setFont(coordFont);
+        painter.setFont(kHintFont());
         painter.drawText(localRegion.bottomLeft() + QPoint(0, 20),
             tr("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     }
