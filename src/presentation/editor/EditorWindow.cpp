@@ -17,6 +17,7 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QShortcut>
 #include <QPainter>
 #include <QPixmap>
 #include <QDockWidget>
@@ -833,10 +834,10 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
     arrowLbl->setStyleSheet(kSliderLabelStyle);
     arrowRow->addWidget(arrowLbl);
 
-    struct ArrowDef { const char* text; int value; };
-    const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("EditorWindow", "Tri"), 0},
-                                  {QT_TRANSLATE_NOOP("EditorWindow", "Circle"), 1},
-                                  {QT_TRANSLATE_NOOP("EditorWindow", "Square"), 2}};
+    struct ArrowDef { const char* text; const char* tip; int value; };
+    const ArrowDef arrowDefs[] = {{QT_TRANSLATE_NOOP("EditorWindow", "Tri"), QT_TRANSLATE_NOOP("EditorWindow", "Triangular arrowhead"), 0},
+                                  {QT_TRANSLATE_NOOP("EditorWindow", "Circle"), QT_TRANSLATE_NOOP("EditorWindow", "Circular endpoint"), 1},
+                                  {QT_TRANSLATE_NOOP("EditorWindow", "Square"), QT_TRANSLATE_NOOP("EditorWindow", "Square endpoint"), 2}};
     auto* arrowGroup = new QButtonGroup(content);
     arrowGroup->setObjectName("arrowGroup");
     arrowGroup->setExclusive(true);
@@ -847,6 +848,7 @@ void EditorWindow::buildArrowSection(QVBoxLayout* layout, QWidget* content)
         btn->setFixedHeight(26);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setStyleSheet(kChipStyle);
+        btn->setToolTip(tr(ad.tip));
         if (ad.value == 0) btn->setChecked(true);
         arrowGroup->addButton(btn, ad.value);
         connect(btn, &QToolButton::clicked, this, [this, val = ad.value] {
@@ -1169,13 +1171,13 @@ void EditorWindow::buildCropSection(QVBoxLayout* layout, QWidget* content)
     cropLabel->setStyleSheet("color: #8e8e93; font: 10px; padding: 0;");
     cropLayout->addWidget(cropLabel);
 
-    struct RatioDef { const char* text; double value; };
+    struct RatioDef { const char* text; const char* tip; double value; };
     const RatioDef ratios[] = {
-        {QT_TRANSLATE_NOOP("EditorWindow", "Free"), 0.0},
-        {QT_TRANSLATE_NOOP("EditorWindow", "1:1"), 1.0},
-        {QT_TRANSLATE_NOOP("EditorWindow", "16:9"), 16.0 / 9.0},
-        {QT_TRANSLATE_NOOP("EditorWindow", "4:3"), 4.0 / 3.0},
-        {QT_TRANSLATE_NOOP("EditorWindow", "3:2"), 3.0 / 2.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "Free"), QT_TRANSLATE_NOOP("EditorWindow", "Unconstrained crop"), 0.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "1:1"), QT_TRANSLATE_NOOP("EditorWindow", "Square crop (1:1)"), 1.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "16:9"), QT_TRANSLATE_NOOP("EditorWindow", "Widescreen crop (16:9)"), 16.0 / 9.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "4:3"), QT_TRANSLATE_NOOP("EditorWindow", "Standard crop (4:3)"), 4.0 / 3.0},
+        {QT_TRANSLATE_NOOP("EditorWindow", "3:2"), QT_TRANSLATE_NOOP("EditorWindow", "Classic photo crop (3:2)"), 3.0 / 2.0},
     };
     auto* ratioGroup = new QButtonGroup(content);
     ratioGroup->setExclusive(true);
@@ -1186,6 +1188,7 @@ void EditorWindow::buildCropSection(QVBoxLayout* layout, QWidget* content)
         auto* btn = new QToolButton(content);
         auto label = QCoreApplication::translate("EditorWindow", ratios[i].text);
         btn->setText(label);
+        btn->setToolTip(QCoreApplication::translate("EditorWindow", ratios[i].tip));
         btn->setCheckable(true);
         btn->setFixedHeight(26);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1356,17 +1359,32 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformRow->setContentsMargins(0, 0, 0, 0);
     transformRow->setSpacing(4);
 
-    auto* rotCw = addTransformBtn(iconProvider_.icon(IconName::RotateRight), tr("Rotate 90\u00B0 clockwise"));
-    auto* rotCcw = addTransformBtn(iconProvider_.icon(IconName::RotateLeft), tr("Rotate 90\u00B0 counter-clockwise"));
-    auto* rot180 = addTransformBtn(iconProvider_.icon(IconName::Rotate180), tr("Rotate 180\u00B0"));
-    auto* flipH = addTransformBtn(iconProvider_.icon(IconName::FlipHorizontal), tr("Flip horizontal"));
-    auto* flipV = addTransformBtn(iconProvider_.icon(IconName::FlipVertical), tr("Flip vertical"));
+    auto* rotCw = addTransformBtn(iconProvider_.icon(IconName::RotateRight), tr("Rotate 90\u00B0 clockwise\tR"));
+    auto* rotCcw = addTransformBtn(iconProvider_.icon(IconName::RotateLeft), tr("Rotate 90\u00B0 counter-clockwise\tShift+R"));
+    auto* rot180 = addTransformBtn(iconProvider_.icon(IconName::Rotate180), tr("Rotate 180\u00B0\tCtrl+R"));
+    auto* flipH = addTransformBtn(iconProvider_.icon(IconName::FlipHorizontal), tr("Flip horizontal\tH"));
+    auto* flipV = addTransformBtn(iconProvider_.icon(IconName::FlipVertical), tr("Flip vertical\tV"));
 
-    connect(rotCw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(90); });
-    connect(rotCcw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(270); });
-    connect(rot180, &QToolButton::clicked, this, [this] { canvas_->rotateImage(180); });
-    connect(flipH, &QToolButton::clicked, this, [this] { canvas_->flipImage(true, false); });
-    connect(flipV, &QToolButton::clicked, this, [this] { canvas_->flipImage(false, true); });
+    connect(rotCw, &QToolButton::clicked, this, [this] {
+        canvas_->rotateImage(90);
+        statusBar()->showMessage(tr("Rotated 90\u00B0 clockwise"), 3000);
+    });
+    connect(rotCcw, &QToolButton::clicked, this, [this] {
+        canvas_->rotateImage(270);
+        statusBar()->showMessage(tr("Rotated 90\u00B0 counter-clockwise"), 3000);
+    });
+    connect(rot180, &QToolButton::clicked, this, [this] {
+        canvas_->rotateImage(180);
+        statusBar()->showMessage(tr("Rotated 180\u00B0"), 3000);
+    });
+    connect(flipH, &QToolButton::clicked, this, [this] {
+        canvas_->flipImage(true, false);
+        statusBar()->showMessage(tr("Flipped horizontally"), 3000);
+    });
+    connect(flipV, &QToolButton::clicked, this, [this] {
+        canvas_->flipImage(false, true);
+        statusBar()->showMessage(tr("Flipped vertically"), 3000);
+    });
 
     transformRow->addWidget(rotCw);
     transformRow->addWidget(rotCcw);
@@ -1374,6 +1392,18 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformRow->addWidget(flipH);
     transformRow->addWidget(flipV);
     layout->addLayout(transformRow);
+
+    // Keyboard shortcuts for transform operations
+    auto* rotCwShortcut = new QShortcut(QKeySequence(Qt::Key_R), this);
+    connect(rotCwShortcut, &QShortcut::activated, rotCw, &QToolButton::click);
+    auto* rotCcwShortcut = new QShortcut(QKeySequence(Qt::SHIFT + Qt::Key_R), this);
+    connect(rotCcwShortcut, &QShortcut::activated, rotCcw, &QToolButton::click);
+    auto* rot180Shortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_R), this);
+    connect(rot180Shortcut, &QShortcut::activated, rot180, &QToolButton::click);
+    auto* flipHShortcut = new QShortcut(QKeySequence(Qt::Key_H), this);
+    connect(flipHShortcut, &QShortcut::activated, flipH, &QToolButton::click);
+    auto* flipVShortcut = new QShortcut(QKeySequence(Qt::Key_V), this);
+    connect(flipVShortcut, &QShortcut::activated, flipV, &QToolButton::click);
 
     layout->addSpacing(10);
 }
@@ -1437,6 +1467,10 @@ void EditorWindow::buildLayerSection(QVBoxLayout* layout, QWidget* content)
 
         auto* act = menu.exec(layerList_->mapToGlobal(pos));
         if (act == delAct) {
+            auto ret = QMessageBox::question(this, tr("Delete Annotation"),
+                tr("Are you sure you want to delete this annotation? This action cannot be undone."),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (ret != QMessageBox::Yes) return;
             canvas_->deleteAnnotation(idx);
             rebuildLayerList();
         } else if (act == dupAct) {
