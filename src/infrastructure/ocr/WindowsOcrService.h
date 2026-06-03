@@ -30,17 +30,16 @@ public:
 
     bool isCancelled(int requestId) const noexcept
     {
-        return cancelled_.load() || requestId != currentRequestId_.load();
+        return requestId != currentRequestId_.load();
     }
 
 private:
     void workerLoop();
-    OcrResult recognizeTextImpl(const QImage& source);
+    OcrResult recognizeTextImpl(const QImage& source, int requestId);
 
     ILogger& logger_;
     QString language_;
     QMutex langMutex_;
-    std::atomic<bool> cancelled_{false};
     std::atomic<int> currentRequestId_{0};
 
     std::thread worker_;

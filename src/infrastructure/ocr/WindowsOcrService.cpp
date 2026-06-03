@@ -89,7 +89,6 @@ void WindowsOcrService::workerLoop()
 
 void WindowsOcrService::cancel()
 {
-    cancelled_ = true;
     ++currentRequestId_;
 }
 
@@ -101,8 +100,9 @@ void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 
 OcrResult WindowsOcrService::recognizeText(const QImage& source)
 {
-    std::packaged_task<OcrResult()> task([this, &source] {
-        return recognizeTextImpl(source);
+    const auto requestId = currentRequestId_.load();
+    std::packaged_task<OcrResult()> task([this, &source, requestId] {
+        return recognizeTextImpl(source, requestId);
     });
     auto future = task.get_future();
     {
@@ -113,11 +113,8 @@ OcrResult WindowsOcrService::recognizeText(const QImage& source)
     return future.get();
 }
 
-OcrResult WindowsOcrService::recognizeTextImpl(const QImage& source)
+OcrResult WindowsOcrService::recognizeTextImpl(const QImage& source, int requestId)
 {
-    cancelled_ = false;
-    const auto requestId = ++currentRequestId_;
-
 #if defined(SNAPPASTE_HAS_WINRT_OCR)
     if (source.isNull()) {
         return {false, {}, QObject::tr("No image is available for OCR."), {}, {}};
