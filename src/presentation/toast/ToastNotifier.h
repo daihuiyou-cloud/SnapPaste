@@ -4,6 +4,7 @@
 #include <QPoint>
 
 #include <functional>
+#include <memory>
 #include <queue>
 
 class QLabel;
@@ -40,7 +41,7 @@ private:
     void showNext();
     void fadeOutCurrent();
 
-    QWidget* toast_ = nullptr;
+    std::unique_ptr<QWidget> toast_;
     QLabel* label_ = nullptr;
     QTimer* hideTimer_ = nullptr;
     QTimer* hoverTimer_ = nullptr;

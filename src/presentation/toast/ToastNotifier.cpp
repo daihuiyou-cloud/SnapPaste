@@ -57,7 +57,6 @@ ToastNotifier::~ToastNotifier()
     if (slideAnimation_ != nullptr) {
         slideAnimation_->stop();
     }
-    delete toast_;
 }
 
 void ToastNotifier::showMessage(const QString& message, const QPoint& /*referencePosition*/,
@@ -97,12 +96,13 @@ void ToastNotifier::showNext()
     const auto startPos = toast_->pos() + QPoint(0, 20);
     toast_->move(startPos);
 
-    delete slideAnimation_;
-    slideAnimation_ = new QPropertyAnimation(toast_, "pos", this);
-    slideAnimation_->setDuration(kToastSlideMs);
+    if (slideAnimation_ == nullptr) {
+        slideAnimation_ = new QPropertyAnimation(toast_.get(), "pos", this);
+        slideAnimation_->setDuration(kToastSlideMs);
+        slideAnimation_->setEasingCurve(QEasingCurve::OutBack);
+    }
     slideAnimation_->setStartValue(startPos);
     slideAnimation_->setEndValue(toast_->pos() - QPoint(0, 20));
-    slideAnimation_->setEasingCurve(QEasingCurve::OutBack);
     slideAnimation_->start();
 
     fadeAnimation_->setStartValue(0.0);
@@ -154,7 +154,7 @@ void ToastNotifier::hide()
 
 bool ToastNotifier::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj != toast_) {
+    if (obj != toast_.get()) {
         return QObject::eventFilter(obj, event);
     }
 
@@ -185,11 +185,11 @@ bool ToastNotifier::eventFilter(QObject* obj, QEvent* event)
 
 void ToastNotifier::ensureToast()
 {
-    if (toast_ != nullptr) {
+    if (toast_) {
         return;
     }
 
-    toast_ = new QWidget();
+    toast_ = std::make_unique<QWidget>();
     toast_->setWindowFlags(Qt::Tool
                            | Qt::FramelessWindowHint
                            | Qt::WindowStaysOnTopHint
@@ -199,7 +199,7 @@ void ToastNotifier::ensureToast()
     toast_->installEventFilter(this);
     toast_->setMouseTracking(true);
 
-    label_ = new QLabel(toast_);
+    label_ = new QLabel(toast_.get());
     label_->setObjectName("ToastLabel");
     label_->setMaximumWidth(kToastMaxWidth);
     label_->setMinimumWidth(kToastMinWidth);
@@ -215,12 +215,12 @@ void ToastNotifier::ensureToast()
         " font-family: 'Microsoft YaHei UI','Segoe UI';"
         "}");
 
-    auto* layout = new QVBoxLayout(toast_);
+    auto* layout = new QVBoxLayout(toast_.get());
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(label_);
     toast_->setLayout(layout);
 
-    fadeAnimation_ = new QPropertyAnimation(toast_, "windowOpacity", this);
+    fadeAnimation_ = new QPropertyAnimation(toast_.get(), "windowOpacity", this);
     fadeAnimation_->setDuration(kToastFadeMs);
     fadeAnimation_->setEasingCurve(QEasingCurve::OutCubic);
 }
