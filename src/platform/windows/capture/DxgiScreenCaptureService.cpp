@@ -367,45 +367,14 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
 
 #ifdef Q_OS_WIN
     if (segments.size() > 1) {
-        QRect physicalBounds;
-        qreal compositeDpr = 1.0;
-        for (const auto& seg : segments) {
-            auto dpr = seg.devicePixelRatio;
-            compositeDpr = qMax(compositeDpr, dpr);
-            QRect physSeg(qRound(seg.logicalRegion.x() * dpr),
-                          qRound(seg.logicalRegion.y() * dpr),
-                          qRound(seg.logicalRegion.width() * dpr),
-                          qRound(seg.logicalRegion.height() * dpr));
-            if (physicalBounds.isNull()) {
-                physicalBounds = physSeg;
-            } else {
-                physicalBounds = physicalBounds.united(physSeg);
+        return composeSegments(segments, [this](const ScreenCaptureSegment& seg) -> Result<QImage> {
+            auto result = captureWithDxgi(seg);
+            if (result.isError()) {
+                result = fallback_.captureRegion(
+                    logicalToPhysical(seg.logicalRegion, seg.devicePixelRatio), seg.devicePixelRatio);
             }
-        }
-
-        QImage composite(physicalBounds.size(), QImage::Format_RGB32);
-        composite.fill(Qt::black);
-        QPainter painter(&composite);
-
-        for (const auto& segment : segments) {
-            auto segmentResult = captureWithDxgi(segment);
-            if (segmentResult.isError()) {
-                segmentResult = fallback_.captureRegion(logicalToPhysical(segment.logicalRegion, segment.devicePixelRatio), segment.devicePixelRatio);
-            }
-            if (segmentResult.isError()) {
-                return Result<QImage>::failure(segmentResult.error());
-            }
-
-            auto segmentImage = segmentResult.value();
-            auto dpr = segment.devicePixelRatio;
-            QPoint physicalOffset(
-                qRound(segment.logicalRegion.x() * dpr) - physicalBounds.left(),
-                qRound(segment.logicalRegion.y() * dpr) - physicalBounds.top());
-            painter.drawImage(physicalOffset, segmentImage);
-        }
-
-        composite.setDevicePixelRatio(compositeDpr);
-        return Result<QImage>::success(std::move(composite));
+            return result;
+        });
     }
 
     auto dxgiResult = captureWithDxgi(segments.first());
@@ -421,39 +390,10 @@ Result<QImage> DxgiScreenCaptureService::captureRegion(const QRect& region, cons
     return dxgiResult;
 #else
     if (segments.size() > 1) {
-        QRect physicalBounds;
-        qreal compositeDpr = 1.0;
-        for (const auto& seg : segments) {
-            auto dpr = seg.devicePixelRatio;
-            compositeDpr = qMax(compositeDpr, dpr);
-            QRect physSeg(qRound(seg.logicalRegion.x() * dpr),
-                          qRound(seg.logicalRegion.y() * dpr),
-                          qRound(seg.logicalRegion.width() * dpr),
-                          qRound(seg.logicalRegion.height() * dpr));
-            if (physicalBounds.isNull()) {
-                physicalBounds = physSeg;
-            } else {
-                physicalBounds = physicalBounds.united(physSeg);
-            }
-        }
-
-        QImage composite(physicalBounds.size(), QImage::Format_RGB32);
-        composite.fill(Qt::black);
-        QPainter painter(&composite);
-        for (const auto& segment : segments) {
-            auto segmentResult = fallback_.captureRegion(logicalToPhysical(segment.logicalRegion, segment.devicePixelRatio), segment.devicePixelRatio);
-            if (segmentResult.isError()) {
-                return Result<QImage>::failure(segmentResult.error());
-            }
-            auto segmentImage = segmentResult.value();
-            auto dpr = segment.devicePixelRatio;
-            QPoint physicalOffset(
-                qRound(segment.logicalRegion.x() * dpr) - physicalBounds.left(),
-                qRound(segment.logicalRegion.y() * dpr) - physicalBounds.top());
-            painter.drawImage(physicalOffset, segmentImage);
-        }
-        composite.setDevicePixelRatio(compositeDpr);
-        return Result<QImage>::success(std::move(composite));
+        return composeSegments(segments, [this](const ScreenCaptureSegment& seg) -> Result<QImage> {
+            return fallback_.captureRegion(
+                logicalToPhysical(seg.logicalRegion, seg.devicePixelRatio), seg.devicePixelRatio);
+        });
     }
     return fallback_.captureRegion(region);
 #endif
@@ -509,6 +449,47 @@ Result<void> DxgiScreenCaptureService::ensureD3dDevice()
 {
     std::scoped_lock lock(mutex_);
     return ensureD3dDeviceImpl();
+}
+
+Result<QImage> DxgiScreenCaptureService::composeSegments(
+    const QVector<ScreenCaptureSegment>& segments,
+    const std::function<Result<QImage>(const ScreenCaptureSegment&)>& captureOne)
+{
+    QRect physicalBounds;
+    qreal compositeDpr = 1.0;
+    for (const auto& seg : segments) {
+        auto dpr = seg.devicePixelRatio;
+        compositeDpr = qMax(compositeDpr, dpr);
+        QRect physSeg(qRound(seg.logicalRegion.x() * dpr),
+                      qRound(seg.logicalRegion.y() * dpr),
+                      qRound(seg.logicalRegion.width() * dpr),
+                      qRound(seg.logicalRegion.height() * dpr));
+        if (physicalBounds.isNull()) {
+            physicalBounds = physSeg;
+        } else {
+            physicalBounds = physicalBounds.united(physSeg);
+        }
+    }
+
+    QImage composite(physicalBounds.size(), QImage::Format_RGB32);
+    composite.fill(Qt::black);
+    QPainter painter(&composite);
+
+    for (const auto& segment : segments) {
+        auto segmentResult = captureOne(segment);
+        if (segmentResult.isError()) {
+            return Result<QImage>::failure(segmentResult.error());
+        }
+        auto segmentImage = segmentResult.value();
+        auto dpr = segment.devicePixelRatio;
+        QPoint physicalOffset(
+            qRound(segment.logicalRegion.x() * dpr) - physicalBounds.left(),
+            qRound(segment.logicalRegion.y() * dpr) - physicalBounds.top());
+        painter.drawImage(physicalOffset, segmentImage);
+    }
+
+    composite.setDevicePixelRatio(compositeDpr);
+    return Result<QImage>::success(std::move(composite));
 }
 
 Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegment& segment)

@@ -1,9 +1,10 @@
+#include "presentation/editor/EditorWindow.h"
+
 #include <algorithm>
 #include <cmath>
 
 #include "presentation/editor/AnnotationCanvas.h"
 #include "presentation/editor/EditorIconFactory.h"
-#include "presentation/editor/EditorWindow.h"
 
 #include <QApplication>
 #include <QClipboard>

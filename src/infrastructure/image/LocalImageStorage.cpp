@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "infrastructure/image/LocalImageStorage.h"
+﻿#include "infrastructure/image/LocalImageStorage.h"
+#include <QCoreApplication>
 
 #include <QDateTime>
 #include <QDir>

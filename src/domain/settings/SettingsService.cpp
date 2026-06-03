@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "domain/settings/SettingsService.h"
+﻿#include "domain/settings/SettingsService.h"
+#include <QCoreApplication>
 
 namespace snappaste {
 

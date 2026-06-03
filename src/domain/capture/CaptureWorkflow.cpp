@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "domain/capture/CaptureWorkflow.h"
+﻿#include "domain/capture/CaptureWorkflow.h"
+#include <QCoreApplication>
 
 namespace snappaste {
 

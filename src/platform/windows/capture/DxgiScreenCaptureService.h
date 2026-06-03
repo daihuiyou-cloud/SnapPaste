@@ -5,6 +5,7 @@
 
 #include <QRect>
 
+#include <functional>
 #include <mutex>
 
 #ifdef Q_OS_WIN
@@ -22,6 +23,8 @@ public:
 
 private:
     Result<QImage> captureWithDxgi(const ScreenCaptureSegment& segment);
+    Result<QImage> composeSegments(const QVector<ScreenCaptureSegment>& segments,
+        const std::function<Result<QImage>(const ScreenCaptureSegment&)>& captureOne);
     Result<void> ensureD3dDeviceImpl();
     Result<void> ensureD3dDevice();
 

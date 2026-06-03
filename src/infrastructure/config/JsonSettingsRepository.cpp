@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "infrastructure/config/JsonSettingsRepository.h"
+﻿#include "infrastructure/config/JsonSettingsRepository.h"
+#include <QCoreApplication>
 
 #include <QFile>
 #include <QJsonDocument>

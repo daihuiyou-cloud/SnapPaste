@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "domain/pin/PinnedImageService.h"
+﻿#include "domain/pin/PinnedImageService.h"
+#include <QCoreApplication>
 #include "domain/pin/PinnedItem.h"
 
 #include <utility>

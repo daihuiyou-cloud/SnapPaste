@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "app/AppStartup.h"
+﻿#include "app/AppStartup.h"
+#include <QCoreApplication>
 
 #include <QFile>
 

@@ -1,5 +1,5 @@
-﻿#include <QCoreApplication>
-#include "infrastructure/persistence/SqliteConnection.h"
+﻿#include "infrastructure/persistence/SqliteConnection.h"
+#include <QCoreApplication>
 
 #include <QSqlError>
 #include <QSqlQuery>
