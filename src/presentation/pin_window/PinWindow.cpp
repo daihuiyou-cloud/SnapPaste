@@ -47,6 +47,29 @@ const QColor kControlBorder(255, 255, 255, 110);
 const QColor kOverflowBg(20, 26, 33, 200);
 const QColor kOverflowText("#bcbec6");
 
+const QFont& kThumbnailFont()
+{
+    static const QFont f = [] {
+        QFont font = QApplication::font();
+        font.setPointSize(9);
+        font.setBold(true);
+        return font;
+    }();
+    return f;
+}
+
+const QFont& kZoomFont()
+{
+    static const QFont f = [] {
+        QFont font = QApplication::font();
+        font.setPointSize(10);
+        return font;
+    }();
+    return f;
+}
+
+const QFont kOverflowDotsFont("Segoe UI", 10, QFont::Bold);
+
 } // namespace
 
 PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* parent)
@@ -727,19 +750,14 @@ void PinWindow::paintEvent(QPaintEvent* event)
 
     if (thumbnailMode_) {
         painter.setPen(kPinAccent);
-        auto pinFont = QApplication::font();
-        pinFont.setPointSize(9);
-        pinFont.setBold(true);
-        painter.setFont(pinFont);
+        painter.setFont(kThumbnailFont());
         painter.drawText(rect().adjusted(8, 8, -8, -8), Qt::AlignTop | Qt::AlignLeft, tr("T"));
     }
 
     const int zoomPct = static_cast<int>(std::round(item_.state.transform.scale * 100));
     if (zoomPct != 100 || thumbnailMode_) {
         painter.setPen(kZoomTextColor);
-        auto zoomFont = QApplication::font();
-        zoomFont.setPointSize(10);
-        painter.setFont(zoomFont);
+        painter.setFont(kZoomFont());
         painter.drawText(rect().adjusted(8, 8, -8, -8),
             Qt::AlignTop | Qt::AlignRight,
             tr("%1%").arg(zoomPct));
@@ -772,7 +790,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(ob, 3, 3);
             painter.setPen(kOverflowText);
-            painter.setFont(QFont("Segoe UI", 10, QFont::Bold));
+            painter.setFont(kOverflowDotsFont);
             painter.drawText(ob, Qt::AlignCenter, tr("..."));
         }
     }
