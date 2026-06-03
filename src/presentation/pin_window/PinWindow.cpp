@@ -72,10 +72,14 @@ void PinWindow::setPinnedVisible(bool visible)
 {
     item_.state.options.visible = visible;
     if (!visible) {
-        savedClickThrough_ = item_.state.options.clickThrough;
+        if (!visibleSaved_) {
+            visibleSaved_ = true;
+            savedClickThrough_ = item_.state.options.clickThrough;
+        }
         item_.state.options.clickThrough = false;
         windowInteraction_.setClickThrough(this, false);
     } else {
+        visibleSaved_ = false;
         windowInteraction_.setClickThrough(this, savedClickThrough_);
     }
     if (visible) {

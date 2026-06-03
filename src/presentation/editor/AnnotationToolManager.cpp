@@ -17,7 +17,7 @@ AnnotationToolManager::AnnotationToolManager()
         int textAlignment = -1;
         QVector<QColor> recentColors;
     };
-    static const EditorPrefs prefs = [] {
+    const EditorPrefs prefs = [] {
         QSettings s;
         EditorPrefs p;
         p.fontSize = s.value("editor/fontSize", 14).toInt();
