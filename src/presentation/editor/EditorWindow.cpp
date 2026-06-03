@@ -1324,11 +1324,12 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformLabel->setStyleSheet("color: #8e8e93; font: 9px; padding: 0;");
     layout->addWidget(transformLabel);
 
-    auto addTransformBtn = [content](const QString& text, const QString& tip) -> QToolButton* {
+    auto addTransformBtn = [this, content](const QIcon& icon, const QString& tip) -> QToolButton* {
         auto* btn = new QToolButton(content);
-        btn->setText(text);
+        btn->setIcon(icon);
         btn->setToolTip(tip);
-        btn->setFixedHeight(22);
+        btn->setFixedHeight(26);
+        btn->setIconSize(QSize(16, 16));
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         btn->setStyleSheet(kSmallBtnStyle);
         return btn;
@@ -1338,11 +1339,11 @@ void EditorWindow::buildTransformSection(QVBoxLayout* layout, QWidget* content)
     transformRow->setContentsMargins(0, 0, 0, 0);
     transformRow->setSpacing(4);
 
-    auto* rotCw = addTransformBtn(tr("CW"), tr("Rotate 90 degrees clockwise"));
-    auto* rotCcw = addTransformBtn(tr("CCW"), tr("Rotate 90 degrees counter-clockwise"));
-    auto* rot180 = addTransformBtn(tr("180"), tr("Rotate 180 degrees"));
-    auto* flipH = addTransformBtn(tr("H"), tr("Flip horizontal"));
-    auto* flipV = addTransformBtn(tr("V"), tr("Flip vertical"));
+    auto* rotCw = addTransformBtn(iconProvider_.icon(IconName::RotateRight), tr("Rotate 90\u00B0 clockwise"));
+    auto* rotCcw = addTransformBtn(iconProvider_.icon(IconName::RotateLeft), tr("Rotate 90\u00B0 counter-clockwise"));
+    auto* rot180 = addTransformBtn(iconProvider_.icon(IconName::Rotate180), tr("Rotate 180\u00B0"));
+    auto* flipH = addTransformBtn(iconProvider_.icon(IconName::FlipHorizontal), tr("Flip horizontal"));
+    auto* flipV = addTransformBtn(iconProvider_.icon(IconName::FlipVertical), tr("Flip vertical"));
 
     connect(rotCw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(90); });
     connect(rotCcw, &QToolButton::clicked, this, [this] { canvas_->rotateImage(270); });
