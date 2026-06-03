@@ -2,6 +2,8 @@
 
 #include "domain/editor/Annotation.h"
 #include "presentation/editor/AnnotationRenderer.h"
+#include "presentation/editor/AnnotationToolManager.h"
+#include "presentation/editor/AnnotationEventHandler.h"
 
 #include <QColor>
 #include <QImage>
@@ -9,6 +11,7 @@
 #include <QRect>
 #include <QString>
 #include <QVector>
+#include <QScrollBar>
 #include <QWidget>
 
 #include <functional>
@@ -38,6 +41,8 @@ public:
     void zoomFit();
     void updateWindowTitle();
     QImage renderedImage() const;
+
+    // --- Delegated to ToolManager ---
     void setTool(AnnotationTool tool);
     void setColor(const QColor& color);
     void setStrokeWidth(int width);
@@ -55,8 +60,8 @@ public:
     void updateTextBounds(int index);
     int fontSize() const;
     void setFontSize(int size, bool persist = true);
-    int selectedIndex() const { return (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) ? selectedIndex_ : -1; }
-    const Annotation& annotationAt(int index) const { return annotations_.at(index); }
+    int selectedIndex() const;
+    const Annotation& annotationAt(int index) const { return toolManager_.annotationAt(index); }
 
     QString fontFamily() const;
     void setFontFamily(const QString& family);
@@ -94,9 +99,9 @@ public:
 
     bool gridEnabled() const;
     void setGridEnabled(bool enabled);
-    bool filled() const { return filled_; }
-    bool textOutlineEnabled() const { return textOutlineEnabled_; }
-    bool mosaicBlurred() const { return mosaicBlurred_; }
+    bool filled() const { return toolManager_.filled(); }
+    bool textOutlineEnabled() const { return toolManager_.textOutlineEnabled(); }
+    bool mosaicBlurred() const { return toolManager_.mosaicBlurred(); }
 
     QPointF mouseImagePos() const;
     QColor mousePixelColor() const;
@@ -105,12 +110,15 @@ public:
 
     int undoCount() const;
     int redoCount() const;
-    int annotationCount() const { return annotations_.size(); }
+    int annotationCount() const { return toolManager_.annotationCount(); }
     void selectAnnotation(int index);
     void deleteAnnotation(int index);
     void duplicateAnnotation(int index);
     void swapAnnotations(int i, int j);
     void setAnnotationVisible(int index, bool visible);
+
+    AnnotationRenderer& renderer() { return renderer_; }
+    AnnotationToolManager& toolManager() { return toolManager_; }
 
 signals:
     void imageEdited(const QImage& image);
@@ -144,30 +152,7 @@ protected:
 private:
     void reapplyAdjustments();
     void rebuildBackingCache();
-    void handlePanningPress(QMouseEvent* event);
-    bool handlePickingColorPress(QMouseEvent* event);
-    bool handleSelectPress(const QPoint& pos);
-    bool handleEraserPress(const QPoint& pos);
-    bool handleNumberedPress(const QPoint& pos);
-    bool handleTextPress(const QPoint& pos);
-    bool handleExistingAnnotationPress(const QPoint& pos);
-    void startDrawingAnnotation(const QPoint& pos);
-
-    void updateMouseInfo(QMouseEvent* event);
-    void updateMoveCursor(QMouseEvent* event);
-    void handleMovePan(QMouseEvent* event);
-    void handleMoveSelect(QMouseEvent* event);
-    void updateDrawingStroke(QMouseEvent* event);
-
-    bool handleTextEditingKey(QKeyEvent* event);
-    void handleZoomFit();
-    void handleAnnotationDeleteKey();
-    void handleDuplicateKey();
-    void handleLayerReorderKey(int direction);
-    void handleNudgeKey(int key);
-    void handleFontSizeChange(int delta);
-
-    void pushUndoSnapshot(bool clearRedo);
+    void wireCallbacks();
 
     struct ImageSnapshot {
         QImage image;
@@ -180,59 +165,14 @@ private:
     static constexpr int kMaxUndo = 20;
 
     AnnotationRenderer renderer_;
+    AnnotationToolManager toolManager_;
+    AnnotationEventHandler eventHandler_;
+
     QImage image_;
     QImage baseImage_;
     int brightness_ = 0;
     int contrast_ = 0;
-    QVector<Annotation> annotations_;
-    QVector<QVector<Annotation>> undoStack_;
-    QVector<ImageSnapshot> imageHistory_;
-    QVector<QVector<Annotation>> redoStack_;
-    QVector<ImageSnapshot> redoImageHistory_;
-    AnnotationTool currentTool_ = AnnotationTool::Rectangle;
-    QColor currentColor_{"#ff3b30"};
-    QColor currentFillColor_;
-    int currentStrokeWidth_ = 4;
-    int selectedIndex_ = -1;
-    int editingTextIndex_ = -1;
-    int cursorPos_ = 0;
-    QString preeditString_;
-    bool moving_ = false;
-    bool resizing_ = false;
-    int resizeCorner_ = 0;
-    QRect resizeStartBounds_;
-    QVector<QPoint> resizeStartPoints_;
-    QPoint moveOffset_;
-    Annotation draft_;
-    QPoint start_;
-    QPoint current_;
-    bool drawing_ = false;
-    bool pickingColor_ = false;
-    bool mosaicBlurred_ = false;
-    bool panning_ = false;
-    QPoint panStart_;
-    double zoomFactor_ = 1.0;
     bool modified_ = false;
-    int nextNumber_ = 1;
-    int fontSize_ = 14;
-    bool filled_ = false;
-    bool textOutlineEnabled_ = true;
-    QString currentFontFamily_;
-    bool bold_ = false;
-    bool italic_ = false;
-    bool underline_ = false;
-    int textAlignment_ = -1;
-    bool textBackgroundEnabled_ = false;
-    QColor textBackgroundColor_{0, 0, 0, 80};
-    double cropAspectRatio_ = 0.0;
-    QVector<QColor> customColors_;
-    int strokeAlpha_ = 255;
-    ArrowStyle arrowStyle_ = ArrowStyle::DefaultArrow;
-    int cornerRadius_ = 0;
-    bool gridEnabled_ = false;
-    QPointF mouseImagePos_;
-    QColor mousePixelColor_;
-    QVector<AnnotationTool> recentTools_;
 
     QPixmap backingCache_;
     double backingZoom_ = 0.0;

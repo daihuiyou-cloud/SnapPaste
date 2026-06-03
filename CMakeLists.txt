@@ -56,6 +56,10 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/capture_overlay/CaptureOverlay.cpp
     src/presentation/capture_overlay/CaptureOverlayGeometry.cpp
     src/presentation/editor/AnnotationCanvas.cpp
+    src/presentation/editor/AnnotationToolManager.h
+    src/presentation/editor/AnnotationToolManager.cpp
+    src/presentation/editor/AnnotationEventHandler.h
+    src/presentation/editor/AnnotationEventHandler.cpp
     src/presentation/editor/AnnotationRenderer.h
     src/presentation/editor/AnnotationRenderer.cpp
     src/presentation/editor/EditorIconFactory.cpp
