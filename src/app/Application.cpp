@@ -291,26 +291,30 @@ void Application::ocrRegion(const QRect& region)
         }
         auto weakAlive = alive_;
         auto ocrService = ocrService_;
+        QPointer<Application> guard(this);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus(tr("OCR processing..."));
-        std::thread worker([weakAlive, ocrService, image, this]() {
+        std::thread worker([weakAlive, ocrService, image, guard]() {
             if (!*weakAlive) return;
             const auto outcome = ocrService->recognizeText(image);
-            QMetaObject::invokeMethod(qApp, [weakAlive, outcome, this]() {
-                if (!*weakAlive) return;
+            QMetaObject::invokeMethod(qApp, [weakAlive, outcome, guard]() {
+                if (!*weakAlive || guard.isNull()) return;
                 QApplication::restoreOverrideCursor();
                 if (!outcome.ok) {
-                    this->showStatus(outcome.message);
+                    guard->showStatus(outcome.message);
                     return;
                 }
 
                 auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
-                this->ocrWindow_ = win;
-                QObject::connect(win, &QObject::destroyed, [this] {
-                    this->ocrWindow_.clear();
+                guard->ocrWindow_ = win;
+#pragma warning(push)
+#pragma warning(disable: 4573)
+                QObject::connect(win, &QObject::destroyed, win, [guard] {
+                    if (guard) guard->ocrWindow_.clear();
                 });
-                QObject::connect(win, &OcrResultWindow::pasteRequested, [this] { this->pasteFromClipboard(); });
-                this->showStatus(
+                QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
+#pragma warning(pop)
+                guard->showStatus(
                     tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
             }, Qt::QueuedConnection);
         });
