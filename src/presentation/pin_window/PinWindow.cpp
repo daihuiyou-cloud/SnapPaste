@@ -712,7 +712,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     painter.drawImage(rect(), renderedImage());
 
     if (thumbnailMode_) {
-        painter.setPen(QColor("#31c7a4"));
+        painter.setPen(QColor("#2fbf9f"));
         auto pinFont = QApplication::font();
         pinFont.setPointSize(9);
         pinFont.setBold(true);
@@ -732,7 +732,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     }
 
     if (item_.state.options.clickThrough) {
-        QPen dashPen(QColor("#31c7a4"), 2, Qt::DashLine);
+        QPen dashPen(QColor("#2fbf9f"), 2, Qt::DashLine);
         dashPen.setDashPattern({6, 4});
         painter.setPen(dashPen);
         painter.setBrush(QColor(20, 26, 33, 18));
@@ -742,7 +742,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;
     if (showControls) {
         painter.fillRect(rect(), QColor(20, 26, 33, 28));
-        painter.setPen(QPen(QColor("#31c7a4"), 2));
+        painter.setPen(QPen(QColor("#2fbf9f"), 2));
         painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
         painter.setPen(QPen(QColor(255, 255, 255, 110), 1));
         painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);

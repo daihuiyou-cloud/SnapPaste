@@ -113,7 +113,7 @@ private:
     {
         if (recording_) {
             setStyleSheet(
-                "QLabel { background: #2fbf9f; color: #101418;"
+                "QLabel { background: #2fbf9f; color: #1f2329;"
                 " padding: 4px 12px; border-radius: 4px; font: bold 12px; }");
         } else {
             setStyleSheet(

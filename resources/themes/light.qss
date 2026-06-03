@@ -155,3 +155,11 @@ QScrollBar::handle:horizontal:pressed { background: rgba(160,160,160,0.65); }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QScrollBar::corner { background: transparent; }
+
+QToolTip {
+    background: #ffffff;
+    color: #20242a;
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 4px 8px;
+    font-size: 11px;
+}
