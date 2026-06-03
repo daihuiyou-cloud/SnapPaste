@@ -346,7 +346,7 @@ void EditorWindow::syncPanelDefaults()
         for (auto* btn : strokeGroup_->buttons())
             btn->setChecked(btn->property("width").toInt() == canvas_->strokeWidth());
     }
-    for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
+    for (auto* btn : chipButtons_) {
         auto key = btn->property("chipKey").toByteArray();
         if (key == "Fill")
             btn->setChecked(canvas_->filled());
@@ -395,7 +395,7 @@ void EditorWindow::onToolChanged(AnnotationTool tool)
     }
     if (propsWidget_) {
         bool anyVisible = false;
-        for (auto* chip : propsWidget_->findChildren<QToolButton*>()) {
+        for (auto* chip : chipButtons_) {
             auto key = chip->property("chipKey").toByteArray();
             bool visible = true;
             if (key == "Fill")
@@ -797,6 +797,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
     auto* chipRow = new QHBoxLayout();
     chipRow->setContentsMargins(0, 0, 0, 0);
     chipRow->setSpacing(4);
+    chipButtons_.clear();
     for (const auto& p : props) {
         auto* btn = new QToolButton(content);
         btn->setText(QCoreApplication::translate("EditorWindow", p.text));
@@ -811,6 +812,7 @@ void EditorWindow::buildStrokeSection(QVBoxLayout* layout, QWidget* content)
             (canvas_->*p.setter)(checked);
         });
         chipRow->addWidget(btn);
+        chipButtons_.push_back(btn);
     }
     propsWidget_ = new QWidget(content);
     propsWidget_->setLayout(chipRow);
@@ -1572,7 +1574,7 @@ void EditorWindow::wireToolPanelConnections()
                 for (auto* btn : strokeGroup_->buttons())
                     btn->setChecked(btn->property("width").toInt() == a.strokeWidth);
             }
-            for (auto* btn : propsWidget_->findChildren<QToolButton*>()) {
+            for (auto* btn : chipButtons_) {
                 auto key = btn->property("chipKey").toByteArray();
                 if (key == "Fill")
                     btn->setChecked(a.filled);

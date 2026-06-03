@@ -105,6 +105,7 @@ private:
     QButtonGroup* arrowGroup_ = nullptr;
     QSlider* radiusSlider_ = nullptr;
     QLabel* radiusVal_ = nullptr;
+    QVector<QToolButton*> chipButtons_;
 
     void rebuildLayerList();
 };
