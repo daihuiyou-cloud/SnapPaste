@@ -53,11 +53,12 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
         IconName::RotateRight,
         IconName::FlipHorizontal,
         IconName::FlipVertical,
+        IconName::Copy,
         IconName::ClickThrough,
         IconName::Pin
     };
-    constexpr int kToggleIdxClickThrough = 5;
-    constexpr int kToggleIdxAlwaysOnTop = 6;
+    constexpr int kToggleIdxClickThrough = 6;
+    constexpr int kToggleIdxAlwaysOnTop = 7;
 
     for (int i = 0; i < btns.size(); ++i) {
         const bool active = (i == kToggleIdxClickThrough && clickThroughActive)

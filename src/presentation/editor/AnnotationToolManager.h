@@ -37,9 +37,11 @@ public:
     std::function<void()> onWindowTitleUpdate;
     std::function<void(const QSize&)> onResizeCanvas;
     std::function<void(int, int)> onScrollBy;
+    std::function<void()> onImageHistoryRestored;
 
     // --- Image (owned by Canvas, referenced here) ---
     void setImage(const QImage& image, double zoomFactor);
+    void syncImageState(const QImage& image, const QImage& baseImage, int brightness, int contrast);
     const QImage& image() const { return image_; }
     const QImage& baseImage() const { return baseImage_; }
     void setImageDirect(const QImage& img) { image_ = img; }

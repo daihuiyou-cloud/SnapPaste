@@ -518,6 +518,7 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Rotate Right"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Flip Horizontal"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Flip Vertical"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Copy"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Click Through"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top")
         };
@@ -627,8 +628,9 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
                 case 2: rotateBy(90); break;
                 case 3: flipH(); break;
                 case 4: flipV(); break;
-                case 5: toggleClickThrough(); break;
-                case 6: toggleAlwaysOnTop(); break;
+                case 5: emit copyRequested(renderedImage()); break;
+                case 6: toggleClickThrough(); break;
+                case 7: toggleAlwaysOnTop(); break;
                 }
                 event->accept();
                 return;

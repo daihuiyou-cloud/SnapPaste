@@ -59,6 +59,14 @@ void AnnotationToolManager::setImage(const QImage& /*image*/, double zoom)
     zoomFactor_ = zoom;
 }
 
+void AnnotationToolManager::syncImageState(const QImage& image, const QImage& baseImage, int brightness, int contrast)
+{
+    image_ = image;
+    baseImage_ = baseImage;
+    brightness_ = brightness;
+    contrast_ = contrast;
+}
+
 // --- Tool state setters ---
 
 void AnnotationToolManager::setTool(AnnotationTool tool)
@@ -442,6 +450,7 @@ void AnnotationToolManager::undo()
     contrast_ = snap.contrast;
     zoomFactor_ = snap.zoomFactor;
 
+    if (onImageHistoryRestored) onImageHistoryRestored();
     if (onWindowTitleUpdate) onWindowTitleUpdate();
 
     int maxNumber = 0;
@@ -477,6 +486,7 @@ void AnnotationToolManager::redo()
     contrast_ = snap.contrast;
     zoomFactor_ = snap.zoomFactor;
 
+    if (onImageHistoryRestored) onImageHistoryRestored();
     if (onWindowTitleUpdate) onWindowTitleUpdate();
 
     selectedIndex_ = -1;

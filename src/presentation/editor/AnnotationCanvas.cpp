@@ -101,6 +101,15 @@ void AnnotationCanvas::wireCallbacks()
         }
     };
 
+    toolManager_.onImageHistoryRestored = [this] {
+        image_ = toolManager_.image();
+        baseImage_ = toolManager_.baseImage();
+        brightness_ = toolManager_.brightness();
+        contrast_ = toolManager_.contrast();
+        rebuildBackingCache();
+        update();
+    };
+
     toolManager_.onMouseInfoChanged = [this](QPointF pos, QColor color) {
         emit mouseInfoChanged(pos, color);
     };
@@ -225,17 +234,28 @@ void AnnotationCanvas::reapplyAdjustments()
     update();
 }
 
-void AnnotationCanvas::adjustImage(int brightness, int contrast)
+void AnnotationCanvas::beginImageAdjust()
+{
+    if (baseImage_.isNull()) return;
+    toolManager_.syncImageState(image_, baseImage_, brightness_, contrast_);
+    toolManager_.pushUndo();
+}
+
+void AnnotationCanvas::previewAdjustImage(int brightness, int contrast)
 {
     if (baseImage_.isNull()) return;
     brightness = qBound(-100, brightness, 100);
     contrast = qBound(-100, contrast, 100);
     if (brightness == brightness_ && contrast == contrast_) return;
-    toolManager_.pushUndo();
-    // Save image state for undo
     brightness_ = brightness;
     contrast_ = contrast;
     reapplyAdjustments();
+}
+
+void AnnotationCanvas::adjustImage(int brightness, int contrast)
+{
+    beginImageAdjust();
+    previewAdjustImage(brightness, contrast);
 }
 
 void AnnotationCanvas::rotateImage(int degrees)

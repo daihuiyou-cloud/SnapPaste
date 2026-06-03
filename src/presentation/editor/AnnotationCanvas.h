@@ -31,6 +31,9 @@ public:
     QPoint toImage(QPoint widgetPt) const;
     void setImage(QImage image);
     void adjustImage(int brightness, int contrast);
+    void beginImageAdjust();
+    void previewAdjustImage(int brightness, int contrast);
+    const QImage& image() const { return image_; }
     void rotateImage(int degrees);
     void flipImage(bool horizontal, bool vertical);
     void applyCrop(QRect cropRect);
@@ -80,6 +83,9 @@ public:
 
     double zoomFactor() const;
     QSize imageSize() const;
+    const QImage& baseImage() const { return baseImage_; }
+    int brightness() const { return brightness_; }
+    int contrast() const { return contrast_; }
     QColor color() const;
     int strokeWidth() const;
     const QVector<QColor>& recentColors() const;
