@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPixmap>
 
 #include <algorithm>
 #include <cmath>
@@ -13,20 +14,30 @@ namespace snappaste {
 namespace {
     const QColor kCheckerLight("#555555");
     const QColor kCheckerDark("#333333");
+    const QColor kGridColor(255, 255, 255, 22);
+
+    const QPixmap& checkerTile()
+    {
+        static const QPixmap tile = [] {
+            QPixmap t(16, 16);
+            QPainter p(&t);
+            p.fillRect(0, 0, 8, 8, kCheckerLight);
+            p.fillRect(8, 0, 8, 8, kCheckerDark);
+            p.fillRect(0, 8, 8, 8, kCheckerDark);
+            p.fillRect(8, 8, 8, 8, kCheckerLight);
+            p.end();
+            return t;
+        }();
+        return tile;
+    }
 }
 
 void AnnotationRenderer::drawCheckerboard(QPainter& painter, const QImage& sourceImage)
 {
-    int tile = 8;
     auto dpr = sourceImage.devicePixelRatio();
-    auto logicalH = sourceImage.height() / dpr;
     auto logicalW = sourceImage.width() / dpr;
-    for (int y = 0; y < logicalH; y += tile) {
-        for (int x = 0; x < logicalW; x += tile) {
-            bool light = ((x / tile) + (y / tile)) % 2 == 0;
-            painter.fillRect(x, y, tile, tile, light ? kCheckerLight : kCheckerDark);
-        }
-    }
+    auto logicalH = sourceImage.height() / dpr;
+    painter.drawTiledPixmap(QRect(0, 0, logicalW, logicalH), checkerTile());
 }
 
 void AnnotationRenderer::drawGridOverlay(QPainter& painter, const QRect& imageRect, double zoomFactor)
@@ -37,7 +48,7 @@ void AnnotationRenderer::drawGridOverlay(QPainter& painter, const QRect& imageRe
     if (step < 8) step = 8;
     painter.save();
     painter.setClipRect(0, 0, w, h);
-    painter.setPen(QPen(QColor(255, 255, 255, 22), 1));
+    painter.setPen(QPen(kGridColor, 1));
     for (int x = step; x < w; x += step)
         painter.drawLine(x, 0, x, h);
     for (int y = step; y < h; y += step)
@@ -300,7 +311,7 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
             const auto clipped = blockRect.intersected(sourceImage.rect());
             if (clipped.isEmpty()) continue;
             if (annotation.blurRadius > 0) {
-                painter->drawImage(clipped.topLeft(), mosaicBlurCache_.copy(clipped));
+                painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
             } else {
                 constexpr int kBlock = 8;
                 const int bw = qMax(1, clipped.width() / kBlock);
@@ -320,7 +331,7 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
                 mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
                 mosaicCachedRadius_ = annotation.blurRadius;
             }
-            painter->drawImage(clipped.topLeft(), mosaicBlurCache_.copy(clipped));
+            painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
         } else {
             constexpr int kBlockSize = 8;
             const int bw = qMax(1, clipped.width() / kBlockSize);
