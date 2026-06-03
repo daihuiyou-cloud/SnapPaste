@@ -139,6 +139,7 @@ signals:
     void textPropertiesChanged();
     void cropAspectRatioChanged(double ratio);
     void modified();
+    void annotationsChanged();
     void selectionChanged();
 
 protected:

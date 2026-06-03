@@ -386,6 +386,7 @@ void AnnotationCanvas::markModified()
     renderer_.invalidateCache();
     backingCacheDirty_ = true;
     emit modified();
+    emit annotationsChanged();
     updateWindowTitle();
     update();
 }

@@ -1523,7 +1523,8 @@ void EditorWindow::wireToolPanelConnections()
     connect(undoBtn_, &QToolButton::clicked, this, [this] { canvas_->undo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
     connect(redoBtn_, &QToolButton::clicked, this, [this] { canvas_->redo(); refreshPanelUi(); rebuildLayerList(); canvas_->setFocus(); });
 
-    connect(canvas_, &AnnotationCanvas::modified, this, [this] { refreshPanelUi(); rebuildLayerList(); });
+    connect(canvas_, &AnnotationCanvas::modified, this, [this] { refreshPanelUi(); });
+    connect(canvas_, &AnnotationCanvas::annotationsChanged, this, [this] { rebuildLayerList(); });
 
     connect(copyBtn_, &QToolButton::clicked, this, [this] {
         emit imageEdited(canvas_->renderedImage());
