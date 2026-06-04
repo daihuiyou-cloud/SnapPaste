@@ -126,10 +126,13 @@ void AnnotationRenderer::drawAnnotations(QPainter& painter,
         return;
     }
 
-    QImage cache(sourceImage.size(), QImage::Format_ARGB32_Premultiplied);
-    cache.setDevicePixelRatio(sourceImage.devicePixelRatio());
-    cache.fill(Qt::transparent);
-    QPainter cachePainter(&cache);
+    if (annotationCache_.size() != sourceImage.size() ||
+        annotationCache_.format() != QImage::Format_ARGB32_Premultiplied) {
+        annotationCache_ = QImage(sourceImage.size(), QImage::Format_ARGB32_Premultiplied);
+    }
+    annotationCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
+    annotationCache_.fill(Qt::transparent);
+    QPainter cachePainter(&annotationCache_);
     cachePainter.setRenderHint(QPainter::Antialiasing, true);
     cachePainter.setRenderHint(QPainter::TextAntialiasing, true);
 
@@ -138,8 +141,6 @@ void AnnotationRenderer::drawAnnotations(QPainter& painter,
         drawAnnotation(&cachePainter, sourceImage, annotations.at(i), fontSize);
     }
     cachePainter.end();
-
-    annotationCache_ = cache;
     cacheValid_ = true;
     painter.drawImage(QPoint(0, 0), annotationCache_);
 }

@@ -65,13 +65,13 @@ void CaptureViewModel::setCurrentImage(const QImage& image)
 
 void CaptureViewModel::captureRegion(const QRect& region)
 {
-    const auto result = workflow_.captureRegion(region);
+    auto result = workflow_.captureRegion(region);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
     }
 
-    currentImage_ = result.value();
+    currentImage_ = std::move(result.value());
     const auto screen = QGuiApplication::screenAt(region.center());
     sourceScreen_ = screen != nullptr ? screen->name() : "primary";
     emit imageReady(currentImage_);
@@ -87,10 +87,10 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
     auto weakAlive = alive_;
     auto task = [weakAlive, guard, region, segments, requestId, onReady = std::move(onReady), &workflow = workflow_]() mutable {
         if (!*weakAlive) return;
-        const auto result = workflow.captureRegion(region, segments);
+        auto result = workflow.captureRegion(region, segments);
         if (!*weakAlive) return;
 
-        QMetaObject::invokeMethod(qApp, [weakAlive, guard, region, requestId, result, onReady = std::move(onReady)]() mutable {
+        QMetaObject::invokeMethod(qApp, [weakAlive, guard, region, requestId, result = std::move(result), onReady = std::move(onReady)]() mutable {
             if (!*weakAlive || guard.isNull()) return;
             if (guard->requestGeneration_.load() != requestId) return;
 
@@ -99,7 +99,7 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
                 return;
             }
 
-            guard->currentImage_ = result.value();
+            guard->currentImage_ = std::move(result.value());
             const auto screen = QGuiApplication::screenAt(region.center());
             guard->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
             emit guard->imageReady(guard->currentImage_);
