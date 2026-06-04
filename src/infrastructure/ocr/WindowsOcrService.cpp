@@ -104,7 +104,7 @@ void WindowsOcrService::setLanguage(const QString& bcp47Tag)
 OcrResult WindowsOcrService::recognizeText(const QImage& source)
 {
     const auto requestId = currentRequestId_.load();
-    std::packaged_task<OcrResult()> task([this, &source, requestId] {
+    std::packaged_task<OcrResult()> task([this, source, requestId] {
         return recognizeTextImpl(source, requestId);
     });
     auto future = task.get_future();

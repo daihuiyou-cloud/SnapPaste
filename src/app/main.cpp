@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     QApplication qtApplication(argc, argv);
     QCoreApplication::setOrganizationName("SnapPaste");
     QCoreApplication::setApplicationName("SnapPaste");
-    QCoreApplication::setApplicationVersion("0.1.0");
+    QCoreApplication::setApplicationVersion("0.2.0");
 
     installTranslators();
 

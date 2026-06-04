@@ -146,7 +146,7 @@ HotkeyAction WinHotkeyService::actionForId(int id)
     case kCaptureHotkeyId:
         return HotkeyAction::Capture;
     default:
-        Q_ASSERT_X(false, "actionForId", "unknown hotkey id");
+        qWarning("WinHotkeyService: unknown hotkey id %d", id);
         return HotkeyAction::Capture;
     }
 }

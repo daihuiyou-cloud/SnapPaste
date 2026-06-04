@@ -6,6 +6,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMetaObject>
+#include <QPointer>
 #include <QRunnable>
 #include <QScreen>
 
@@ -82,30 +83,28 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
     const auto segments = captureSegmentsFor(region);
     workerPool_.clear();
 
+    QPointer<CaptureViewModel> guard(this);
     auto weakAlive = alive_;
-    auto task = [weakAlive, region, segments, requestId, onReady = std::move(onReady), this]() mutable {
+    auto task = [weakAlive, guard, region, segments, requestId, onReady = std::move(onReady), &workflow = workflow_]() mutable {
         if (!*weakAlive) return;
-        const auto result = this->workflow_.captureRegion(region, segments);
-        if (!*weakAlive || this->shuttingDown_.load() || this->requestGeneration_.load() != requestId) {
-            return;
-        }
+        const auto result = workflow.captureRegion(region, segments);
+        if (!*weakAlive) return;
 
-        QMetaObject::invokeMethod(this, [weakAlive, region, requestId, result, onReady = std::move(onReady), this]() mutable {
-            if (!*weakAlive || this->shuttingDown_.load() || this->requestGeneration_.load() != requestId) {
-                return;
-            }
+        QMetaObject::invokeMethod(qApp, [weakAlive, guard, region, requestId, result, onReady = std::move(onReady)]() mutable {
+            if (!*weakAlive || guard.isNull()) return;
+            if (guard->requestGeneration_.load() != requestId) return;
 
             if (result.isError()) {
-                emit this->errorOccurred(result.error());
+                emit guard->errorOccurred(result.error());
                 return;
             }
 
-            this->currentImage_ = result.value();
+            guard->currentImage_ = result.value();
             const auto screen = QGuiApplication::screenAt(region.center());
-            this->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
-            emit this->imageReady(this->currentImage_);
+            guard->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
+            emit guard->imageReady(guard->currentImage_);
             if (onReady) {
-                onReady(this->currentImage_);
+                onReady(guard->currentImage_);
             }
         }, Qt::QueuedConnection);
     };

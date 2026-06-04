@@ -85,16 +85,22 @@ void Application::connectCoreSignals()
     connect(&trayController_, &TrayController::hidePinsRequested, this, &Application::hideAllPins);
     connect(&trayController_, &TrayController::showPinsRequested, this, &Application::showAllPins);
     connect(&trayController_, &TrayController::closeAllPinsRequested, this, [this] {
-        for (auto it = pinWindows_.begin(); it != pinWindows_.end(); it = pinWindows_.begin()) {
-            if (it->second) {
-                context_.pinViewModel().close(it->first);
-                auto slotIt = pinIdToSlot_.find(it->first);
-                if (slotIt != pinIdToSlot_.end()) {
-                    freePinSlot(slotIt->second);
-                }
-                pinIdToSlot_.erase(it->first);
-                pinWindows_.erase(it);
+        const auto ids = [this] {
+            QVector<qint64> result;
+            result.reserve(pinWindows_.size());
+            for (const auto& entry : pinWindows_) {
+                result.push_back(entry.first);
             }
+            return result;
+        }();
+        for (const auto id : ids) {
+            context_.pinViewModel().close(id);
+            auto slotIt = pinIdToSlot_.find(id);
+            if (slotIt != pinIdToSlot_.end()) {
+                freePinSlot(slotIt->second);
+            }
+            pinIdToSlot_.erase(id);
+            pinWindows_.erase(id);
         }
         showStatus(tr("All pinned images closed."));
     });
