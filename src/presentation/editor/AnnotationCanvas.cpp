@@ -213,8 +213,8 @@ void AnnotationCanvas::rebuildBackingCache()
 
 void AnnotationCanvas::reapplyAdjustments()
 {
+    image_ = baseImage_.copy();
     if (brightness_ != 0 || contrast_ != 0) {
-        image_ = baseImage_.copy();
         double contrastFactor = (contrast_ + 100.0) / 100.0;
 
         quint8 lut[256];
@@ -231,8 +231,6 @@ void AnnotationCanvas::reapplyAdjustments()
                 line[x] = qRgba(lut[qRed(px)], lut[qGreen(px)], lut[qBlue(px)], qAlpha(px));
             }
         }
-    } else {
-        image_ = baseImage_;
     }
     toolManager_.setImageDirect(image_);
     auto logicalSize = image_.size() / image_.devicePixelRatio();
