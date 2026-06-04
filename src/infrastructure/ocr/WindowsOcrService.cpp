@@ -24,22 +24,22 @@ QImage preprocessForOcr(const QImage& src)
 {
     if (src.isNull()) return {};
 
-    QImage gray;
-    if (src.format() == QImage::Format_Grayscale8) {
-        gray = src;
+    QImage result;
+    if (src.format() == QImage::Format_ARGB32_Premultiplied) {
+        result = src;
     } else {
-        gray = src.convertToFormat(QImage::Format_Grayscale8);
+        result = src.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
 
-    const double minDim = qMin(gray.width(), gray.height());
+    const double minDim = qMin(result.width(), result.height());
     if (minDim < 200) {
         const double factor = qMin(4.0, 200.0 / minDim);
-        gray = gray.scaled(static_cast<int>(gray.width() * factor),
-                           static_cast<int>(gray.height() * factor),
-                           Qt::KeepAspectRatio, Qt::FastTransformation);
+        result = result.scaled(static_cast<int>(result.width() * factor),
+                               static_cast<int>(result.height() * factor),
+                               Qt::KeepAspectRatio, Qt::FastTransformation);
     }
 
-    return gray.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    return result;
 }
 
 #if defined(SNAPPASTE_HAS_WINRT_OCR)

@@ -535,9 +535,11 @@ void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalR
 
     painter.setBrush(kSelectionColor);
     painter.setPen(QPen(kHandleBorderColor, 1));
-    const auto handles = {Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
-                          Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left};
-    for (const auto handle : handles) {
+    static const Handle kHandles[] = {
+        Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
+        Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left
+    };
+    for (const auto handle : kHandles) {
         const auto handleLocal = handleRect(handle).translated(-geometry().topLeft());
         painter.drawRoundedRect(handleLocal, 2, 2);
     }
@@ -677,9 +679,11 @@ QRect CaptureOverlay::handleRect(Handle handle) const
 
 CaptureOverlay::Handle CaptureOverlay::hitTest(const QPoint& globalPosition) const
 {
-    const auto handles = {Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
-                          Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left};
-    for (const auto handle : handles) {
+    static const Handle kHandles[] = {
+        Handle::TopLeft, Handle::Top, Handle::TopRight, Handle::Right,
+        Handle::BottomRight, Handle::Bottom, Handle::BottomLeft, Handle::Left
+    };
+    for (const auto handle : kHandles) {
         if (handleRect(handle).adjusted(-kHandleHitSlop, -kHandleHitSlop, kHandleHitSlop, kHandleHitSlop).contains(globalPosition)) {
             return handle;
         }

@@ -28,8 +28,16 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
         return;
     }
 
+    struct GrabInfo {
+        QRect logicalIntersect;
+        qreal dpr = 1.0;
+        QRect physSeg;
+    };
+
     screenCache_.clear();
+    QVector<GrabInfo> grabs;
     QRect physicalBounds;
+
     for (auto* screen : QGuiApplication::screens()) {
         if (screen == nullptr) continue;
 
@@ -44,6 +52,8 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
             static_cast<int>(std::floor(intersection.y() * dpr)),
             static_cast<int>(std::ceil((intersection.x() + intersection.width()) * dpr)) - static_cast<int>(std::floor(intersection.x() * dpr)),
             static_cast<int>(std::ceil((intersection.y() + intersection.height()) * dpr)) - static_cast<int>(std::floor(intersection.y() * dpr)));
+        grabs.push_back({intersection, dpr, physSeg});
+
         if (physicalBounds.isNull()) {
             physicalBounds = physSeg;
         } else {
@@ -56,27 +66,18 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
     snapshotOrigin_ = physicalBounds.topLeft();
 
     QPainter painter(&snapshot_);
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen == nullptr) continue;
-
-        const auto intersection = screen->geometry().intersected(bounds_);
-        if (!intersection.isValid()) continue;
-
-        const auto pixmap = screen->grabWindow(0);
+    for (const auto& g : grabs) {
+        const auto pixmap = QGuiApplication::screenAt(g.logicalIntersect.center())->grabWindow(
+            0, g.logicalIntersect.x(), g.logicalIntersect.y(),
+            g.logicalIntersect.width(), g.logicalIntersect.height());
         if (pixmap.isNull()) continue;
 
-        auto dpr = screen->devicePixelRatio();
         auto image = pixmap.toImage();
-        image.setDevicePixelRatio(1.0);
 
-        QPoint physTarget(
-            static_cast<int>(std::floor(intersection.x() * dpr)) - physicalBounds.left(),
-            static_cast<int>(std::floor(intersection.y() * dpr)) - physicalBounds.top());
-        QSize physSize(
-            static_cast<int>(std::ceil((intersection.x() + intersection.width()) * dpr)) - static_cast<int>(std::floor(intersection.x() * dpr)),
-            static_cast<int>(std::ceil((intersection.y() + intersection.height()) * dpr)) - static_cast<int>(std::floor(intersection.y() * dpr)));
+        QPoint physTarget(g.physSeg.x() - physicalBounds.left(),
+                          g.physSeg.y() - physicalBounds.top());
 
-        painter.drawImage(physTarget, image, QRect(QPoint(0, 0), physSize));
+        painter.drawImage(physTarget, image);
     }
 }
 
