@@ -493,6 +493,13 @@ int AnnotationCanvas::cornerRadius() const { return toolManager_.cornerRadius();
 void AnnotationCanvas::setCornerRadius(int radius) { toolManager_.setCornerRadius(radius); }
 bool AnnotationCanvas::gridEnabled() const { return toolManager_.gridEnabled(); }
 void AnnotationCanvas::setGridEnabled(bool enabled) { toolManager_.setGridEnabled(enabled); }
+int AnnotationCanvas::undoCount() const { return toolManager_.undoCount(); }
+int AnnotationCanvas::redoCount() const { return toolManager_.redoCount(); }
+void AnnotationCanvas::selectAnnotation(int index) { toolManager_.selectAnnotation(index); }
+void AnnotationCanvas::deleteAnnotation(int index) { toolManager_.deleteAnnotation(index); }
+void AnnotationCanvas::duplicateAnnotation(int index) { toolManager_.duplicateAnnotation(index); }
+void AnnotationCanvas::swapAnnotations(int i, int j) { toolManager_.swapAnnotations(i, j); }
+void AnnotationCanvas::setAnnotationVisible(int index, bool visible) { toolManager_.setAnnotationVisible(index, visible); }
 
 void AnnotationCanvas::updateBrushCursor()
 {

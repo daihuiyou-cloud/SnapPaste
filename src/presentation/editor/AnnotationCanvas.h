@@ -109,10 +109,6 @@ public:
     bool textOutlineEnabled() const { return toolManager_.textOutlineEnabled(); }
     bool mosaicBlurred() const { return toolManager_.mosaicBlurred(); }
 
-
-
-    const QVector<AnnotationTool>& recentTools() const;
-
     int undoCount() const;
     int redoCount() const;
     int annotationCount() const { return toolManager_.annotationCount(); }
