@@ -109,8 +109,7 @@ public:
     bool textOutlineEnabled() const { return toolManager_.textOutlineEnabled(); }
     bool mosaicBlurred() const { return toolManager_.mosaicBlurred(); }
 
-    QPointF mouseImagePos() const;
-    QColor mousePixelColor() const;
+
 
     const QVector<AnnotationTool>& recentTools() const;
 
@@ -135,7 +134,7 @@ signals:
     void strokeAlphaChanged(int alpha);
     void arrowStyleChanged(int style);
     void cornerRadiusChanged(int radius);
-    void mouseInfoChanged(QPointF pos, QColor color);
+
     void textPropertiesChanged();
     void cropAspectRatioChanged(double ratio);
     void modified();

@@ -56,7 +56,6 @@ public:
 
 private:
     QPoint toImage(QPoint widgetPt) const;
-    void updateMouseInfo(QMouseEvent* event);
     void updateMoveCursor(QMouseEvent* event);
 
     void handlePanningPress(QMouseEvent* event);

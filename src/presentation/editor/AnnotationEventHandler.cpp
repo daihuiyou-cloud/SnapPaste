@@ -381,26 +381,6 @@ void AnnotationEventHandler::mousePressEvent(QMouseEvent* event)
     }
 }
 
-void AnnotationEventHandler::updateMouseInfo(QMouseEvent* event)
-{
-    const auto& img = toolManager_.image();
-    if (!img.isNull()) {
-        QPointF imgPos(toImage(event->pos()));
-        toolManager_.setMouseImagePos(imgPos);
-        auto dpr = img.devicePixelRatio();
-        QPoint px(static_cast<int>(imgPos.x() * dpr),
-                  static_cast<int>(imgPos.y() * dpr));
-        QRect imgRect(QPoint(0, 0), img.size());
-        if (imgRect.contains(px)) {
-            QRgb pixel = reinterpret_cast<const QRgb*>(img.constScanLine(px.y()))[px.x()];
-            QColor pixelColor = QColor::fromRgba(pixel);
-            toolManager_.setMousePixelColor(pixelColor);
-            if (toolManager_.onMouseInfoChanged)
-                toolManager_.onMouseInfoChanged(imgPos, pixelColor);
-        }
-    }
-}
-
 void AnnotationEventHandler::updateMoveCursor(QMouseEvent* event)
 {
     auto tool = toolManager_.currentTool();
@@ -536,7 +516,6 @@ void AnnotationEventHandler::updateDrawingStroke(QMouseEvent* event)
 
 void AnnotationEventHandler::mouseMoveEvent(QMouseEvent* event)
 {
-    updateMouseInfo(event);
     if (toolManager_.panning()) {
         handleMovePan(event);
         event->accept();

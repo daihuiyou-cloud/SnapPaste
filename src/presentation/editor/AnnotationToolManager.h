@@ -32,7 +32,6 @@ public:
     std::function<void(double)> onCropAspectRatioChanged;
     std::function<void()> onImageEdited;
     std::function<void()> onUpdateRequired;
-    std::function<void(QPointF, QColor)> onMouseInfoChanged;
     std::function<void(QCursor)> onSetCursor;
     std::function<void()> onWindowTitleUpdate;
     std::function<void(const QSize&)> onResizeCanvas;
@@ -167,12 +166,6 @@ public:
     QPoint panStart() const { return panStart_; }
     void setPanStart(const QPoint& p) { panStart_ = p; }
 
-    // --- Mouse info ---
-    QPointF mouseImagePos() const { return mouseImagePos_; }
-    void setMouseImagePos(const QPointF& pos) { mouseImagePos_ = pos; }
-    QColor mousePixelColor() const { return mousePixelColor_; }
-    void setMousePixelColor(const QColor& c) { mousePixelColor_ = c; }
-
     // --- Recent tools / colors ---
     const QVector<AnnotationTool>& recentTools() const { return recentTools_; }
     const QVector<QColor>& recentColors() const { return customColors_; }
@@ -283,10 +276,6 @@ private:
     // Pan
     bool panning_ = false;
     QPoint panStart_;
-
-    // Mouse info
-    QPointF mouseImagePos_;
-    QColor mousePixelColor_;
 
     // Recent
     QVector<AnnotationTool> recentTools_;

@@ -16,7 +16,6 @@ namespace {
     const QColor kCanvasBg("#1f2329");
     const QColor kAccentColor("#2fbf9f");
     const QColor kWhite("#ffffff");
-    const QColor kInfoBg(0, 0, 0, 180);
 }
 
 AnnotationCanvas::AnnotationCanvas(QWidget* parent)
@@ -117,10 +116,6 @@ void AnnotationCanvas::wireCallbacks()
         contrast_ = toolManager_.contrast();
         rebuildBackingCache();
         update();
-    };
-
-    toolManager_.onMouseInfoChanged = [this](QPointF pos, QColor color) {
-        emit mouseInfoChanged(pos, color);
     };
 
     // Wire EventHandler default callbacks
@@ -498,16 +493,6 @@ int AnnotationCanvas::cornerRadius() const { return toolManager_.cornerRadius();
 void AnnotationCanvas::setCornerRadius(int radius) { toolManager_.setCornerRadius(radius); }
 bool AnnotationCanvas::gridEnabled() const { return toolManager_.gridEnabled(); }
 void AnnotationCanvas::setGridEnabled(bool enabled) { toolManager_.setGridEnabled(enabled); }
-QPointF AnnotationCanvas::mouseImagePos() const { return toolManager_.mouseImagePos(); }
-QColor AnnotationCanvas::mousePixelColor() const { return toolManager_.mousePixelColor(); }
-const QVector<AnnotationTool>& AnnotationCanvas::recentTools() const { return toolManager_.recentTools(); }
-int AnnotationCanvas::undoCount() const { return toolManager_.undoCount(); }
-int AnnotationCanvas::redoCount() const { return toolManager_.redoCount(); }
-void AnnotationCanvas::selectAnnotation(int index) { toolManager_.selectAnnotation(index); }
-void AnnotationCanvas::deleteAnnotation(int index) { toolManager_.deleteAnnotation(index); }
-void AnnotationCanvas::duplicateAnnotation(int index) { toolManager_.duplicateAnnotation(index); }
-void AnnotationCanvas::swapAnnotations(int i, int j) { toolManager_.swapAnnotations(i, j); }
-void AnnotationCanvas::setAnnotationVisible(int index, bool visible) { toolManager_.setAnnotationVisible(index, visible); }
 
 void AnnotationCanvas::updateBrushCursor()
 {
@@ -626,47 +611,6 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         renderer_.drawTextEditCursor(painter, toolManager_.annotations(),
             toolManager_.editingTextIndex(), toolManager_.cursorPos(),
             toolManager_.preeditString(), toolManager_.fontSize(), zf);
-    }
-    // Pixel info overlay near cursor
-    QPointF mouseImgPos = toolManager_.mouseImagePos();
-    QColor mousePxColor = toolManager_.mousePixelColor();
-    if (!image_.isNull() && mousePxColor.isValid()) {
-        auto dpr = image_.devicePixelRatio();
-        QPoint px(static_cast<int>(mouseImgPos.x() * dpr),
-                  static_cast<int>(mouseImgPos.y() * dpr));
-        QRect imgRect(QPoint(0, 0), image_.size());
-        if (imgRect.contains(px)) {
-            double zf = toolManager_.zoomFactor();
-            QString info = tr("(%1, %2) %3")
-                .arg(static_cast<int>(mouseImgPos.x()),
-                     static_cast<int>(mouseImgPos.y()))
-                .arg(mousePxColor.name(QColor::HexRgb).toUpper());
-            static QFont infoFont = []{ QFont f; f.setPixelSize(11); return f; }();
-            painter.setFont(infoFont);
-            auto textRect = painter.fontMetrics().boundingRect(info);
-            int ox = static_cast<int>(mouseImgPos.x() * zf) + 14;
-            int oy = static_cast<int>(mouseImgPos.y() * zf) - textRect.height() - 6;
-            int overlayW = textRect.width() + 8;
-            int overlayH = textRect.height() + 4;
-            if (ox + overlayW > width()) ox = width() - overlayW - 10;
-            if (oy < 2) oy = static_cast<int>(mouseImgPos.y() * zf) + 14;
-            if (oy + overlayH > height()) oy = static_cast<int>(mouseImgPos.y() * zf) - overlayH - 6;
-            QRect bgRect(ox, oy, overlayW, overlayH);
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(kInfoBg);
-            painter.drawRoundedRect(bgRect, 3, 3);
-            painter.setPen(Qt::white);
-            painter.setBrush(Qt::NoBrush);
-            painter.drawText(bgRect, Qt::AlignCenter, info);
-            // Color swatch
-            int swatchSize = 10;
-            bool swatchRight = bgRect.right() + 4 + swatchSize <= width();
-            QRect swatchRect(swatchRight ? bgRect.right() + 4 : bgRect.left() - swatchSize - 4,
-                             bgRect.center().y() - swatchSize / 2, swatchSize, swatchSize);
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(mousePxColor);
-            painter.drawRoundedRect(swatchRect, 2, 2);
-        }
     }
     renderer_.drawDraftSizeLabel(painter, toolManager_.current(),
         toolManager_.draft(), toolManager_.drawing(), toolManager_.zoomFactor());
