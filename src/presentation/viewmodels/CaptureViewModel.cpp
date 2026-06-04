@@ -81,6 +81,7 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
 {
     const auto requestId = requestGeneration_.fetch_add(1) + 1;
     const auto segments = captureSegmentsFor(region);
+    sourceScreen_ = segments.isEmpty() ? QString("primary") : segments.first().screenName;
     workerPool_.clear();
 
     QPointer<CaptureViewModel> guard(this);
@@ -100,8 +101,6 @@ void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<voi
             }
 
             guard->currentImage_ = std::move(result.value());
-            const auto screen = QGuiApplication::screenAt(region.center());
-            guard->sourceScreen_ = screen != nullptr ? screen->name() : "primary";
             emit guard->imageReady(guard->currentImage_);
             if (onReady) {
                 onReady(guard->currentImage_);

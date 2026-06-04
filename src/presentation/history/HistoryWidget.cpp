@@ -75,6 +75,7 @@ HistoryWidget::HistoryWidget(HistoryViewModel& viewModel, QWidget* parent)
     listView_->setModel(proxyModel_);
     listView_->setIconSize(QSize(48, 48));
     listView_->setSpacing(2);
+    listView_->setUniformItemSizes(true);
     listView_->setContextMenuPolicy(Qt::CustomContextMenu);
     listView_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     listView_->setSelectionBehavior(QAbstractItemView::SelectRows);
