@@ -17,7 +17,7 @@ public:
         callback(recognizeText(image));
     }
 
-    virtual void setLanguage(const QString& bcp47Tag) = 0;
+    virtual void setLanguage(QString bcp47Tag) = 0;
     virtual void cancel() {}
 };
 

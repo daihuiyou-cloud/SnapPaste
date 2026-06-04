@@ -59,10 +59,10 @@ ToastNotifier::~ToastNotifier()
     }
 }
 
-void ToastNotifier::showMessage(const QString& message, const QPoint& /*referencePosition*/,
+void ToastNotifier::showMessage(QString message, const QPoint& /*referencePosition*/,
                                 std::function<void()> onClick)
 {
-    pending_.push({message, std::move(onClick)});
+    pending_.push({std::move(message), std::move(onClick)});
     if (!showing_) {
         showNext();
     }

@@ -8,9 +8,9 @@ PinViewModel::PinViewModel(PinnedImageService& service, QObject* parent)
 {
 }
 
-void PinViewModel::createFromImage(const QImage& image, PinSource source)
+void PinViewModel::createFromImage(QImage image, PinSource source)
 {
-    const auto result = service_.createFromImage(image, source);
+    const auto result = service_.createFromImage(std::move(image), source);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;

@@ -24,7 +24,7 @@ public:
     void captureRegionAsync(const QRect& region, std::function<void(const QImage&)> onReady = {});
 
 public slots:
-    void setCurrentImage(const QImage& image);
+    void setCurrentImage(QImage image);
     void captureRegion(const QRect& region);
     void saveImage(const QImage& image, const QString& sourceScreen = "pin");
     void saveCurrentImage();

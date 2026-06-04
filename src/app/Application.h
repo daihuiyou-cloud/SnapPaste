@@ -49,7 +49,7 @@ private:
     void saveRegion(const QRect& region);
     void editRegion(const QRect& region);
     void ocrRegion(const QRect& region);
-    void showStatus(const QString& message, std::function<void()> onClick = {});
+    void showStatus(QString message, std::function<void()> onClick = {});
     void captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady);
     void ensureSettingsCached();
     void invalidateSettingsCache();

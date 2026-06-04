@@ -59,10 +59,10 @@ void AnnotationToolManager::setImage(const QImage& /*image*/, double zoom)
     zoomFactor_ = zoom;
 }
 
-void AnnotationToolManager::syncImageState(const QImage& image, const QImage& baseImage, int brightness, int contrast)
+void AnnotationToolManager::syncImageState(QImage image, QImage baseImage, int brightness, int contrast)
 {
-    image_ = image;
-    baseImage_ = baseImage;
+    image_ = std::move(image);
+    baseImage_ = std::move(baseImage);
     brightness_ = brightness;
     contrast_ = contrast;
 }

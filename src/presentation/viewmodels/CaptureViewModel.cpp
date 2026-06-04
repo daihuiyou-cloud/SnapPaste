@@ -58,9 +58,9 @@ const QImage& CaptureViewModel::currentImage() const noexcept
     return currentImage_;
 }
 
-void CaptureViewModel::setCurrentImage(const QImage& image)
+void CaptureViewModel::setCurrentImage(QImage image)
 {
-    currentImage_ = image;
+    currentImage_ = std::move(image);
 }
 
 void CaptureViewModel::captureRegion(const QRect& region)

@@ -52,11 +52,11 @@ QString titleBtnStyle(const char* hoverColor)
 } // namespace
 
 OcrResultWindow::OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
-                                 const QString& fullText, QWidget* parent)
+                                 QString fullText, QWidget* parent)
     : QWidget(parent)
     , source_(std::move(source))
     , blocks_(std::move(blocks))
-    , fullText_(fullText)
+    , fullText_(std::move(fullText))
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground, true);

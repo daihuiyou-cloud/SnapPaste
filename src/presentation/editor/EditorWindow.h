@@ -30,7 +30,7 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 public slots:
-    void setImage(const QImage& image);
+    void setImage(QImage image);
     void onToolChanged(AnnotationTool tool);
 
 signals:

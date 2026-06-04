@@ -270,11 +270,12 @@ void EditorWindow::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
-void EditorWindow::setImage(const QImage& image)
+void EditorWindow::setImage(QImage image)
 {
-    canvas_->setImage(image);
+    auto imageSize = image.size();
+    canvas_->setImage(std::move(image));
     if (imageInfoLabel_) {
-        imageInfoLabel_->setText(tr("Image: %1 x %2 px").arg(image.width()).arg(image.height()));
+        imageInfoLabel_->setText(tr("Image: %1 x %2 px").arg(imageSize.width()).arg(imageSize.height()));
     }
     refreshPanelUi();
     show();

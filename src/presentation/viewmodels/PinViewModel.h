@@ -13,7 +13,7 @@ public:
     explicit PinViewModel(PinnedImageService& service, QObject* parent = nullptr);
 
 public slots:
-    void createFromImage(const QImage& image, PinSource source);
+    void createFromImage(QImage image, PinSource source);
     void createFromClipboard();
     void restore();
     void updateState(qint64 id, const PinnedImageState& state);

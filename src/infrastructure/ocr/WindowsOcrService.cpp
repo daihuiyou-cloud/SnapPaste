@@ -95,10 +95,10 @@ void WindowsOcrService::cancel()
     ++currentRequestId_;
 }
 
-void WindowsOcrService::setLanguage(const QString& bcp47Tag)
+void WindowsOcrService::setLanguage(QString bcp47Tag)
 {
     QMutexLocker lock(&langMutex_);
-    language_ = bcp47Tag;
+    language_ = std::move(bcp47Tag);
 }
 
 OcrResult WindowsOcrService::recognizeText(const QImage& source)

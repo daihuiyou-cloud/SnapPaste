@@ -323,9 +323,9 @@ void Application::ocrRegion(const QRect& region)
     });
 }
 
-void Application::showStatus(const QString& message, std::function<void()> onClick)
+void Application::showStatus(QString message, std::function<void()> onClick)
 {
-    toastNotifier_.showMessage(message, QPoint(), std::move(onClick));
+    toastNotifier_.showMessage(std::move(message), QPoint(), std::move(onClick));
 }
 
 void Application::repeatLastCapture()

@@ -41,11 +41,11 @@ public:
 
     // --- Image (owned by Canvas, referenced here) ---
     void setImage(const QImage& image, double zoomFactor);
-    void syncImageState(const QImage& image, const QImage& baseImage, int brightness, int contrast);
+    void syncImageState(QImage image, QImage baseImage, int brightness, int contrast);
     const QImage& image() const { return image_; }
     const QImage& baseImage() const { return baseImage_; }
-    void setImageDirect(const QImage& img) { image_ = img; }
-    void setBaseImage(const QImage& img) { baseImage_ = img; }
+    void setImageDirect(QImage img) { image_ = std::move(img); }
+    void setBaseImage(QImage img) { baseImage_ = std::move(img); }
     int brightness() const { return brightness_; }
     void setBrightness(int b) { brightness_ = b; }
     int contrast() const { return contrast_; }
@@ -65,7 +65,7 @@ public:
     int cursorPos() const { return cursorPos_; }
     void setCursorPos(int pos) { cursorPos_ = pos; }
     const QString& preeditString() const { return preeditString_; }
-    void setPreeditString(const QString& s) { preeditString_ = s; }
+    void setPreeditString(QString s) { preeditString_ = std::move(s); }
 
     // --- Tool state ---
     AnnotationTool currentTool() const { return currentTool_; }

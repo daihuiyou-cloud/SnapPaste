@@ -26,7 +26,7 @@ public:
     explicit ToastNotifier(QObject* parent = nullptr);
     ~ToastNotifier() override;
 
-    void showMessage(const QString& message, const QPoint& referencePosition = QPoint(),
+    void showMessage(QString message, const QPoint& referencePosition = QPoint(),
                      std::function<void()> onClick = {});
     void hide();
 
