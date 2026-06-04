@@ -58,6 +58,7 @@ Result<QVector<CaptureRecord>> SqliteHistoryRepository::recent(int limit)
     }
 
     QVector<CaptureRecord> records;
+    records.reserve(limit);
     while (query.next()) {
         records.push_back(readRecord(query));
     }

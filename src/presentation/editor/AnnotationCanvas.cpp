@@ -637,8 +637,8 @@ void AnnotationCanvas::paintEvent(QPaintEvent* event)
         if (imgRect.contains(px)) {
             double zf = toolManager_.zoomFactor();
             QString info = tr("(%1, %2) %3")
-                .arg(static_cast<int>(mouseImgPos.x()))
-                .arg(static_cast<int>(mouseImgPos.y()))
+                .arg(static_cast<int>(mouseImgPos.x()),
+                     static_cast<int>(mouseImgPos.y()))
                 .arg(mousePxColor.name(QColor::HexRgb).toUpper());
             static QFont infoFont = []{ QFont f; f.setPixelSize(11); return f; }();
             painter.setFont(infoFont);

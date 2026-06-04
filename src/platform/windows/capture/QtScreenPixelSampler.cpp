@@ -64,6 +64,7 @@ void QtScreenPixelSampler::refresh(const QRect& desktopBounds)
     snapshot_ = QImage(physicalBounds.size(), QImage::Format_ARGB32_Premultiplied);
     snapshot_.fill(Qt::transparent);
     snapshotOrigin_ = physicalBounds.topLeft();
+    cachedRegionHalfSize_ = -1;
 
     QPainter painter(&snapshot_);
     for (const auto& g : grabs) {
@@ -121,6 +122,9 @@ QImage QtScreenPixelSampler::sampleRegion(const QPoint& center, int halfSize) co
     if (snapshot_.isNull() || !bounds_.isValid()) {
         return {};
     }
+    if (center == cachedRegionCenter_ && halfSize == cachedRegionHalfSize_ && !cachedRegion_.isNull()) {
+        return cachedRegion_;
+    }
     const auto physicalCenter = physicalFromLogical(center);
     const auto local = physicalCenter - snapshotOrigin_;
     auto rect = QRect(local.x() - halfSize, local.y() - halfSize,
@@ -129,7 +133,10 @@ QImage QtScreenPixelSampler::sampleRegion(const QPoint& center, int halfSize) co
     if (rect.width() < 1 || rect.height() < 1) {
         return {};
     }
-    return snapshot_.copy(rect);
+    cachedRegionCenter_ = center;
+    cachedRegionHalfSize_ = halfSize;
+    cachedRegion_ = snapshot_.copy(rect);
+    return cachedRegion_;
 }
 
 } // namespace snappaste

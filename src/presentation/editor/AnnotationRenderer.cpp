@@ -100,7 +100,7 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
         return;
     }
     auto dims = draft.bounds.size();
-    QString label = QStringLiteral("%1 \u00D7 %2").arg(dims.width()).arg(dims.height());
+    QString label = QStringLiteral("%1 \u00D7 %2").arg(dims.width(), dims.height());
     painter.save();
     painter.setPen(Qt::NoPen);
     auto textRect = painter.fontMetrics().boundingRect(label);
@@ -317,10 +317,12 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
                 constexpr int kBlock = 8;
                 const int bw = qMax(1, clipped.width() / kBlock);
                 const int bh = qMax(1, clipped.height() / kBlock);
-                auto region = sourceImage.copy(clipped);
-                auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                                      .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
-                painter->drawImage(clipped.topLeft(), pixelated);
+                auto pixelated = sourceImage.copy(clipped)
+                    .scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                painter->save();
+                painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+                painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
+                painter->restore();
             }
         }
     } else {
@@ -337,10 +339,12 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
             constexpr int kBlockSize = 8;
             const int bw = qMax(1, clipped.width() / kBlockSize);
             const int bh = qMax(1, clipped.height() / kBlockSize);
-            auto region = sourceImage.copy(clipped);
-            auto pixelated = region.scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                                  .scaled(clipped.size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
-            painter->drawImage(clipped.topLeft(), pixelated);
+            auto pixelated = sourceImage.copy(clipped)
+                .scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            painter->save();
+            painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+            painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
+            painter->restore();
         }
     }
 }

@@ -29,6 +29,9 @@ private:
     QRect bounds_;
     QImage snapshot_;
     QPoint snapshotOrigin_;
+    mutable QPoint cachedRegionCenter_;
+    mutable int cachedRegionHalfSize_ = -1;
+    mutable QImage cachedRegion_;
 };
 
 } // namespace snappaste

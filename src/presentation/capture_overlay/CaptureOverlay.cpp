@@ -549,7 +549,7 @@ void CaptureOverlay::drawSelectionRegion(QPainter& painter, const QRect& globalR
         painter.setPen(kLabelTextColor);
         painter.setFont(kHintFont());
         painter.drawText(localRegion.bottomLeft() + QPoint(0, 20),
-            tr("(%1, %2)").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+            tr("(%1, %2)").arg(lastMouseGlobal_.x(), lastMouseGlobal_.y()));
     }
     if (state_ == State::Selecting || state_ == State::Moving || state_ == State::Resizing || state_ == State::CandidatePressed) {
         drawMagnifier(painter);
@@ -998,7 +998,7 @@ void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)
 
 void CaptureOverlay::drawSizeLabel(QPainter& painter, const QRect& localRegion, const QSize& regionSize)
 {
-    const auto text = tr("%1 x %2").arg(regionSize.width()).arg(regionSize.height());
+    const auto text = tr("%1 x %2").arg(regionSize.width(), regionSize.height());
     const auto metrics = painter.fontMetrics();
     const auto labelWidth = metrics.horizontalAdvance(text) + (kSizeLabelPaddingX * 2);
 
@@ -1125,7 +1125,7 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop, text);
     } else {
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
-            tr("%1,%2").arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
+            tr("%1,%2").arg(lastMouseGlobal_.x(), lastMouseGlobal_.y()));
     }
 }
 
