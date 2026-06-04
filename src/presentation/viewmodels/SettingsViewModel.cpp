@@ -18,13 +18,13 @@ AppSettings SettingsViewModel::settings() const
 
 void SettingsViewModel::load()
 {
-    const auto result = repository_.load();
+    auto result = repository_.load();
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
     }
 
-    settings_ = result.value();
+    settings_ = std::move(result.value());
     emit loaded(settings_);
 }
 

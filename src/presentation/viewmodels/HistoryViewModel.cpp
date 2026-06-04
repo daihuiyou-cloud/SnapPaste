@@ -42,13 +42,13 @@ QStandardItemModel* HistoryViewModel::model() noexcept
 
 void HistoryViewModel::refresh()
 {
-    const auto result = recentCaptures(100);
+    auto result = recentCaptures(100);
     if (result.isError()) {
         emit errorOccurred(result.error());
         return;
     }
 
-    records_ = result.value();
+    records_ = std::move(result.value());
     batchLoadIndex_ = 0;
     model_.clear();
     model_.setHorizontalHeaderLabels({tr("Capture History")});

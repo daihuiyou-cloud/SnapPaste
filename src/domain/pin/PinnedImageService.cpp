@@ -48,7 +48,7 @@ Result<PinnedItem> PinnedImageService::createFromClipboard()
         return Result<PinnedItem>::failure(imageResult.error());
     }
 
-    return createFromImage(imageResult.value(), PinSource::Clipboard);
+    return createFromImage(std::move(imageResult.value()), PinSource::Clipboard);
 }
 
 Result<QVector<PinnedItem>> PinnedImageService::restorePinnedItems()

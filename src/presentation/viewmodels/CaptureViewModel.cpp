@@ -80,13 +80,13 @@ void CaptureViewModel::captureRegion(const QRect& region)
 void CaptureViewModel::captureRegionAsync(const QRect& region, std::function<void(const QImage&)> onReady)
 {
     const auto requestId = requestGeneration_.fetch_add(1) + 1;
-    const auto segments = captureSegmentsFor(region);
+    auto segments = captureSegmentsFor(region);
     sourceScreen_ = segments.isEmpty() ? QString("primary") : segments.first().screenName;
     workerPool_.clear();
 
     QPointer<CaptureViewModel> guard(this);
     auto weakAlive = alive_;
-    auto task = [weakAlive, guard, region, segments, requestId, onReady = std::move(onReady), &workflow = workflow_]() mutable {
+    auto task = [weakAlive, guard, region, segments = std::move(segments), requestId, onReady = std::move(onReady), &workflow = workflow_]() mutable {
         if (!*weakAlive) return;
         auto result = workflow.captureRegion(region, segments);
         if (!*weakAlive) return;

@@ -81,12 +81,12 @@ void AnnotationEventHandler::mouseDoubleClickEvent(QMouseEvent* event)
         int idx = toolManager_.selectedIndex();
         if (toolManager_.annotationAt(idx).tool == AnnotationTool::Text) {
             bool ok = false;
-            const auto newText = QInputDialog::getMultiLineText(
+            auto newText = QInputDialog::getMultiLineText(
                 static_cast<QWidget*>(canvas_.parent()), canvas_.tr("Edit Text"), canvas_.tr("Edit text:"),
                 toolManager_.annotationAt(idx).text, &ok);
             if (ok && !newText.isEmpty() && newText != toolManager_.annotationAt(idx).text) {
                 toolManager_.pushUndo();
-                toolManager_.annotationsMut()[idx].text = newText;
+                toolManager_.annotationsMut()[idx].text = std::move(newText);
                 canvas_.markModified();
                 canvas_.update();
             }
@@ -111,12 +111,12 @@ void AnnotationEventHandler::mouseDoubleClickEvent(QMouseEvent* event)
         if (toolManager_.annotationAt(i).tool == AnnotationTool::Text
             && toolManager_.annotationAt(i).bounds.contains(pos)) {
             bool ok = false;
-            const auto newText = QInputDialog::getMultiLineText(
+            auto newText = QInputDialog::getMultiLineText(
                 static_cast<QWidget*>(canvas_.parent()), canvas_.tr("Edit Text"), canvas_.tr("Edit text:"),
                 toolManager_.annotationAt(i).text, &ok);
             if (ok && !newText.isEmpty() && newText != toolManager_.annotationAt(i).text) {
                 toolManager_.pushUndo();
-                toolManager_.annotationsMut()[i].text = newText;
+                toolManager_.annotationsMut()[i].text = std::move(newText);
                 canvas_.markModified();
                 canvas_.update();
             }
