@@ -148,29 +148,39 @@ Result<QImage> GdiScreenCaptureService::captureRegion(const QRect& region)
 #if defined(Q_OS_WIN)
     QRect physicalRegion;
     qreal dpr = 1.0;
-    bool mixedDpr = false;
 
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen == nullptr) continue;
-        const auto screenGeo = screen->geometry();
-        const auto intersection = screenGeo.intersected(region);
-        if (!intersection.isValid() || intersection.isEmpty()) continue;
+    auto* singleScreen = QGuiApplication::screenAt(region.center());
+    if (singleScreen && singleScreen->geometry().contains(region)) {
+        dpr = singleScreen->devicePixelRatio();
+        physicalRegion = QRect(qRound(region.x() * dpr),
+                               qRound(region.y() * dpr),
+                               qRound(region.width() * dpr),
+                               qRound(region.height() * dpr));
+    } else {
+        bool mixedDpr = false;
+        for (auto* screen : QGuiApplication::screens()) {
+            if (screen == nullptr) continue;
+            const auto screenGeo = screen->geometry();
+            const auto intersection = screenGeo.intersected(region);
+            if (!intersection.isValid() || intersection.isEmpty()) continue;
 
-        const auto screenDpr = screen->devicePixelRatio();
-        if (dpr != 1.0 && std::abs(dpr - screenDpr) > 0.01) {
-            mixedDpr = true;
+            const auto screenDpr = screen->devicePixelRatio();
+            if (dpr != 1.0 && std::abs(dpr - screenDpr) > 0.01) {
+                mixedDpr = true;
+            }
+            dpr = qMax(dpr, screenDpr);
+
+            QRect physSeg(qRound(intersection.x() * screenDpr),
+                          qRound(intersection.y() * screenDpr),
+                          qRound(intersection.width() * screenDpr),
+                          qRound(intersection.height() * screenDpr));
+            if (physicalRegion.isNull()) {
+                physicalRegion = physSeg;
+            } else {
+                physicalRegion = physicalRegion.united(physSeg);
+            }
         }
-        dpr = qMax(dpr, screenDpr);
-
-        QRect physSeg(qRound(intersection.x() * screenDpr),
-                      qRound(intersection.y() * screenDpr),
-                      qRound(intersection.width() * screenDpr),
-                      qRound(intersection.height() * screenDpr));
-        if (physicalRegion.isNull()) {
-            physicalRegion = physSeg;
-        } else {
-            physicalRegion = physicalRegion.united(physSeg);
-        }
+        Q_UNUSED(mixedDpr)
     }
 
     if (physicalRegion.isNull()) {

@@ -156,9 +156,11 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
         for (int y = 0; y < height; ++y) {
             const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
             std::memcpy(image.scanLine(y), src, std::min(static_cast<size_t>(width) * 4, srcRowBytes));
-            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
-            for (int x = 0; x < width; ++x) {
-                pixels[x] |= 0xff000000;
+        }
+        {
+            auto* bits = image.bits();
+            for (int i = 3; i < width * height * 4; i += 4) {
+                bits[i] = static_cast<uchar>(0xFF);
             }
         }
         break;
