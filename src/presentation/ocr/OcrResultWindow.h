@@ -21,7 +21,7 @@ class OcrResultWindow final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit OcrResultWindow(const QImage& source, const QVector<OcrBlockInfo>& blocks,
+    explicit OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
                              const QString& fullText, QWidget* parent = nullptr);
     ~OcrResultWindow() override = default;
 

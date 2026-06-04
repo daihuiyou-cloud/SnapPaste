@@ -111,7 +111,8 @@ std::optional<QColor> QtScreenPixelSampler::sample(const QPoint& globalPosition)
     if (!snapshot_.rect().contains(local)) {
         return std::nullopt;
     }
-    return QColor::fromRgba(snapshot_.pixel(local));
+    QRgb pixel = reinterpret_cast<const QRgb*>(snapshot_.constScanLine(local.y()))[local.x()];
+    return QColor::fromRgba(pixel);
 }
 
 QImage QtScreenPixelSampler::sampleRegion(const QPoint& center, int halfSize) const

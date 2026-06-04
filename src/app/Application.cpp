@@ -308,7 +308,7 @@ void Application::ocrRegion(const QRect& region)
                 return;
             }
 
-            auto* win = new OcrResultWindow(outcome.image, outcome.blocks, outcome.text, nullptr);
+            auto* win = new OcrResultWindow(std::move(outcome.image), std::move(outcome.blocks), outcome.text, nullptr);
             guard->ocrWindow_ = win;
 #pragma warning(push)
 #pragma warning(disable: 4573)

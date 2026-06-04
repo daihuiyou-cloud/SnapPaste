@@ -146,7 +146,8 @@ bool AnnotationEventHandler::handlePickingColorPress(QMouseEvent* event)
         const auto dpr = img.devicePixelRatio();
         QPoint physicalPos(static_cast<int>(pos.x() * dpr),
                            static_cast<int>(pos.y() * dpr));
-        toolManager_.setColor(QColor::fromRgba(img.pixel(physicalPos)));
+        QRgb pixel = reinterpret_cast<const QRgb*>(img.constScanLine(physicalPos.y()))[physicalPos.x()];
+        toolManager_.setColor(QColor::fromRgba(pixel));
     }
     if (toolManager_.onPickingColorChanged) toolManager_.onPickingColorChanged(false);
     canvas_.update();
@@ -391,7 +392,8 @@ void AnnotationEventHandler::updateMouseInfo(QMouseEvent* event)
                   static_cast<int>(imgPos.y() * dpr));
         QRect imgRect(QPoint(0, 0), img.size());
         if (imgRect.contains(px)) {
-            QColor pixelColor = QColor::fromRgba(img.pixel(px));
+            QRgb pixel = reinterpret_cast<const QRgb*>(img.constScanLine(px.y()))[px.x()];
+            QColor pixelColor = QColor::fromRgba(pixel);
             toolManager_.setMousePixelColor(pixelColor);
             if (toolManager_.onMouseInfoChanged)
                 toolManager_.onMouseInfoChanged(imgPos, pixelColor);
