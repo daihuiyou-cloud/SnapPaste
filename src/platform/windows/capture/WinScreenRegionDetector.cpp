@@ -41,67 +41,84 @@ void addCandidate(QVector<QRect>& regions, const QRect& candidate, const QRect& 
 }
 
 #ifdef Q_OS_WIN
-QRect nativeGeometryFor(const QScreen* screen)
-{
-    if (screen == nullptr) {
-        return {};
-    }
+#pragma region Screen geometry cache
 
-    const auto geometry = screen->geometry();
-    const auto dpr = screen->devicePixelRatio();
-    return QRect(qRound(geometry.x() * dpr),
-                 qRound(geometry.y() * dpr),
-                 qRound(geometry.width() * dpr),
-                 qRound(geometry.height() * dpr));
+struct ScreenCacheEntry {
+    QScreen* const screen;
+    const QRect logicalGeo;
+    const QRect nativeGeo;
+    const qreal dpr;
+};
+
+static QVector<ScreenCacheEntry> s_screenCache;
+static int s_screenCacheGeneration = 0;
+
+static void ensureScreenCache()
+{
+    const auto screens = QGuiApplication::screens();
+    if (s_screenCacheGeneration != 0 && s_screenCache.size() == screens.size()) {
+        return;
+    }
+    s_screenCache.clear();
+    for (auto* screen : screens) {
+        if (screen == nullptr) continue;
+        const auto geo = screen->geometry();
+        const auto dpr = screen->devicePixelRatio();
+        s_screenCache.push_back({screen, geo,
+            QRect(qRound(geo.x() * dpr), qRound(geo.y() * dpr),
+                  qRound(geo.width() * dpr), qRound(geo.height() * dpr)),
+            dpr});
+    }
+    s_screenCacheGeneration = 1;
 }
 
-QScreen* screenForLogicalPoint(const QPoint& point)
+static const ScreenCacheEntry* findEntryForScreen(const QScreen* screen)
+{
+    ensureScreenCache();
+    for (const auto& e : s_screenCache) {
+        if (e.screen == screen) return &e;
+    }
+    return nullptr;
+}
+
+static const ScreenCacheEntry* findEntryForNativePoint(const RECT& winRect)
+{
+    ensureScreenCache();
+    const QPoint center((winRect.left + winRect.right) / 2, (winRect.top + winRect.bottom) / 2);
+    for (const auto& e : s_screenCache) {
+        if (e.nativeGeo.contains(center)) return &e;
+    }
+    return s_screenCache.isEmpty() ? nullptr : &s_screenCache.first();
+}
+
+static QPoint nativePointFromLogical(const QPoint& point)
 {
     auto* screen = QGuiApplication::screenAt(point);
-    return screen != nullptr ? screen : QGuiApplication::primaryScreen();
+    if (screen == nullptr) screen = QGuiApplication::primaryScreen();
+    if (screen == nullptr) return point;
+
+    const auto* entry = findEntryForScreen(screen);
+    if (entry == nullptr) return point;
+
+    return QPoint(entry->nativeGeo.x() + qRound((point.x() - entry->logicalGeo.x()) * entry->dpr),
+                  entry->nativeGeo.y() + qRound((point.y() - entry->logicalGeo.y()) * entry->dpr));
 }
 
-QScreen* screenForNativeRect(const RECT& rect)
+static QRect rectFromWinRect(const RECT& winRect)
 {
-    const QPoint center((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
-    for (auto* screen : QGuiApplication::screens()) {
-        if (screen != nullptr && nativeGeometryFor(screen).contains(center)) {
-            return screen;
-        }
-    }
-    return QGuiApplication::primaryScreen();
-}
-
-QPoint nativePointFromLogical(const QPoint& point)
-{
-    auto* screen = screenForLogicalPoint(point);
-    if (screen == nullptr) {
-        return point;
+    const auto* entry = findEntryForNativePoint(winRect);
+    if (entry == nullptr) {
+        return QRect(QPoint(winRect.left, winRect.top), QPoint(winRect.right - 1, winRect.bottom - 1));
     }
 
-    const auto logicalGeometry = screen->geometry();
-    const auto nativeGeometry = nativeGeometryFor(screen);
-    const auto dpr = screen->devicePixelRatio();
-    return QPoint(nativeGeometry.x() + qRound((point.x() - logicalGeometry.x()) * dpr),
-                  nativeGeometry.y() + qRound((point.y() - logicalGeometry.y()) * dpr));
-}
-
-QRect rectFromWinRect(const RECT& rect)
-{
-    auto* screen = screenForNativeRect(rect);
-    if (screen == nullptr) {
-        return QRect(QPoint(rect.left, rect.top), QPoint(rect.right - 1, rect.bottom - 1));
-    }
-
-    const auto logicalGeometry = screen->geometry();
-    const auto nativeGeometry = nativeGeometryFor(screen);
-    const auto dpr = screen->devicePixelRatio();
-    const QPoint topLeft(logicalGeometry.x() + qRound((rect.left - nativeGeometry.x()) / dpr),
-                         logicalGeometry.y() + qRound((rect.top - nativeGeometry.y()) / dpr));
-    const QPoint bottomRight(logicalGeometry.x() + qRound((rect.right - 1 - nativeGeometry.x()) / dpr),
-                             logicalGeometry.y() + qRound((rect.bottom - 1 - nativeGeometry.y()) / dpr));
+    const QPoint topLeft(entry->logicalGeo.x() + qRound((winRect.left - entry->nativeGeo.x()) / entry->dpr),
+                         entry->logicalGeo.y() + qRound((winRect.top - entry->nativeGeo.y()) / entry->dpr));
+    const QPoint bottomRight(entry->logicalGeo.x() + qRound((winRect.right - 1 - entry->nativeGeo.x()) / entry->dpr),
+                             entry->logicalGeo.y() + qRound((winRect.bottom - 1 - entry->nativeGeo.y()) / entry->dpr));
     return QRect(topLeft, bottomRight).normalized();
 }
+
+#pragma endregion
 
 bool isOwnProcessWindow(HWND hwnd)
 {
@@ -143,6 +160,20 @@ HWND topWindowAt(const POINT& nativePoint)
             RECT rect{};
             if (GetWindowRect(root, &rect) && PtInRect(&rect, nativePoint))
                 return root;
+        }
+        if (root == nullptr) {
+            root = hwnd;
+        }
+        if (isOwnProcessWindow(root)) {
+            HWND sibling = GetWindow(root, GW_HWNDPREV);
+            if (sibling == nullptr) sibling = GetWindow(root, GW_HWNDNEXT);
+            if (sibling) {
+                HWND sibRoot = GetAncestor(sibling, GA_ROOT);
+                RECT sr{};
+                if (sibRoot && isUsableWindow(sibRoot)
+                    && GetWindowRect(sibRoot, &sr) && PtInRect(&sr, nativePoint))
+                    return sibRoot;
+            }
         }
     }
     for (hwnd = GetTopWindow(nullptr); hwnd != nullptr; hwnd = GetWindow(hwnd, GW_HWNDNEXT)) {

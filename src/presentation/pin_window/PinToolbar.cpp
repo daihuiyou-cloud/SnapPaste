@@ -27,6 +27,17 @@ const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
     return cache;
 }
 
+struct ButtonRectCache {
+    int parentWidth = 0;
+    QVector<QRect> rects;
+};
+
+ButtonRectCache& cachedButtonRects()
+{
+    static ButtonRectCache cache;
+    return cache;
+}
+
 } // namespace
 
 QRect PinToolbar::rect(int parentWidth)
@@ -37,16 +48,21 @@ QRect PinToolbar::rect(int parentWidth)
 
 QVector<QRect> PinToolbar::buttonRects(int parentWidth)
 {
+    auto& cache = cachedButtonRects();
+    if (cache.parentWidth == parentWidth) {
+        return cache.rects;
+    }
+    cache.parentWidth = parentWidth;
+    cache.rects.clear();
     const auto tb = rect(parentWidth);
-    QVector<QRect> rects;
-    rects.reserve(kButtonCount);
+    cache.rects.reserve(kButtonCount);
     int x = tb.left() + kBtnPad;
     const int y = tb.top() + (tb.height() - kBtnSize) / 2;
     for (int i = 0; i < kButtonCount; ++i) {
-        rects.append(QRect(x, y, kBtnSize, kBtnSize));
+        cache.rects.append(QRect(x, y, kBtnSize, kBtnSize));
         x += kBtnSize + kBtnPad;
     }
-    return rects;
+    return cache.rects;
 }
 
 QRect PinToolbar::overflowRect(int parentWidth, int parentHeight)
