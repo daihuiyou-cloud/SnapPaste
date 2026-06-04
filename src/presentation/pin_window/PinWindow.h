@@ -7,6 +7,7 @@
 
 #include <QElapsedTimer>
 #include <QPropertyAnimation>
+#include <QScreen>
 #include <QRect>
 #include <QVector>
 #include <QWidget>
@@ -78,6 +79,7 @@ private:
     WindowInteractionService windowInteraction_;
     QPoint dragOffset_;
     bool dragging_ = false;
+    QScreen* cachedDragScreen_ = nullptr;
     bool resizing_ = false;
     ResizeEdge resizeEdge_ = EdgeNone;
     QRect resizeStartGeometry_;

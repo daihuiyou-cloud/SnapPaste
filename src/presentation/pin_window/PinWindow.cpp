@@ -584,13 +584,14 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
                 QStandardPaths::writableLocation(QStandardPaths::TempLocation)
                 + "/snappaste_drag_" + QString::number(QCoreApplication::applicationPid()) + ".png");
             img.save(tempPath, "PNG");
+            auto dragPixmap = QPixmap::fromImage(
+                img.scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             QDrag drag(this);
             auto* mimeData = new QMimeData();
-            mimeData->setImageData(QVariant(img));
+            mimeData->setImageData(QVariant(std::move(img)));
             mimeData->setUrls({QUrl::fromLocalFile(tempPath)});
             drag.setMimeData(mimeData);
-            drag.setPixmap(QPixmap::fromImage(
-                img.scaled(160, 160, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+            drag.setPixmap(std::move(dragPixmap));
             drag.exec(Qt::CopyAction);
             QFile::remove(tempPath);
         }
@@ -614,7 +615,11 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
     {
         auto newPos = event->globalPos() - dragOffset_;
         const auto frame = frameGeometry();
-        const auto screen = QGuiApplication::screenAt(frame.center());
+        QScreen* screen = cachedDragScreen_;
+        if (!screen || !screen->geometry().contains(frame.center())) {
+            screen = QGuiApplication::screenAt(frame.center());
+            cachedDragScreen_ = screen;
+        }
         if (screen != nullptr) {
             const auto geo = screen->availableGeometry();
             const auto rightEdge = geo.right() - frame.width() + 1;
@@ -727,6 +732,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
     dragging_ = true;
     dragOffset_ = event->globalPos() - frameGeometry().topLeft();
+    cachedDragScreen_ = QGuiApplication::screenAt(frameGeometry().center());
     event->accept();
 }
 
