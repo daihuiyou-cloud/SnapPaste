@@ -4,6 +4,31 @@
 
 namespace snappaste {
 
+namespace {
+
+const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
+{
+    static QVector<QPixmap> cache;
+    if (cache.isEmpty()) {
+        const IconName icons[] = {
+            IconName::Close,
+            IconName::RotateLeft,
+            IconName::RotateRight,
+            IconName::FlipHorizontal,
+            IconName::FlipVertical,
+            IconName::Copy,
+            IconName::ClickThrough,
+            IconName::Pin
+        };
+        cache.reserve(8);
+        for (auto name : icons)
+            cache.push_back(iconProvider.icon(name).pixmap(PinToolbar::kIconSize, PinToolbar::kIconSize));
+    }
+    return cache;
+}
+
+} // namespace
+
 QRect PinToolbar::rect(int parentWidth)
 {
     const int tbWidth = kButtonCount * (kBtnSize + kBtnPad) + kBtnPad;
@@ -47,16 +72,7 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
     painter.drawRoundedRect(tb, 4, 4);
 
     const auto btns = buttonRects(parentWidth);
-    const IconName icons[] = {
-        IconName::Close,
-        IconName::RotateLeft,
-        IconName::RotateRight,
-        IconName::FlipHorizontal,
-        IconName::FlipVertical,
-        IconName::Copy,
-        IconName::ClickThrough,
-        IconName::Pin
-    };
+    const auto& pixmaps = cachedToolbarPixmaps(iconProvider);
     constexpr int kToggleIdxClickThrough = 6;
     constexpr int kToggleIdxAlwaysOnTop = 7;
 
@@ -77,9 +93,8 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
             painter.drawRoundedRect(btns[i].adjusted(1, 1, -1, -1), 3, 3);
         }
 
-        const auto pixmap = iconProvider.icon(icons[i]).pixmap(kIconSize, kIconSize);
         const auto iconTopLeft = btns[i].center() - QPoint(kIconSize / 2, kIconSize / 2);
-        painter.drawPixmap(iconTopLeft, pixmap);
+        painter.drawPixmap(iconTopLeft, pixmaps[i]);
     }
 }
 
