@@ -26,14 +26,14 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
 
     const auto image = clipboard->image();
     if (!image.isNull()) {
-        return Result<QImage>::success(image);
+        return Result<QImage>::success(std::move(image));
     }
 
     if (mimeData->hasColor()) {
         const auto color = qvariant_cast<QColor>(mimeData->colorData());
         QImage output(240, 160, QImage::Format_ARGB32_Premultiplied);
         output.fill(color);
-        return Result<QImage>::success(output);
+        return Result<QImage>::success(std::move(output));
     }
 
     if (mimeData->hasText()) {
@@ -68,7 +68,7 @@ Result<QImage> ClipboardImageProvider::imageFromHtml(const QString& html)
     QPainter painter(&output);
     painter.translate(18, 18);
     document.drawContents(&painter, QRectF(0, 0, size.width() - 36, size.height() - 36));
-    return Result<QImage>::success(output);
+    return Result<QImage>::success(std::move(output));
 }
 
 Result<QImage> ClipboardImageProvider::imageFromText(const QString& text)
@@ -96,7 +96,7 @@ Result<QImage> ClipboardImageProvider::imageFromText(const QString& text)
                      Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
                      text.left(1200));
 
-    return Result<QImage>::success(output);
+    return Result<QImage>::success(std::move(output));
 }
 
 Result<QImage> ClipboardImageProvider::colorImageFromText(const QString& text)
@@ -113,7 +113,7 @@ Result<QImage> ClipboardImageProvider::colorImageFromText(const QString& text)
     painter.setPen(color.lightness() < 120 ? Qt::white : Qt::black);
     painter.drawText(output.rect(), Qt::AlignCenter, color.name().toUpper());
 
-    return Result<QImage>::success(output);
+    return Result<QImage>::success(std::move(output));
 }
 
 } // namespace snappaste

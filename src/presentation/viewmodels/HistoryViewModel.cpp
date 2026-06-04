@@ -87,7 +87,7 @@ void HistoryViewModel::loadThumbnail(int row)
     QString cacheKey = QStringLiteral("hthumb_") + record.thumbnailPath;
     QPixmap cached;
     if (QPixmapCache::find(cacheKey, &cached)) {
-        item->setData(cached, Qt::DecorationRole);
+        item->setData(std::move(cached), Qt::DecorationRole);
         return;
     }
     QImage raw(record.thumbnailPath);

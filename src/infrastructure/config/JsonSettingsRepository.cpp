@@ -66,7 +66,7 @@ Result<AppSettings> JsonSettingsRepository::load()
         if (saveResult.isError()) {
             return Result<AppSettings>::failure(saveResult.error());
         }
-        return Result<AppSettings>::success(settings);
+        return Result<AppSettings>::success(std::move(settings));
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -105,7 +105,7 @@ Result<AppSettings> JsonSettingsRepository::load()
         }
     }
 
-    return Result<AppSettings>::success(settings);
+    return Result<AppSettings>::success(std::move(settings));
 }
 
 Result<void> JsonSettingsRepository::save(const AppSettings& settings)

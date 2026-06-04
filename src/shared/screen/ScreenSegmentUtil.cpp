@@ -44,7 +44,7 @@ QVector<ScreenCaptureSegment> captureSegmentsFor(const QRect& region)
         segment.logicalScreenGeometry = info.geometry;
         segment.screenName = info.name;
         segment.devicePixelRatio = info.dpr;
-        segments.push_back(segment);
+        segments.push_back(std::move(segment));
     }
     return segments;
 }

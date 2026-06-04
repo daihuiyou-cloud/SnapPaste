@@ -51,7 +51,7 @@ Result<PinnedItem> SqlitePinnedItemRepository::add(const PinnedItem& item)
 
     auto saved = item;
     saved.id = query.lastInsertId().toLongLong();
-    return Result<PinnedItem>::success(saved);
+    return Result<PinnedItem>::success(std::move(saved));
 }
 
 Result<QVector<PinnedItem>> SqlitePinnedItemRepository::restoreActive()
@@ -74,7 +74,7 @@ Result<QVector<PinnedItem>> SqlitePinnedItemRepository::restoreActive()
         items.push_back(readItem(query));
     }
 
-    return Result<QVector<PinnedItem>>::success(items);
+    return Result<QVector<PinnedItem>>::success(std::move(items));
 }
 
 Result<void> SqlitePinnedItemRepository::updateState(qint64 id, const PinnedImageState& state)

@@ -438,14 +438,14 @@ void AnnotationToolManager::undo()
     moving_ = false;
     resizing_ = false;
 
-    redoStack_.push_back(annotations_);
-    redoImageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_});
+    redoStack_.push_back(std::move(annotations_));
+    redoImageHistory_.push_back({std::move(image_), std::move(baseImage_), brightness_, contrast_, zoomFactor_});
 
     annotations_ = undoStack_.takeLast();
 
     auto snap = imageHistory_.takeLast();
-    image_ = snap.image;
-    baseImage_ = snap.baseImage;
+    image_ = std::move(snap.image);
+    baseImage_ = std::move(snap.baseImage);
     brightness_ = snap.brightness;
     contrast_ = snap.contrast;
     zoomFactor_ = snap.zoomFactor;
@@ -480,8 +480,8 @@ void AnnotationToolManager::redo()
 
     annotations_ = redoStack_.takeLast();
     auto snap = redoImageHistory_.takeLast();
-    image_ = snap.image;
-    baseImage_ = snap.baseImage;
+    image_ = std::move(snap.image);
+    baseImage_ = std::move(snap.baseImage);
     brightness_ = snap.brightness;
     contrast_ = snap.contrast;
     zoomFactor_ = snap.zoomFactor;

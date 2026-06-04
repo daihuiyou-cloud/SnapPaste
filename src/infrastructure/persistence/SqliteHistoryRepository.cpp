@@ -37,7 +37,7 @@ Result<CaptureRecord> SqliteHistoryRepository::add(const CaptureRecord& record)
 
     auto saved = record;
     saved.id = query.lastInsertId().toLongLong();
-    return Result<CaptureRecord>::success(saved);
+    return Result<CaptureRecord>::success(std::move(saved));
 }
 
 Result<QVector<CaptureRecord>> SqliteHistoryRepository::recent(int limit)
@@ -63,7 +63,7 @@ Result<QVector<CaptureRecord>> SqliteHistoryRepository::recent(int limit)
         records.push_back(readRecord(query));
     }
 
-    return Result<QVector<CaptureRecord>>::success(records);
+    return Result<QVector<CaptureRecord>>::success(std::move(records));
 }
 
 Result<void> SqliteHistoryRepository::markDeleted(qint64 id)
