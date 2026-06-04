@@ -27,17 +27,6 @@ const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
     return cache;
 }
 
-struct ButtonRectCache {
-    int parentWidth = 0;
-    QVector<QRect> rects;
-};
-
-ButtonRectCache& cachedButtonRects()
-{
-    static ButtonRectCache cache;
-    return cache;
-}
-
 } // namespace
 
 QRect PinToolbar::rect(int parentWidth)
@@ -48,11 +37,12 @@ QRect PinToolbar::rect(int parentWidth)
 
 QVector<QRect> PinToolbar::buttonRects(int parentWidth)
 {
-    auto& cache = cachedButtonRects();
-    if (cache.parentWidth == parentWidth) {
+    struct Cache { int width = 0; QVector<QRect> rects; };
+    static Cache cache;
+    if (cache.width == parentWidth) {
         return cache.rects;
     }
-    cache.parentWidth = parentWidth;
+    cache.width = parentWidth;
     cache.rects.clear();
     const auto tb = rect(parentWidth);
     cache.rects.reserve(kButtonCount);

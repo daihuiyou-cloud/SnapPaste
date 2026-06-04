@@ -51,12 +51,12 @@ struct ScreenCacheEntry {
 };
 
 static QVector<ScreenCacheEntry> s_screenCache;
-static int s_screenCacheGeneration = 0;
+static bool s_screenCacheValid = false;
 
 static void ensureScreenCache()
 {
     const auto screens = QGuiApplication::screens();
-    if (s_screenCacheGeneration != 0 && s_screenCache.size() == screens.size()) {
+    if (s_screenCacheValid && s_screenCache.size() == screens.size()) {
         return;
     }
     s_screenCache.clear();
@@ -69,7 +69,7 @@ static void ensureScreenCache()
                   qRound(geo.width() * dpr), qRound(geo.height() * dpr)),
             dpr});
     }
-    s_screenCacheGeneration = 1;
+    s_screenCacheValid = true;
 }
 
 static const ScreenCacheEntry* findEntryForScreen(const QScreen* screen)
@@ -164,7 +164,7 @@ HWND topWindowAt(const POINT& nativePoint)
         if (root == nullptr) {
             root = hwnd;
         }
-        if (isOwnProcessWindow(root)) {
+        if (isOwnProcessWindow(root) || !isUsableWindow(root)) {
             HWND sibling = GetWindow(root, GW_HWNDPREV);
             if (sibling == nullptr) sibling = GetWindow(root, GW_HWNDNEXT);
             if (sibling) {
