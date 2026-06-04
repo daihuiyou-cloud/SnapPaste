@@ -24,7 +24,7 @@ Result<QImage> ClipboardImageProvider::imageFromClipboard()
         return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Nothing on clipboard \u2014 copy an image or text first, then press Paste."));
     }
 
-    const auto image = clipboard->image();
+    auto image = clipboard->image();
     if (!image.isNull()) {
         return Result<QImage>::success(std::move(image));
     }
