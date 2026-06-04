@@ -37,10 +37,9 @@ Result<StoredImage> LocalImageStorage::saveCapture(const QImage& image,
     }
 
     auto thumb = image;
-    if (thumb.width() > 640 || thumb.height() > 400) {
-        thumb = thumb.scaled(640, 400, Qt::KeepAspectRatio, Qt::FastTransformation);
+    if (thumb.width() > 320 || thumb.height() > 200) {
+        thumb = thumb.scaled(320, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
-    thumb = thumb.scaled(320, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if (!thumb.save(thumbnailPath, "JPG", 82)) {
         return Result<StoredImage>::success(StoredImage{capturePath, {}});
     }

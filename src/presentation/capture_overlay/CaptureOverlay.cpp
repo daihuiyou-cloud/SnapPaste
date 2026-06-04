@@ -17,6 +17,7 @@
 #include <QScreen>
 #include <QTextStream>
 #include <QTimer>
+#include <QTimerEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -64,6 +65,7 @@ CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
     , pixelSampler_(pixelSampler)
     , selectionHistory_(selectionHistory)
     , actionBar_(new CaptureActionBar(iconProvider_, this))
+    , pendingUpdateTimerId_(0)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -950,6 +952,10 @@ void CaptureOverlay::scheduleOverlayUpdate()
     if (!frameLimiter_.isValid() || frameLimiter_.elapsed() >= kOverlayFrameIntervalMs) {
         repaintQueued_ = false;
         frameLimiter_.restart();
+        if (pendingUpdateTimerId_) {
+            killTimer(pendingUpdateTimerId_);
+            pendingUpdateTimerId_ = 0;
+        }
         update();
         return;
     }
@@ -959,14 +965,21 @@ void CaptureOverlay::scheduleOverlayUpdate()
     }
 
     repaintQueued_ = true;
-    const auto delay = static_cast<int>(std::max<qint64>(1, kOverlayFrameIntervalMs - frameLimiter_.elapsed()));
-    QPointer<CaptureOverlay> guard(this);
-    QTimer::singleShot(delay, this, [guard] {
-        if (guard.isNull()) return;
-        guard->repaintQueued_ = false;
-        guard->frameLimiter_.restart();
-        guard->update();
-    });
+    const auto delayMs = kOverlayFrameIntervalMs - static_cast<int>(frameLimiter_.elapsed());
+    pendingUpdateTimerId_ = startTimer(std::max(1, delayMs));
+}
+
+void CaptureOverlay::timerEvent(QTimerEvent* event)
+{
+    if (event->timerId() == pendingUpdateTimerId_) {
+        killTimer(pendingUpdateTimerId_);
+        pendingUpdateTimerId_ = 0;
+        repaintQueued_ = false;
+        frameLimiter_.restart();
+        update();
+        return;
+    }
+    QWidget::timerEvent(event);
 }
 
 void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)

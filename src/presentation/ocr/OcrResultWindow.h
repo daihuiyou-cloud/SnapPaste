@@ -37,6 +37,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void timerEvent(QTimerEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
@@ -52,6 +53,7 @@ private:
     void updateTextRows();
     void updateToolbar();
     void updateTitleButtons();
+    void delayedRebuild();
 
     QImage source_;
     QVector<OcrBlockInfo> blocks_;
@@ -64,6 +66,7 @@ private:
     QPoint dragMaximizeCheck_;
     bool dragging_ = false;
     bool maximized_ = false;
+    int rebuildTimerId_ = 0;
     QRect normalGeometry_;
 
     QLabel* imageLabel_ = nullptr;

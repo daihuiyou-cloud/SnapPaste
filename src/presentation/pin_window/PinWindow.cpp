@@ -602,7 +602,7 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         setGeometry(constrainedResizeGeometry(event->globalPos()));
         applyResizeToScale();
         update();
-        emitStateChanged();
+        emitStateChangedThrottled();
         event->accept();
         return;
     }
@@ -633,7 +633,7 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         move(newPos);
         item_.state.position = frameGeometry().topLeft();
     }
-    emitStateChanged();
+    emitStateChangedThrottled();
     event->accept();
 }
 
@@ -838,7 +838,7 @@ void PinWindow::wheelEvent(QWheelEvent* event)
         setGeometry(QRect(newPos, newSize));
         item_.state.position = frameGeometry().topLeft();
         update();
-        emitStateChanged();
+        emitStateChangedThrottled();
     }
     event->accept();
 }
@@ -869,11 +869,25 @@ void PinWindow::applyWindowFlags()
 
 void PinWindow::emitStateChanged()
 {
+    stateEmitLimiter_.invalidate();
     item_.state.position = frameGeometry().topLeft();
     item_.state.size = logicalImageSize();
     item_.state.devicePixelRatio = item_.image.devicePixelRatio();
     item_.state = normalizedState(item_.state);
     setWindowOpacity(item_.state.opacity);
+    emit stateChanged(item_.id, item_.state);
+}
+
+void PinWindow::emitStateChangedThrottled()
+{
+    if (stateEmitLimiter_.isValid() && stateEmitLimiter_.elapsed() < kStateEmitIntervalMs) {
+        return;
+    }
+    stateEmitLimiter_.restart();
+    item_.state.position = frameGeometry().topLeft();
+    item_.state.size = logicalImageSize();
+    item_.state.devicePixelRatio = item_.image.devicePixelRatio();
+    item_.state = normalizedState(item_.state);
     emit stateChanged(item_.id, item_.state);
 }
 

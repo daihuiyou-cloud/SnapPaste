@@ -5,6 +5,7 @@
 #include "presentation/icons/IIconProvider.h"
 #include "presentation/pin_window/PinToolbar.h"
 
+#include <QElapsedTimer>
 #include <QPropertyAnimation>
 #include <QRect>
 #include <QVector>
@@ -97,7 +98,10 @@ private:
     bool savedClickThrough_ = false;
     bool visibleSaved_ = false;
     static constexpr int kMaxPinUndo = 20;
+    static constexpr int kStateEmitIntervalMs = 50;
     QVector<PinnedImageState> undoStack_;
+    QElapsedTimer stateEmitLimiter_;
+    void emitStateChangedThrottled();
 };
 
 } // namespace snappaste

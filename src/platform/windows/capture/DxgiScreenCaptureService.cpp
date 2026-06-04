@@ -22,6 +22,10 @@
 
 namespace snappaste {
 
+#ifdef Q_OS_WIN
+using Microsoft::WRL::ComPtr;
+#endif
+
 namespace {
 
 QRect logicalToPhysical(const QRect& logical, qreal dpr)
@@ -33,12 +37,6 @@ QRect logicalToPhysical(const QRect& logical, qreal dpr)
 }
 
 #ifdef Q_OS_WIN
-using Microsoft::WRL::ComPtr;
-
-struct OutputMatch {
-    ComPtr<IDXGIOutput1> output;
-    DXGI_OUTPUT_DESC desc{};
-};
 
 bool rectContains(const RECT& rect, const POINT& point)
 {
@@ -50,20 +48,60 @@ QString deviceNameFrom(const DXGI_OUTPUT_DESC& desc)
     return QString::fromWCharArray(desc.DeviceName);
 }
 
-Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physicalCenter)
-{
-    ComPtr<IDXGIFactory1> factory;
-    auto hr = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(factory.GetAddressOf()));
-    if (FAILED(hr)) {
-        return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "Failed to create DXGI factory."));
-    }
+struct OutputMatch {
+    ComPtr<IDXGIOutput1> output;
+    DXGI_OUTPUT_DESC desc{};
+};
 
+Result<OutputMatch> findOutput(const QVector<DxgiScreenCaptureService::CachedOutput>& cache,
+                                const QString& qtScreenName,
+                                const POINT& physicalCenter)
+{
     OutputMatch fallback;
     bool hasFallback = false;
 
+    for (const auto& entry : cache) {
+        auto name = deviceNameFrom(entry.desc);
+        if (!qtScreenName.isEmpty() && name.compare(qtScreenName, Qt::CaseInsensitive) == 0) {
+            OutputMatch match;
+            match.output = entry.output;
+            match.desc = entry.desc;
+            return Result<OutputMatch>::success(std::move(match));
+        }
+
+        if (!hasFallback && rectContains(entry.desc.DesktopCoordinates, physicalCenter)) {
+            fallback.output = entry.output;
+            fallback.desc = entry.desc;
+            hasFallback = true;
+        }
+    }
+
+    if (hasFallback) {
+        return Result<OutputMatch>::success(std::move(fallback));
+    }
+
+    return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "No matching DXGI output was found."));
+}
+
+#endif
+
+} // anonymous namespace
+
+#ifdef Q_OS_WIN
+
+void DxgiScreenCaptureService::ensureFactoryCache()
+{
+    if (cacheValid_) return;
+
+    cachedOutputs_.clear();
+    cachedFactory_.Reset();
+
+    auto hr = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(cachedFactory_.GetAddressOf()));
+    if (FAILED(hr)) return;
+
     for (UINT adapterIndex = 0;; ++adapterIndex) {
         ComPtr<IDXGIAdapter1> adapter;
-        if (factory->EnumAdapters1(adapterIndex, adapter.GetAddressOf()) == DXGI_ERROR_NOT_FOUND) {
+        if (cachedFactory_->EnumAdapters1(adapterIndex, adapter.GetAddressOf()) == DXGI_ERROR_NOT_FOUND) {
             break;
         }
 
@@ -83,27 +121,16 @@ Result<OutputMatch> findOutput(const QString& qtScreenName, const POINT& physica
                 continue;
             }
 
-            OutputMatch match;
-            match.output = output1;
-            match.desc = desc;
-
-            if (!qtScreenName.isEmpty() && deviceNameFrom(desc).compare(qtScreenName, Qt::CaseInsensitive) == 0) {
-                return Result<OutputMatch>::success(std::move(match));
-            }
-
-            if (!hasFallback && rectContains(desc.DesktopCoordinates, physicalCenter)) {
-                fallback = std::move(match);
-                hasFallback = true;
-            }
+            cachedOutputs_.push_back({std::move(output1), desc});
         }
     }
 
-    if (hasFallback) {
-        return Result<OutputMatch>::success(std::move(fallback));
-    }
-
-    return Result<OutputMatch>::failure(QCoreApplication::translate("AppErrors", "No matching DXGI output was found."));
+    cacheValid_ = true;
 }
+
+#endif
+
+#ifdef Q_OS_WIN
 
 QRect toPhysicalRegion(const QRect& logicalRegion,
                        const QRect& logicalScreenGeometry,
@@ -221,7 +248,8 @@ private:
     IDXGIOutputDuplication* duplication_;
 };
 
-Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
+Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::CachedOutput>& cachedOutputs,
+                                      const ScreenCaptureSegment& segment,
                                       ID3D11Device& device,
                                       ID3D11DeviceContext& context)
 {
@@ -236,7 +264,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
         static_cast<LONG>(std::llround(region.center().y() * approximateScale)),
     };
 
-    auto outputResult = findOutput(segment.screenName, approximateCenter);
+    auto outputResult = findOutput(cachedOutputs, segment.screenName, approximateCenter);
     if (outputResult.isError()) {
         return Result<QImage>::failure(outputResult.error());
     }
@@ -336,9 +364,7 @@ Result<QImage> captureSegmentWithDxgi(const ScreenCaptureSegment& segment,
 
     return Result<QImage>::success(std::move(image));
 }
-#endif
-
-} // namespace
+#endif // Q_OS_WIN
 
 Result<QImage> DxgiScreenCaptureService::capturePrimaryScreen()
 {
@@ -501,12 +527,16 @@ Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegm
             d3dDeviceValid_ = false;
             d3dContext_.Reset();
             d3dDevice_.Reset();
+            cacheValid_ = false;
+            cachedFactory_.Reset();
+            cachedOutputs_.clear();
         }
         auto deviceResult = ensureD3dDeviceImpl();
         if (deviceResult.isError()) {
             break;
         }
-        auto result = captureSegmentWithDxgi(segment, *d3dDevice_.Get(), *d3dContext_.Get());
+        ensureFactoryCache();
+        auto result = captureSegmentWithDxgi(cachedOutputs_, segment, *d3dDevice_.Get(), *d3dContext_.Get());
         if (result.isOk()) {
             return result;
         }

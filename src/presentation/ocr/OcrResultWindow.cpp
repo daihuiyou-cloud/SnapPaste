@@ -15,6 +15,7 @@
 #include <QScrollBar>
 #include <QSplitter>
 #include <QTimer>
+#include <QTimerEvent>
 #include <QVBoxLayout>
 #include <QWindowStateChangeEvent>
 
@@ -547,7 +548,26 @@ void OcrResultWindow::keyPressEvent(QKeyEvent* event)
 void OcrResultWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    rebuildCache();
+    delayedRebuild();
+}
+
+void OcrResultWindow::timerEvent(QTimerEvent* event)
+{
+    if (event->timerId() == rebuildTimerId_) {
+        killTimer(rebuildTimerId_);
+        rebuildTimerId_ = 0;
+        rebuildCache();
+        return;
+    }
+    QWidget::timerEvent(event);
+}
+
+void OcrResultWindow::delayedRebuild()
+{
+    if (rebuildTimerId_) {
+        killTimer(rebuildTimerId_);
+    }
+    rebuildTimerId_ = startTimer(100);
 }
 
 void OcrResultWindow::updateTitleButtons()
