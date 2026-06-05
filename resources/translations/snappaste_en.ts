@@ -837,7 +837,7 @@
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="125"/>
-        <source>Saved %1 → Click to open</source>
+        <source>Saved %1 - Click to open</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -897,7 +897,7 @@
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="309"/>
-        <source>OCR → %1 characters</source>
+        <source>OCR - %1 characters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -133,7 +133,7 @@ void Application::connectCoreSignals()
         });
     });
     connect(&context_.captureViewModel(), &CaptureViewModel::saved, this, [this](const QString& filePath) {
-        showStatus(tr("Saved %1 \u2192 Click to open").arg(QFileInfo(filePath).fileName()), [filePath] {
+        showStatus(tr("Saved %1 - Click to open").arg(QFileInfo(filePath).fileName()), [filePath] {
             QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
         });
     });
@@ -318,7 +318,7 @@ void Application::ocrRegion(const QRect& region)
             QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
 #pragma warning(pop)
             guard->showStatus(
-                tr("OCR \u2192 %1 characters").arg(outcome.text.length()));
+                tr("OCR - %1 characters").arg(outcome.text.length()));
         });
     });
 }

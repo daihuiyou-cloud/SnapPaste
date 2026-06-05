@@ -837,8 +837,8 @@
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="125"/>
-        <source>Saved %1 → Click to open</source>
-        <translation>已保存 %1 → 点击打开</translation>
+        <source>Saved %1 - Click to open</source>
+        <translation>已保存 %1 - 点击打开</translation>
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="119"/>
@@ -897,8 +897,8 @@
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="309"/>
-        <source>OCR → %1 characters</source>
-        <translation>OCR → %1 个字符</translation>
+        <source>OCR - %1 characters</source>
+        <translation>OCR - %1 个字符</translation>
     </message>
     <message>
         <location filename="../../src/app/Application.cpp" line="405"/>
