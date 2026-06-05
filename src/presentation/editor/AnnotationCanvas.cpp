@@ -412,7 +412,6 @@ void AnnotationCanvas::zoomAt(double factor, QPoint center)
                                         static_cast<int>(oldCenter.y() * newZoom));
     auto* scrollArea = qobject_cast<QScrollArea*>(parentWidget());
     if (scrollArea) {
-        auto vp = scrollArea->viewport();
         auto scrollDelta = newWidgetCenter - center;
         scrollArea->horizontalScrollBar()->setValue(
             scrollArea->horizontalScrollBar()->value() + scrollDelta.x());

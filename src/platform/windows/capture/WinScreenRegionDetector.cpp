@@ -271,6 +271,7 @@ WinScreenRegionDetector::~WinScreenRegionDetector()
 #ifdef Q_OS_WIN
 void WinScreenRegionDetector::rebuildCache(HWND hwnd, const QRect& desktopBounds)
 {
+    Q_UNUSED(desktopBounds)
     cachedChildRects_.clear();
     buildChildWindowCache(hwnd, cachedChildRects_);
     launchUiScan(hwnd);
