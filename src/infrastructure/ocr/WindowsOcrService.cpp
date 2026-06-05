@@ -24,19 +24,67 @@ QImage preprocessForOcr(const QImage& src)
 {
     if (src.isNull()) return {};
 
-    QImage result;
-    if (src.format() == QImage::Format_ARGB32_Premultiplied) {
-        result = src;
-    } else {
-        result = src.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    // Step 1: Convert to grayscale for better text/background separation
+    QImage gray = src.convertToFormat(QImage::Format_Grayscale8);
+
+    // Step 2: Auto-contrast (histogram stretch) to enhance faint/low-contrast text
+    int minVal = 255, maxVal = 0;
+    for (int y = 0; y < gray.height(); ++y) {
+        const auto* line = gray.constScanLine(y);
+        for (int x = 0; x < gray.width(); ++x) {
+            const auto v = line[x];
+            if (v < minVal) minVal = v;
+            if (v > maxVal) maxVal = v;
+        }
+    }
+    if (maxVal > minVal) {
+        const double scale = 255.0 / (maxVal - minVal);
+        for (int y = 0; y < gray.height(); ++y) {
+            auto* line = gray.scanLine(y);
+            for (int x = 0; x < gray.width(); ++x) {
+                line[x] = static_cast<uchar>((line[x] - minVal) * scale + 0.5);
+            }
+        }
     }
 
+    // Step 3: Mild unsharp mask sharpening to enhance text edges (anti-aliased fonts)
+    if (gray.width() > 6 && gray.height() > 6) {
+        QImage blurred(gray.size(), QImage::Format_Grayscale8);
+        for (int y = 0; y < gray.height(); ++y) {
+            for (int x = 0; x < gray.width(); ++x) {
+                int sum = 0;
+                int count = 0;
+                for (int dy = -1; dy <= 1; ++dy) {
+                    const auto* srcLine = gray.constScanLine(qBound(0, y + dy, gray.height() - 1));
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        sum += srcLine[qBound(0, x + dx, gray.width() - 1)];
+                        ++count;
+                    }
+                }
+                blurred.scanLine(y)[x] = static_cast<uchar>(sum / count);
+            }
+        }
+        for (int y = 0; y < gray.height(); ++y) {
+            const auto* origLine = gray.constScanLine(y);
+            const auto* blurLine = blurred.constScanLine(y);
+            auto* outLine = gray.scanLine(y);
+            for (int x = 0; x < gray.width(); ++x) {
+                const int val = origLine[x] + (origLine[x] - blurLine[x]) / 2;
+                outLine[x] = static_cast<uchar>(qBound(0, val, 255));
+            }
+        }
+    }
+
+    // Step 4: Convert to premultiplied ARGB32 for SoftwareBitmap copy
+    QImage result = gray.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+
+    // Step 4: Upscale very small images with smooth interpolation
     const double minDim = qMin(result.width(), result.height());
     if (minDim < 200) {
         const double factor = qMin(4.0, 200.0 / minDim);
         result = result.scaled(static_cast<int>(result.width() * factor),
                                static_cast<int>(result.height() * factor),
-                               Qt::KeepAspectRatio, Qt::FastTransformation);
+                               Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
     return result;

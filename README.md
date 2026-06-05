@@ -175,7 +175,7 @@ presentation -> domain -> infrastructure -> platform/windows
 - **引擎缓存**：`OcrEngine` 按语言缓存，切换语言时自动重建，连续 OCR 避免重复创建开销。
 - **异步回调**：`recognizeTextAsync()` 在工作线程完成后通过 `QMetaObject::invokeMethod` 将结果派发到主线程，避免中间线程阻塞。
 - **请求级取消**：每个 OCR 任务在投递时捕获当前 `requestId`，执行时与 `currentRequestId_` 比对；`cancel()` 仅递增计数器即可使所有未执行任务失效，无竞态。
-- **预处理**：仅做灰度化 + 条件快速缩放（针对极小文字），去掉对比度无益的二值化和锐化处理。
+- **预处理**：灰度化 → 自动对比度拉伸（增强低对比度文字）→ Unsharp Mask 锐化（增强反走样文字边缘）→ 平滑缩放上采样（针对极小文字）。
 
 ### 事件通信
 
