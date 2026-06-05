@@ -199,19 +199,21 @@ OcrResultWindow::OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
     textRows_.reserve(blocks_.size());
     for (int i = 0; i < blocks_.size(); ++i) {
         auto* row = new QFrame(textListContainer_);
-        row->setFixedHeight(42);
         row->setCursor(Qt::PointingHandCursor);
         row->installEventFilter(this);
         row->setProperty("blockIndex", i);
 
         auto* rowLayout = new QHBoxLayout(row);
-        rowLayout->setContentsMargins(14, 0, 14, 0);
+        rowLayout->setContentsMargins(14, 6, 14, 6);
         rowLayout->setSpacing(0);
 
-        auto* textLabel = new QLabel(blocks_[i].text, row);
+        const auto& text = blocks_[i].text;
+        auto* textLabel = new QLabel(text, row);
         textLabel->setStyleSheet("background: transparent; color: #c8d0d8;"
                                  " font-size: 12px;");
+        textLabel->setWordWrap(true);
         textLabel->setCursor(Qt::PointingHandCursor);
+        textLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
         rowLayout->addWidget(textLabel, 1);
 
         textListLayout->addWidget(row);

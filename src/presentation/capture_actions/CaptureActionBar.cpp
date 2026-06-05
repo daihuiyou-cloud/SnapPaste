@@ -35,7 +35,7 @@ QToolButton* createActionButton(const ActionDef& def, IIconProvider& iconProvide
     btn->setAccessibleName(def.tooltip);
     btn->setFocusPolicy(Qt::NoFocus);
     btn->setCursor(Qt::PointingHandCursor);
-    btn->setFixedSize(48, 48);
+    btn->setFixedSize(56, 48);
     btn->setStyleSheet(
         "QToolButton#CaptureActionButton {"
         " color: #f4fbff; font: 11px;"

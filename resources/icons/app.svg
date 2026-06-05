@@ -1,7 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect x="8" y="10" width="48" height="38" rx="10" fill="#1f2937"/>
-  <path d="M18 22h28v16H18z" fill="#eef6ff"/>
-  <path d="M18 22l9 8 7-5 12 13H18z" fill="#31c7a4"/>
-  <circle cx="43" cy="25" r="4" fill="#ffcc4d"/>
-  <path d="M22 54h20" stroke="#31c7a4" stroke-width="5" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2d3748"/>
+      <stop offset="100%" stop-color="#1a202c"/>
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f7fafc"/>
+    </linearGradient>
+    <linearGradient id="mountGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#31c7a4"/>
+      <stop offset="100%" stop-color="#1fa885"/>
+    </linearGradient>
+    <linearGradient id="mountBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6ee7c0"/>
+      <stop offset="100%" stop-color="#31c7a4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <rect x="5" y="7" width="54" height="54" rx="13" fill="#000000" opacity="0.12"/>
+
+  <!-- Main body -->
+  <rect x="4" y="5" width="56" height="56" rx="14" fill="url(#bgGrad)"/>
+
+  <!-- Inner highlight -->
+  <rect x="4" y="5" width="56" height="24" rx="14" fill="#ffffff" opacity="0.04"/>
+
+  <!-- Screen area -->
+  <rect x="12" y="13" width="40" height="28" rx="6" fill="url(#screenGrad)"/>
+
+  <!-- Background mountain -->
+  <path d="M12 35l10-12 8 8 6-5 16 14v5H12z" fill="url(#mountBack)" opacity="0.6"/>
+
+  <!-- Foreground mountain -->
+  <path d="M12 37l14-16 10 10 8-7 8 10v6H12z" fill="url(#mountGrad)"/>
+
+  <!-- Sun -->
+  <circle cx="45" cy="20" r="4.5" fill="#fbbf24"/>
+  <circle cx="45" cy="20" r="3" fill="#fcd34d"/>
+  <circle cx="45" cy="20" r="1.5" fill="#fef3c7"/>
+
+  <!-- Sun glow -->
+  <circle cx="45" cy="20" r="6.5" fill="#fbbf24" opacity="0.15"/>
+
+  <!-- Clipboard/polaroid bar -->
+  <rect x="12" y="41" width="40" height="6" rx="0 0 6 6" fill="#e2e8f0"/>
+
+  <!-- Copy indicator lines -->
+  <rect x="20" y="42.5" width="24" height="1.5" rx="0.75" fill="#a0aec0"/>
+
+  <!-- Stand/clip -->
+  <path d="M24 47v6c0 2 16 2 16 0v-6" fill="none" stroke="#31c7a4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="28" y="52" width="8" height="3" rx="1" fill="#31c7a4"/>
 </svg>
