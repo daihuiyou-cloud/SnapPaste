@@ -28,6 +28,11 @@ public:
         DXGI_OUTPUT_DESC desc{};
     };
 
+    struct CachedDuplication {
+        Microsoft::WRL::ComPtr<IDXGIOutputDuplication> duplication;
+        QString outputName;
+    };
+
 private:
     Result<QImage> captureWithDxgi(const ScreenCaptureSegment& segment);
     Result<QImage> composeSegments(const QVector<ScreenCaptureSegment>& segments,
@@ -51,6 +56,8 @@ private:
     UINT cachedStagingWidth_ = 0;
     UINT cachedStagingHeight_ = 0;
     DXGI_FORMAT cachedStagingFormat_ = DXGI_FORMAT_UNKNOWN;
+
+    CachedDuplication cachedDup_;
 #endif
 };
 

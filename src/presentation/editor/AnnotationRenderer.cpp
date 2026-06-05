@@ -157,6 +157,7 @@ void AnnotationRenderer::invalidateCache()
 {
     cacheValid_ = false;
     mosaicCachedRadius_ = -1;
+    mosaicCachedBounds_ = QRect();
     mosaicThumbCache_ = {};
     mosaicSourceKey_ = -1;
 }
@@ -323,28 +324,43 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
 {
     // --- Blurred mosaic ---
     if (annotation.blurRadius > 0) {
+        QRect blurBounds;
+        if (!annotation.points.isEmpty()) {
+            const int blockSize = qMax(4, annotation.strokeWidth * 4);
+            for (const auto& pt : annotation.points) {
+                QRect r(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
+                blurBounds = blurBounds.isEmpty() ? r : blurBounds.united(r);
+            }
+        } else {
+            blurBounds = annotation.bounds;
+        }
+        blurBounds = blurBounds.intersected(sourceImage.rect());
+        if (blurBounds.isEmpty()) return;
+
         bool cacheStale = (mosaicCachedRadius_ != annotation.blurRadius ||
-                           mosaicBlurCache_.size() != sourceImage.size() ||
+                           mosaicCachedBounds_ != blurBounds ||
                            mosaicSourceKey_ != sourceImage.cacheKey());
         if (cacheStale) {
-            mosaicBlurCache_ = blurImage(sourceImage, annotation.blurRadius);
+            mosaicBlurCache_ = blurImageRegion(sourceImage, blurBounds, annotation.blurRadius);
             mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
             mosaicCachedRadius_ = annotation.blurRadius;
+            mosaicCachedBounds_ = blurBounds;
+            mosaicSourceKey_ = sourceImage.cacheKey();
         }
+
         if (!annotation.points.isEmpty()) {
             const int blockSize = qMax(4, annotation.strokeWidth * 4);
             for (const auto& pt : annotation.points) {
                 QRect clipped = QRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize)
                     .intersected(sourceImage.rect());
-                if (!clipped.isEmpty())
-                    painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
+                if (!clipped.isEmpty()) {
+                    QPoint srcOffset(clipped.left() - blurBounds.left(), clipped.top() - blurBounds.top());
+                    painter->drawImage(clipped.topLeft(), mosaicBlurCache_, QRect(srcOffset, clipped.size()));
+                }
             }
         } else {
-            auto clipped = annotation.bounds.intersected(sourceImage.rect());
-            if (!clipped.isEmpty())
-                painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
+            painter->drawImage(blurBounds.topLeft(), mosaicBlurCache_);
         }
-        mosaicSourceKey_ = sourceImage.cacheKey();
         return;
     }
 

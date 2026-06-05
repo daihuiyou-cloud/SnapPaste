@@ -437,9 +437,9 @@ void AnnotationEventHandler::handleMoveSelect(QMouseEvent* event)
     if (!toolManager_.resizing() && !toolManager_.moving()) {
         return;
     }
-    renderer_.invalidateCache();
     const auto p = toImage(event->pos());
     if (toolManager_.resizing()) {
+        renderer_.invalidateCache();
         toolManager_.updateResize(p, event->modifiers().testFlag(Qt::ShiftModifier));
         canvas_.update();
         return;

@@ -59,6 +59,7 @@ private:
     mutable bool cacheValid_ = false;
     mutable QImage mosaicBlurCache_;
     mutable int mosaicCachedRadius_ = -1;
+    mutable QRect mosaicCachedBounds_;
     mutable QImage mosaicThumbCache_;
     mutable qint64 mosaicSourceKey_ = -1;
 

@@ -752,7 +752,23 @@ void PinWindow::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.drawImage(rect(), renderedImage());
+
+    auto rotation = item_.state.transform.rotationDegrees;
+    bool flippedH = item_.state.transform.flippedHorizontally;
+    bool flippedV = item_.state.transform.flippedVertically;
+    if (rotation != 0 || flippedH || flippedV) {
+        painter.save();
+        auto r = rect();
+        auto center = r.center();
+        painter.translate(center);
+        painter.rotate(rotation);
+        painter.scale(flippedH ? -1.0 : 1.0, flippedV ? -1.0 : 1.0);
+        painter.translate(-center);
+        painter.drawImage(r, item_.image);
+        painter.restore();
+    } else {
+        painter.drawImage(rect(), item_.image);
+    }
 
     if (thumbnailMode_) {
         painter.setPen(kPinAccent);

@@ -2,6 +2,10 @@
 
 #include <climits>
 #include <cstring>
+#include <functional>
+#include <numeric>
+#include <thread>
+#include <vector>
 
 #include <QCoreApplication>
 #include <QMetaObject>
@@ -20,18 +24,41 @@ namespace snappaste {
 
 namespace {
 
+static void parallelRows(int height, const std::function<void(int y)>& func)
+{
+    auto workerCount = std::thread::hardware_concurrency();
+    if (workerCount < 2 || height < 64) {
+        for (int y = 0; y < height; ++y) func(y);
+        return;
+    }
+    std::vector<std::thread> workers;
+    workers.reserve(workerCount);
+    int chunkSize = (height + static_cast<int>(workerCount) - 1) / static_cast<int>(workerCount);
+    for (unsigned t = 0; t < workerCount; ++t) {
+        int start = static_cast<int>(t) * chunkSize;
+        int end = (std::min)(start + chunkSize, height);
+        if (start >= end) break;
+        workers.emplace_back([start, end, &func]() {
+            for (int y = start; y < end; ++y) func(y);
+        });
+    }
+    for (auto& w : workers) w.join();
+}
+
 QImage preprocessForOcr(const QImage& src)
 {
     if (src.isNull()) return {};
 
     // Step 1: Convert to grayscale for better text/background separation
     QImage gray = src.convertToFormat(QImage::Format_Grayscale8);
+    const int w = gray.width();
+    const int h = gray.height();
 
     // Step 2: Auto-contrast (histogram stretch) to enhance faint/low-contrast text
     int minVal = 255, maxVal = 0;
-    for (int y = 0; y < gray.height(); ++y) {
+    for (int y = 0; y < h; ++y) {
         const auto* line = gray.constScanLine(y);
-        for (int x = 0; x < gray.width(); ++x) {
+        for (int x = 0; x < w; ++x) {
             const auto v = line[x];
             if (v < minVal) minVal = v;
             if (v > maxVal) maxVal = v;
@@ -39,43 +66,48 @@ QImage preprocessForOcr(const QImage& src)
     }
     if (maxVal > minVal) {
         const double scale = 255.0 / (maxVal - minVal);
-        for (int y = 0; y < gray.height(); ++y) {
+        parallelRows(h, [&](int y) {
             auto* line = gray.scanLine(y);
-            for (int x = 0; x < gray.width(); ++x) {
+            for (int x = 0; x < w; ++x) {
                 line[x] = static_cast<uchar>((line[x] - minVal) * scale + 0.5);
             }
-        }
+        });
     }
 
     // Step 3: Mild unsharp mask sharpening to enhance text edges (anti-aliased fonts)
-    if (gray.width() > 6 && gray.height() > 6) {
+    if (w > 6 && h > 6) {
         QImage blurred(gray.size(), QImage::Format_Grayscale8);
-        for (int y = 0; y < gray.height(); ++y) {
-            for (int x = 0; x < gray.width(); ++x) {
+        const int lastRow = h - 1;
+        const int lastCol = w - 1;
+        parallelRows(h, [&](int y) {
+            for (int x = 0; x < w; ++x) {
                 int sum = 0;
-                int count = 0;
-                for (int dy = -1; dy <= 1; ++dy) {
-                    const auto* srcLine = gray.constScanLine(qBound(0, y + dy, gray.height() - 1));
-                    for (int dx = -1; dx <= 1; ++dx) {
-                        sum += srcLine[qBound(0, x + dx, gray.width() - 1)];
-                        ++count;
+                int y0 = (std::max)(0, y - 1);
+                int y1 = (std::min)(lastRow, y + 1);
+                int x0 = (std::max)(0, x - 1);
+                int x1 = (std::min)(lastCol, x + 1);
+                for (int dy = y0; dy <= y1; ++dy) {
+                    const auto* srcLine = gray.constScanLine(dy);
+                    for (int dx = x0; dx <= x1; ++dx) {
+                        sum += srcLine[dx];
                     }
                 }
+                int count = (y1 - y0 + 1) * (x1 - x0 + 1);
                 blurred.scanLine(y)[x] = static_cast<uchar>(sum / count);
             }
-        }
-        for (int y = 0; y < gray.height(); ++y) {
+        });
+        parallelRows(h, [&](int y) {
             const auto* origLine = gray.constScanLine(y);
             const auto* blurLine = blurred.constScanLine(y);
             auto* outLine = gray.scanLine(y);
-            for (int x = 0; x < gray.width(); ++x) {
+            for (int x = 0; x < w; ++x) {
                 const int val = origLine[x] + (origLine[x] - blurLine[x]) / 2;
                 outLine[x] = static_cast<uchar>(qBound(0, val, 255));
             }
-        }
+        });
     }
 
-    // Step 4: Convert to premultiplied ARGB32 for SoftwareBitmap copy
+    // Step 3: Convert to premultiplied ARGB32 for SoftwareBitmap copy
     QImage result = gray.convertToFormat(QImage::Format_ARGB32_Premultiplied);
 
     // Step 4: Upscale very small images with smooth interpolation

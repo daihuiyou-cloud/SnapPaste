@@ -89,4 +89,15 @@ QImage blurImage(const QImage& source, int radius)
     return result;
 }
 
+QImage blurImageRegion(const QImage& source, const QRect& region, int radius)
+{
+    if (source.isNull()) return QImage();
+    auto clipped = region.intersected(QRect(QPoint(0, 0), source.size()));
+    if (clipped.isEmpty() || radius <= 0) {
+        return source.copy(clipped);
+    }
+    QImage subImage = source.copy(clipped);
+    return blurImage(subImage, radius);
+}
+
 }

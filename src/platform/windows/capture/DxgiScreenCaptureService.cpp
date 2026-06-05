@@ -254,6 +254,7 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
                                       const ScreenCaptureSegment& segment,
                                       ID3D11Device& device,
                                       ID3D11DeviceContext& context,
+                                      DxgiScreenCaptureService::CachedDuplication& cachedDup,
                                       Microsoft::WRL::ComPtr<ID3D11Texture2D>& cachedStaging,
                                       UINT& cachedW, UINT& cachedH,
                                       DXGI_FORMAT& cachedFmt)
@@ -286,20 +287,32 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
         return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Capture region is outside the selected output."));
     }
 
-    ComPtr<IDXGIOutputDuplication> duplication;
-    auto hr = output.output->DuplicateOutput(&device, duplication.GetAddressOf());
-    if (FAILED(hr)) {
-        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI desktop duplication is not available."));
+    auto outputName = deviceNameFrom(output.desc);
+    if (cachedDup.duplication && cachedDup.outputName != outputName) {
+        cachedDup.duplication.Reset();
+        cachedDup.outputName.clear();
+    }
+
+    if (!cachedDup.duplication) {
+        auto hr = output.output->DuplicateOutput(&device, cachedDup.duplication.GetAddressOf());
+        if (FAILED(hr)) {
+            return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI desktop duplication is not available."));
+        }
+        cachedDup.outputName = outputName;
     }
 
     DXGI_OUTDUPL_FRAME_INFO frameInfo{};
     ComPtr<IDXGIResource> desktopResource;
-    hr = duplication->AcquireNextFrame(100, &frameInfo, desktopResource.GetAddressOf());
+    auto hr = cachedDup.duplication->AcquireNextFrame(1000, &frameInfo, desktopResource.GetAddressOf());
     if (FAILED(hr)) {
+        if (hr == DXGI_ERROR_ACCESS_LOST || hr == DXGI_ERROR_DEVICE_REMOVED) {
+            cachedDup.duplication.Reset();
+            cachedDup.outputName.clear();
+        }
         return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to acquire a DXGI desktop frame."));
     }
 
-    ScopedFrameRelease frameGuard(duplication.Get());
+    ScopedFrameRelease frameGuard(cachedDup.duplication.Get());
 
     ComPtr<ID3D11Texture2D> desktopTexture;
     hr = desktopResource.As(&desktopTexture);
@@ -551,6 +564,7 @@ Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegm
             cachedStagingWidth_ = 0;
             cachedStagingHeight_ = 0;
             cachedStagingFormat_ = DXGI_FORMAT_UNKNOWN;
+            cachedDup_ = CachedDuplication{};
         }
 
         Result<QImage> result = Result<QImage>::failure({});
@@ -562,6 +576,7 @@ Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegm
             }
             ensureFactoryCache();
             result = captureSegmentWithDxgi(cachedOutputs_, segment, *d3dDevice_.Get(), *d3dContext_.Get(),
+                                            cachedDup_,
                                             cachedStagingTexture_, cachedStagingWidth_, cachedStagingHeight_,
                                             cachedStagingFormat_);
         }
