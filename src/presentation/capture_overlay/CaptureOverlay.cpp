@@ -17,7 +17,6 @@
 #include <QScreen>
 #include <QTextStream>
 #include <QTimer>
-#include <QTimerEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -65,8 +64,13 @@ CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
     , pixelSampler_(pixelSampler)
     , selectionHistory_(selectionHistory)
     , actionBar_(new CaptureActionBar(iconProvider_, this))
-    , pendingUpdateTimerId_(0)
+    , updateTimer_(new QTimer(this))
 {
+    updateTimer_->setSingleShot(true);
+    connect(updateTimer_, &QTimer::timeout, this, [this] {
+        frameLimiter_.restart();
+        update();
+    });
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
     setMouseTracking(true);
@@ -954,36 +958,18 @@ void CaptureOverlay::updateCursorFor(const QPoint& globalPosition)
 void CaptureOverlay::scheduleOverlayUpdate()
 {
     if (!frameLimiter_.isValid() || frameLimiter_.elapsed() >= kOverlayFrameIntervalMs) {
-        repaintQueued_ = false;
         frameLimiter_.restart();
-        if (pendingUpdateTimerId_) {
-            killTimer(pendingUpdateTimerId_);
-            pendingUpdateTimerId_ = 0;
-        }
+        updateTimer_->stop();
         update();
         return;
     }
 
-    if (repaintQueued_) {
+    if (updateTimer_->isActive()) {
         return;
     }
 
-    repaintQueued_ = true;
     const auto delayMs = kOverlayFrameIntervalMs - static_cast<int>(frameLimiter_.elapsed());
-    pendingUpdateTimerId_ = startTimer(std::max(1, delayMs));
-}
-
-void CaptureOverlay::timerEvent(QTimerEvent* event)
-{
-    if (event->timerId() == pendingUpdateTimerId_) {
-        killTimer(pendingUpdateTimerId_);
-        pendingUpdateTimerId_ = 0;
-        repaintQueued_ = false;
-        frameLimiter_.restart();
-        update();
-        return;
-    }
-    QWidget::timerEvent(event);
+    updateTimer_->start(std::max(1, delayMs));
 }
 
 void CaptureOverlay::drawCandidate(QPainter& painter, const QRect& globalRegion)
@@ -1091,7 +1077,17 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
         const auto actualGridW = pw * kZoom;
         const auto actualGridH = ph * kZoom;
         const auto gridRect = QRect(rect.left() + kPad, rect.top() + kPad, actualGridW, actualGridH);
-        painter.drawImage(gridRect, pixels.scaled(actualGridW, actualGridH, Qt::IgnoreAspectRatio, Qt::FastTransformation));
+
+        QImage scaled;
+        if (magnifierCachePos_ == lastMouseGlobal_ && !magnifierCache_.isNull()
+            && magnifierCache_.size() == QSize(actualGridW, actualGridH)) {
+            scaled = magnifierCache_;
+        } else {
+            scaled = pixels.scaled(actualGridW, actualGridH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+            magnifierCache_ = scaled;
+            magnifierCachePos_ = lastMouseGlobal_;
+        }
+        painter.drawImage(gridRect, scaled);
 
         painter.setRenderHint(QPainter::Antialiasing, false);
         painter.setPen(QPen(kGridLineColor, 1));

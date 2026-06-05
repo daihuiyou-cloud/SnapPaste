@@ -81,12 +81,13 @@ void applyNativeDesktopBounds(QWidget& widget)
     if (hwnd == nullptr) {
         return;
     }
+    static const int vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    static const int vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    static const int vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    static const int vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
     SetWindowPos(hwnd,
                  HWND_TOPMOST,
-                 GetSystemMetrics(SM_XVIRTUALSCREEN),
-                 GetSystemMetrics(SM_YVIRTUALSCREEN),
-                 GetSystemMetrics(SM_CXVIRTUALSCREEN),
-                 GetSystemMetrics(SM_CYVIRTUALSCREEN),
+                 vx, vy, vw, vh,
                  SWP_SHOWWINDOW);
 #else
     Q_UNUSED(widget)

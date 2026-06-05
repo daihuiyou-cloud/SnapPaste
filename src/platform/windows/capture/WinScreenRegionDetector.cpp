@@ -259,15 +259,35 @@ ComInitializer::~ComInitializer()
 } // namespace detail
 
 WinScreenRegionDetector::WinScreenRegionDetector() = default;
-WinScreenRegionDetector::~WinScreenRegionDetector() = default;
+WinScreenRegionDetector::~WinScreenRegionDetector()
+{
+#ifdef Q_OS_WIN
+    if (uiWorker_.joinable()) {
+        uiWorker_.join();
+    }
+#endif
+}
 
 #ifdef Q_OS_WIN
 void WinScreenRegionDetector::rebuildCache(HWND hwnd, const QRect& desktopBounds)
 {
     cachedChildRects_.clear();
-    cachedUiRects_.clear();
     buildChildWindowCache(hwnd, cachedChildRects_);
-    buildUiAutomationCache(hwnd, cachedUiRects_);
+    launchUiScan(hwnd);
+}
+
+void WinScreenRegionDetector::launchUiScan(HWND hwnd)
+{
+    if (uiWorker_.joinable()) {
+        uiWorker_.join();
+    }
+    uiWorker_ = std::thread([this, hwnd]() {
+        detail::ComInitializer comInit;
+        QVector<QRect> rects;
+        buildUiAutomationCache(hwnd, rects);
+        std::lock_guard<std::mutex> lock(uiCacheMutex_);
+        cachedUiRects_ = std::move(rects);
+    });
 }
 #endif
 
@@ -296,9 +316,12 @@ QVector<QRect> WinScreenRegionDetector::regionsAt(const QPoint& globalPosition, 
             if (rect.contains(globalPosition))
                 addCandidate(result, rect, desktopBounds);
         }
-        for (const auto& rect : cachedUiRects_) {
-            if (rect.contains(globalPosition))
-                addCandidate(result, rect, desktopBounds);
+        {
+            std::lock_guard<std::mutex> lock(uiCacheMutex_);
+            for (const auto& rect : cachedUiRects_) {
+                if (rect.contains(globalPosition))
+                    addCandidate(result, rect, desktopBounds);
+            }
         }
 
         std::sort(result.begin(), result.end(), [](const QRect& a, const QRect& b) {

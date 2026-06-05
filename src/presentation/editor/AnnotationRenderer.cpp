@@ -5,6 +5,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
+#include <QStaticText>
+#include <QTextOption>
 
 #include <algorithm>
 #include <cmath>
@@ -155,6 +157,8 @@ void AnnotationRenderer::invalidateCache()
 {
     cacheValid_ = false;
     mosaicCachedRadius_ = -1;
+    mosaicThumbCache_ = {};
+    mosaicSourceKey_ = -1;
 }
 
 const QImage& AnnotationRenderer::cacheImage() const
@@ -252,20 +256,34 @@ void AnnotationRenderer::drawLineAnnotation(QPainter* painter, const Annotation&
 
 void AnnotationRenderer::drawPenAnnotation(QPainter* painter, const Annotation& annotation)
 {
+    if (annotation.points.size() < 2) return;
     painter->setPen(QPen(annotation.color, annotation.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    for (int i = 1; i < annotation.points.size(); ++i) {
-        painter->drawLine(annotation.points.at(i - 1), annotation.points.at(i));
-    }
+    QPainterPath path;
+    path.moveTo(annotation.points.first());
+    for (int i = 1; i < annotation.points.size(); ++i)
+        path.lineTo(annotation.points.at(i));
+    painter->drawPath(path);
 }
 
-void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize)
+void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize) const
 {
-    QFont font(annotation.fontFamily.isEmpty() ? qApp->font().family() : annotation.fontFamily);
-    font.setPixelSize(annotation.textFontSize > 0 ? annotation.textFontSize : fontSize);
-    font.setBold(annotation.bold);
-    font.setItalic(annotation.italic);
-    font.setUnderline(annotation.underline);
-    painter->setFont(font);
+    QString family = annotation.fontFamily.isEmpty() ? qApp->font().family() : annotation.fontFamily;
+    int size = annotation.textFontSize > 0 ? annotation.textFontSize : fontSize;
+    if (textFontCache_.fontFamily != family || textFontCache_.fontSize != size ||
+        textFontCache_.bold != annotation.bold || textFontCache_.italic != annotation.italic ||
+        textFontCache_.underline != annotation.underline) {
+        textFontCache_.fontFamily = family;
+        textFontCache_.fontSize = size;
+        textFontCache_.bold = annotation.bold;
+        textFontCache_.italic = annotation.italic;
+        textFontCache_.underline = annotation.underline;
+        textFontCache_.font = QFont(family);
+        textFontCache_.font.setPixelSize(size);
+        textFontCache_.font.setBold(annotation.bold);
+        textFontCache_.font.setItalic(annotation.italic);
+        textFontCache_.font.setUnderline(annotation.underline);
+    }
+    painter->setFont(textFontCache_.font);
     int align = (annotation.textAlignment >= 0) ? annotation.textAlignment : (Qt::AlignLeft | Qt::AlignTop);
     const auto flags = align | Qt::TextWordWrap;
 
@@ -281,15 +299,20 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
     }
 
     if (annotation.textOutline) {
-        // drawText ignores pen width for text color, so render at 4 offsets
-        // to create a faux outline, then draw the actual text on top.
         painter->save();
         painter->setPen(QColor(255, 255, 255, 200));
+        QStaticText st(annotation.text);
+        st.setTextFormat(Qt::PlainText);
+        QTextOption textOpt(static_cast<Qt::Alignment>(align));
+        textOpt.setWrapMode(QTextOption::WordWrap);
+        st.setTextOption(textOpt);
+        st.setPerformanceHint(QStaticText::AggressiveCaching);
         auto b = annotation.bounds;
-        painter->drawText(b.adjusted(-1, -1, -1, -1), flags, annotation.text);
-        painter->drawText(b.adjusted( 1, -1,  1, -1), flags, annotation.text);
-        painter->drawText(b.adjusted(-1,  1, -1,  1), flags, annotation.text);
-        painter->drawText(b.adjusted( 1,  1,  1,  1), flags, annotation.text);
+        st.setTextWidth(b.width() - 2);
+        painter->drawStaticText(b.topLeft() + QPoint(-1, -1), st);
+        painter->drawStaticText(b.topLeft() + QPoint( 1, -1), st);
+        painter->drawStaticText(b.topLeft() + QPoint(-1,  1), st);
+        painter->drawStaticText(b.topLeft() + QPoint( 1,  1), st);
         painter->restore();
     }
     painter->setPen(QPen(annotation.color, 1));
@@ -298,54 +321,74 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
 
 void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation) const
 {
-    if (!annotation.points.isEmpty()) {
-        const int blockSize = qMax(4, annotation.strokeWidth * 4);
-        // Pre-blur entire source image once when using gaussian blur with points
-        if (annotation.blurRadius > 0 &&
-            (mosaicCachedRadius_ != annotation.blurRadius || mosaicBlurCache_.size() != sourceImage.size())) {
+    // --- Blurred mosaic ---
+    if (annotation.blurRadius > 0) {
+        bool cacheStale = (mosaicCachedRadius_ != annotation.blurRadius ||
+                           mosaicBlurCache_.size() != sourceImage.size() ||
+                           mosaicSourceKey_ != sourceImage.cacheKey());
+        if (cacheStale) {
             mosaicBlurCache_ = blurImage(sourceImage, annotation.blurRadius);
             mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
             mosaicCachedRadius_ = annotation.blurRadius;
         }
-        for (const auto& pt : annotation.points) {
-            QRect blockRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize);
-            const auto clipped = blockRect.intersected(sourceImage.rect());
-            if (clipped.isEmpty()) continue;
-            if (annotation.blurRadius > 0) {
-                painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
-            } else {
-                constexpr int kBlock = 8;
-                const int bw = qMax(1, clipped.width() / kBlock);
-                const int bh = qMax(1, clipped.height() / kBlock);
-                auto pixelated = sourceImage.copy(clipped)
-                    .scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-                painter->save();
-                painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
-                painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
-                painter->restore();
+        if (!annotation.points.isEmpty()) {
+            const int blockSize = qMax(4, annotation.strokeWidth * 4);
+            for (const auto& pt : annotation.points) {
+                QRect clipped = QRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize)
+                    .intersected(sourceImage.rect());
+                if (!clipped.isEmpty())
+                    painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
             }
+        } else {
+            auto clipped = annotation.bounds.intersected(sourceImage.rect());
+            if (!clipped.isEmpty())
+                painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
+        }
+        mosaicSourceKey_ = sourceImage.cacheKey();
+        return;
+    }
+
+    // --- Pixel-block mosaic ---
+    // Pre-scale the entire source once, then blit from thumb per point.
+    constexpr int kThumbFraction = 8;
+    auto sourceKey = sourceImage.cacheKey();
+    if (mosaicSourceKey_ != sourceKey || mosaicThumbCache_.isNull()) {
+        mosaicThumbCache_ = sourceImage.scaled(
+            qMax(1, sourceImage.width() / kThumbFraction),
+            qMax(1, sourceImage.height() / kThumbFraction),
+            Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        mosaicThumbCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
+        mosaicSourceKey_ = sourceKey;
+    }
+
+    auto blitThumb = [&](const QRect& clipped, int bw, int bh) {
+        QRect thumbRect(
+            clipped.left() / kThumbFraction,
+            clipped.top() / kThumbFraction,
+            bw, bh);
+        auto pixelated = mosaicThumbCache_.copy(thumbRect);
+        painter->save();
+        painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
+        painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
+        painter->restore();
+    };
+
+    if (!annotation.points.isEmpty()) {
+        const int blockSize = qMax(4, annotation.strokeWidth * 4);
+        for (const auto& pt : annotation.points) {
+            QRect clipped = QRect(pt.x() - blockSize / 2, pt.y() - blockSize / 2, blockSize, blockSize)
+                .intersected(sourceImage.rect());
+            if (clipped.isEmpty()) continue;
+            int bw = qMax(1, clipped.width() / kThumbFraction);
+            int bh = qMax(1, clipped.height() / kThumbFraction);
+            blitThumb(clipped, bw, bh);
         }
     } else {
-        const auto clipped = annotation.bounds.intersected(sourceImage.rect());
+        auto clipped = annotation.bounds.intersected(sourceImage.rect());
         if (clipped.isEmpty()) return;
-        if (annotation.blurRadius > 0) {
-            if (mosaicCachedRadius_ != annotation.blurRadius || mosaicBlurCache_.size() != sourceImage.size()) {
-                mosaicBlurCache_ = blurImage(sourceImage, annotation.blurRadius);
-                mosaicBlurCache_.setDevicePixelRatio(sourceImage.devicePixelRatio());
-                mosaicCachedRadius_ = annotation.blurRadius;
-            }
-            painter->drawImage(clipped.topLeft(), mosaicBlurCache_, clipped);
-        } else {
-            constexpr int kBlockSize = 8;
-            const int bw = qMax(1, clipped.width() / kBlockSize);
-            const int bh = qMax(1, clipped.height() / kBlockSize);
-            auto pixelated = sourceImage.copy(clipped)
-                .scaled(bw, bh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-            painter->save();
-            painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
-            painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
-            painter->restore();
-        }
+        int bw = qMax(1, clipped.width() / kThumbFraction);
+        int bh = qMax(1, clipped.height() / kThumbFraction);
+        blitThumb(clipped, bw, bh);
     }
 }
 

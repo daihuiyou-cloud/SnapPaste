@@ -158,10 +158,9 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
             std::memcpy(image.scanLine(y), src, std::min(static_cast<size_t>(width) * 4, srcRowBytes));
         }
         {
-            auto* bits = image.bits();
-            for (int i = 3; i < width * height * 4; i += 4) {
-                bits[i] = static_cast<uchar>(0xFF);
-            }
+            auto* pixels = reinterpret_cast<uint32_t*>(image.bits());
+            auto count = static_cast<size_t>(width) * height;
+            for (size_t i = 0; i < count; ++i) pixels[i] |= 0xFF000000u;
         }
         break;
 
@@ -205,13 +204,14 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
     case DXGI_FORMAT_R8G8B8A8_UNORM:
         for (int y = 0; y < height; ++y) {
             const auto* src = static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch);
-            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            auto* pixels = reinterpret_cast<uint32_t*>(image.scanLine(y));
+            std::memcpy(pixels, src, std::min(static_cast<size_t>(width) * 4, srcRowBytes));
+            // R8G8B8A8 memory order = R G B A (little-endian uint32 = 0xAABBGGRR)
+            // Format_RGB32 on LE = B G R A (uint32 = 0xAARRGGBB)
+            // Swap byte 0 <-> byte 2 in each pixel
             for (int x = 0; x < width; ++x) {
-                int r = src[x * 4 + 0];
-                int g = src[x * 4 + 1];
-                int b = src[x * 4 + 2];
-                int a = src[x * 4 + 3];
-                pixels[x] = qRgba(r, g, b, a);
+                auto px = pixels[x];
+                pixels[x] = (px & 0xFF00FF00u) | ((px & 0x000000FFu) << 16) | ((px >> 16) & 0x000000FFu);
             }
         }
         break;
@@ -253,7 +253,10 @@ private:
 Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::CachedOutput>& cachedOutputs,
                                       const ScreenCaptureSegment& segment,
                                       ID3D11Device& device,
-                                      ID3D11DeviceContext& context)
+                                      ID3D11DeviceContext& context,
+                                      Microsoft::WRL::ComPtr<ID3D11Texture2D>& cachedStaging,
+                                      UINT& cachedW, UINT& cachedH,
+                                      DXGI_FORMAT& cachedFmt)
 {
     const auto& region = segment.logicalRegion;
     if (!region.isValid() || region.width() < 1 || region.height() < 1) {
@@ -321,9 +324,21 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
     stagingDesc.MiscFlags = 0;
 
     ComPtr<ID3D11Texture2D> stagingTexture;
-    hr = device.CreateTexture2D(&stagingDesc, nullptr, stagingTexture.GetAddressOf());
-    if (FAILED(hr)) {
-        return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to allocate DXGI readback texture."));
+    bool reuseStaging = (cachedStaging != nullptr &&
+                         cachedW == stagingDesc.Width &&
+                         cachedH == stagingDesc.Height &&
+                         cachedFmt == stagingDesc.Format);
+    if (reuseStaging) {
+        stagingTexture = cachedStaging;
+    } else {
+        hr = device.CreateTexture2D(&stagingDesc, nullptr, stagingTexture.GetAddressOf());
+        if (FAILED(hr)) {
+            return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to allocate DXGI readback texture."));
+        }
+        cachedStaging = stagingTexture;
+        cachedW = stagingDesc.Width;
+        cachedH = stagingDesc.Height;
+        cachedFmt = stagingDesc.Format;
     }
 
     const D3D11_BOX sourceBox{
@@ -522,26 +537,39 @@ Result<QImage> DxgiScreenCaptureService::composeSegments(
 
 Result<QImage> DxgiScreenCaptureService::captureWithDxgi(const ScreenCaptureSegment& segment)
 {
-    std::scoped_lock lock(mutex_);
     constexpr int kMaxDxgiRetries = 3;
     for (int attempt = 0; attempt < kMaxDxgiRetries; ++attempt) {
         if (attempt > 0) {
+            std::scoped_lock lock(mutex_);
             d3dDeviceValid_ = false;
             d3dContext_.Reset();
             d3dDevice_.Reset();
             cacheValid_ = false;
             cachedFactory_.Reset();
             cachedOutputs_.clear();
+            cachedStagingTexture_.Reset();
+            cachedStagingWidth_ = 0;
+            cachedStagingHeight_ = 0;
+            cachedStagingFormat_ = DXGI_FORMAT_UNKNOWN;
         }
-        auto deviceResult = ensureD3dDeviceImpl();
-        if (deviceResult.isError()) {
-            break;
+
+        Result<QImage> result = Result<QImage>::failure({});
+        {
+            std::scoped_lock lock(mutex_);
+            auto deviceResult = ensureD3dDeviceImpl();
+            if (deviceResult.isError()) {
+                break;
+            }
+            ensureFactoryCache();
+            result = captureSegmentWithDxgi(cachedOutputs_, segment, *d3dDevice_.Get(), *d3dContext_.Get(),
+                                            cachedStagingTexture_, cachedStagingWidth_, cachedStagingHeight_,
+                                            cachedStagingFormat_);
         }
-        ensureFactoryCache();
-        auto result = captureSegmentWithDxgi(cachedOutputs_, segment, *d3dDevice_.Get(), *d3dContext_.Get());
+
         if (result.isOk()) {
             return result;
         }
+
         if (attempt < kMaxDxgiRetries - 1) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
         }

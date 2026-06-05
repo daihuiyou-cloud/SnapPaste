@@ -2,6 +2,7 @@
 
 #include "domain/editor/Annotation.h"
 
+#include <QFont>
 #include <QImage>
 #include <QPoint>
 #include <QRect>
@@ -47,7 +48,7 @@ private:
     static void drawArrowAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawLineAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawPenAnnotation(QPainter* painter, const Annotation& annotation);
-    static void drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize);
+    void drawTextAnnotation(QPainter* painter, const Annotation& annotation, int fontSize) const;
     void drawMosaicAnnotation(QPainter* painter, const QImage& sourceImage, const Annotation& annotation) const;
     static void drawHighlightAnnotation(QPainter* painter, const Annotation& annotation);
     static void drawNumberedAnnotation(QPainter* painter, const Annotation& annotation);
@@ -58,6 +59,16 @@ private:
     mutable bool cacheValid_ = false;
     mutable QImage mosaicBlurCache_;
     mutable int mosaicCachedRadius_ = -1;
+    mutable QImage mosaicThumbCache_;
+    mutable qint64 mosaicSourceKey_ = -1;
+
+    struct FontCacheEntry {
+        QString fontFamily;
+        int fontSize = 0;
+        bool bold = false, italic = false, underline = false;
+        QFont font;
+    };
+    mutable FontCacheEntry textFontCache_;
 };
 
 } // namespace snappaste

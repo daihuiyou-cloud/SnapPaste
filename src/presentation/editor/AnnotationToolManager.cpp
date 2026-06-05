@@ -67,6 +67,7 @@ void AnnotationToolManager::syncImageState(QImage image, QImage baseImage, int b
     baseImage_ = std::move(baseImage);
     brightness_ = brightness;
     contrast_ = contrast;
+    imageChangedSinceLastUndo_ = true;
 }
 
 // --- Tool state setters ---
@@ -412,7 +413,12 @@ void AnnotationToolManager::setAnnotationVisible(int index, bool visible)
 void AnnotationToolManager::pushUndoSnapshot(bool clearRedo)
 {
     undoStack_.push_back(annotations_);
-    imageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_});
+    if (imageChangedSinceLastUndo_) {
+        imageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_, true});
+        imageChangedSinceLastUndo_ = false;
+    } else {
+        imageHistory_.push_back({{}, {}, 0, 0, 1.0, false});
+    }
     if (clearRedo) {
         redoStack_.clear();
         redoImageHistory_.clear();
@@ -441,16 +447,18 @@ void AnnotationToolManager::undo()
     resizing_ = false;
 
     redoStack_.push_back(std::move(annotations_));
-    redoImageHistory_.push_back({std::move(image_), std::move(baseImage_), brightness_, contrast_, zoomFactor_});
+    redoImageHistory_.push_back({std::move(image_), std::move(baseImage_), brightness_, contrast_, zoomFactor_, true});
 
     annotations_ = undoStack_.takeLast();
 
     auto snap = imageHistory_.takeLast();
-    image_ = std::move(snap.image);
-    baseImage_ = std::move(snap.baseImage);
-    brightness_ = snap.brightness;
-    contrast_ = snap.contrast;
-    zoomFactor_ = snap.zoomFactor;
+    if (snap.hasImage) {
+        image_ = std::move(snap.image);
+        baseImage_ = std::move(snap.baseImage);
+        brightness_ = snap.brightness;
+        contrast_ = snap.contrast;
+        zoomFactor_ = snap.zoomFactor;
+    }
 
     if (onImageHistoryRestored) onImageHistoryRestored();
     if (onWindowTitleUpdate) onWindowTitleUpdate();
@@ -482,11 +490,13 @@ void AnnotationToolManager::redo()
 
     annotations_ = redoStack_.takeLast();
     auto snap = redoImageHistory_.takeLast();
-    image_ = std::move(snap.image);
-    baseImage_ = std::move(snap.baseImage);
-    brightness_ = snap.brightness;
-    contrast_ = snap.contrast;
-    zoomFactor_ = snap.zoomFactor;
+    if (snap.hasImage) {
+        image_ = std::move(snap.image);
+        baseImage_ = std::move(snap.baseImage);
+        brightness_ = snap.brightness;
+        contrast_ = snap.contrast;
+        zoomFactor_ = snap.zoomFactor;
+    }
 
     if (onImageHistoryRestored) onImageHistoryRestored();
     if (onWindowTitleUpdate) onWindowTitleUpdate();
@@ -524,6 +534,7 @@ void AnnotationToolManager::startDrawing(const QPoint& pos)
     draft_.textAlignment = textAlignment_;
     draft_.bounds = QRect(start_, current_);
     draft_.points = {start_};
+    draft_.points.reserve(256);
     if (onUpdateRequired) onUpdateRequired();
 }
 
@@ -648,12 +659,18 @@ void AnnotationToolManager::updateTextBounds(int index)
     if (index < 0 || index >= annotations_.size()) return;
     auto& a = annotations_[index];
     if (a.tool != AnnotationTool::Text) return;
-    QFont font(a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily);
-    font.setPixelSize(a.textFontSize > 0 ? a.textFontSize : fontSize_);
-    font.setBold(a.bold);
-    font.setItalic(a.italic);
-    font.setUnderline(a.underline);
-    QFontMetrics fm(font);
+    FontCacheKey key{a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
+                     a.textFontSize > 0 ? a.textFontSize : fontSize_,
+                     a.bold, a.italic, a.underline};
+    if (!(key == fontCacheKey_)) {
+        fontCacheKey_ = key;
+        cachedFont_ = QFont(key.fontFamily);
+        cachedFont_.setPixelSize(key.fontSize);
+        cachedFont_.setBold(key.bold);
+        cachedFont_.setItalic(key.italic);
+        cachedFont_.setUnderline(key.underline);
+    }
+    QFontMetrics fm(cachedFont_);
     if (image_.isNull()) return;
     auto logicalW = image_.width() / image_.devicePixelRatio();
     int textWidth = fm.horizontalAdvance(a.text);

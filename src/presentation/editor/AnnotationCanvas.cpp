@@ -29,6 +29,12 @@ AnnotationCanvas::AnnotationCanvas(QWidget* parent)
     setAttribute(Qt::WA_InputMethodEnabled, true);
     setMinimumSize(640, 360);
 
+    adjustDebounceTimer_ = new QTimer(this);
+    adjustDebounceTimer_->setSingleShot(true);
+    connect(adjustDebounceTimer_, &QTimer::timeout, this, [this] {
+        reapplyAdjustments();
+    });
+
     wireCallbacks();
 }
 
@@ -267,7 +273,7 @@ void AnnotationCanvas::previewAdjustImage(int brightness, int contrast)
     if (brightness == brightness_ && contrast == contrast_) return;
     brightness_ = brightness;
     contrast_ = contrast;
-    reapplyAdjustments();
+    adjustDebounceTimer_->start(30);
 }
 
 void AnnotationCanvas::adjustImage(int brightness, int contrast)
@@ -286,6 +292,7 @@ void AnnotationCanvas::rotateImage(int degrees)
     else if (degrees == 180) transform.rotate(180);
     else if (degrees == 270) transform.rotate(270);
     else return;
+    toolManager_.markImageChanged();
     toolManager_.pushUndo();
     baseImage_ = baseImage_.transformed(transform, Qt::SmoothTransformation);
     toolManager_.clearAnnotations();
@@ -303,6 +310,7 @@ void AnnotationCanvas::flipImage(bool horizontal, bool vertical)
     } else {
         baseImage_ = baseImage_.mirrored(false, true);
     }
+    toolManager_.markImageChanged();
     toolManager_.pushUndo();
     toolManager_.clearAnnotations();
     reapplyAdjustments();
@@ -318,6 +326,7 @@ void AnnotationCanvas::applyCrop(QRect cropRect)
     physicalCrop = physicalCrop.intersected(image_.rect());
     if (physicalCrop.width() < 5 || physicalCrop.height() < 5) return;
 
+    toolManager_.markImageChanged();
     toolManager_.pushUndo();
 
     // Keep annotations inside crop rect, discard those outside

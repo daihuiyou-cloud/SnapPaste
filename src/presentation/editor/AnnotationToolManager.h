@@ -4,6 +4,7 @@
 
 #include <QColor>
 #include <QCursor>
+#include <QFont>
 #include <QImage>
 #include <QPoint>
 #include <QRect>
@@ -41,6 +42,7 @@ public:
     // --- Image (owned by Canvas, referenced here) ---
     void setImage(const QImage& image, double zoomFactor);
     void syncImageState(QImage image, QImage baseImage, int brightness, int contrast);
+    void markImageChanged() { imageChangedSinceLastUndo_ = true; }
     const QImage& image() const { return image_; }
     const QImage& baseImage() const { return baseImage_; }
     void setImageDirect(QImage img) { image_ = std::move(img); }
@@ -222,11 +224,14 @@ private:
         int brightness = 0;
         int contrast = 0;
         double zoomFactor = 1.0;
+        bool hasImage = false;
     };
     QVector<ImageSnapshot> imageHistory_;
     QVector<ImageSnapshot> redoImageHistory_;
 
     static constexpr int kMaxUndo = 20;
+
+    bool imageChangedSinceLastUndo_ = false;
 
     // Selection
     int selectedIndex_ = -1;
@@ -276,6 +281,21 @@ private:
     // Pan
     bool panning_ = false;
     QPoint panStart_;
+
+    // Text font cache
+    struct FontCacheKey {
+        QString fontFamily;
+        int fontSize = 0;
+        bool bold = false;
+        bool italic = false;
+        bool underline = false;
+        bool operator==(const FontCacheKey& o) const {
+            return fontFamily == o.fontFamily && fontSize == o.fontSize
+                && bold == o.bold && italic == o.italic && underline == o.underline;
+        }
+    };
+    FontCacheKey fontCacheKey_;
+    QFont cachedFont_;
 
     // Recent
     QVector<AnnotationTool> recentTools_;

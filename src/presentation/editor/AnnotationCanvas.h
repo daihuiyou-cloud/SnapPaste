@@ -10,6 +10,7 @@
 #include <QPoint>
 #include <QRect>
 #include <QString>
+#include <QTimer>
 #include <QVector>
 #include <QScrollBar>
 #include <QWidget>
@@ -169,6 +170,8 @@ private:
     QPixmap backingCache_;
     double backingZoom_ = 0.0;
     bool backingCacheDirty_ = true;
+
+    QTimer* adjustDebounceTimer_ = nullptr;
 };
 
 } // namespace snappaste

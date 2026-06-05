@@ -482,8 +482,8 @@ void AnnotationEventHandler::updateDrawingStroke(QMouseEvent* event)
         } else if (draftTool == AnnotationTool::Arrow || draftTool == AnnotationTool::Line) {
             double angle = std::atan2(rawPos.y() - start.y(), rawPos.x() - start.x());
             double snapped = std::round(angle / (M_PI / 4)) * (M_PI / 4);
-            double dist = std::sqrt(std::pow(rawPos.x() - start.x(), 2) +
-                                    std::pow(rawPos.y() - start.y(), 2));
+            double dx = rawPos.x() - start.x(), dy = rawPos.y() - start.y();
+            double dist = std::sqrt(dx * dx + dy * dy);
             rawPos.setX(start.x() + static_cast<int>(dist * std::cos(snapped)));
             rawPos.setY(start.y() + static_cast<int>(dist * std::sin(snapped)));
         } else if (draftTool == AnnotationTool::Pen) {

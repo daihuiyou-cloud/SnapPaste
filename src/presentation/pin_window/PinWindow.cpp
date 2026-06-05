@@ -1013,7 +1013,7 @@ QImage PinWindow::renderedImage() const
 
 QSize PinWindow::logicalImageSize() const
 {
-    auto img = renderedImage();
+    auto img = item_.image;
     return img.size() / img.devicePixelRatio();
 }
 

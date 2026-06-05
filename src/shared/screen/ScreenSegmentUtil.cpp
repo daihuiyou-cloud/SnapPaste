@@ -18,7 +18,17 @@ const QVector<ScreenInfo>& cachedScreenInfos()
     static QVector<ScreenInfo> cache;
     const auto screens = QGuiApplication::screens();
     if (cache.size() == screens.size()) {
-        return cache;
+        bool match = true;
+        for (int i = 0; i < cache.size() && match; ++i) {
+            auto* s = screens[i];
+            if (s == nullptr ||
+                cache[i].geometry != s->geometry() ||
+                cache[i].dpr != s->devicePixelRatio() ||
+                cache[i].name != s->name()) {
+                match = false;
+            }
+        }
+        if (match) return cache;
     }
     cache.clear();
     for (auto* screen : screens) {
@@ -33,6 +43,7 @@ const QVector<ScreenInfo>& cachedScreenInfos()
 QVector<ScreenCaptureSegment> captureSegmentsFor(const QRect& region)
 {
     QVector<ScreenCaptureSegment> segments;
+    segments.reserve(cachedScreenInfos().size());
     for (const auto& info : cachedScreenInfos()) {
         const auto logicalRegion = region.intersected(info.geometry);
         if (!logicalRegion.isValid() || logicalRegion.width() < 1 || logicalRegion.height() < 1) {

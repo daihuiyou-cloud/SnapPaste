@@ -50,7 +50,6 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void showEvent(QShowEvent* event) override;
-    void timerEvent(QTimerEvent* event) override;
 
 private:
     enum class State {
@@ -136,9 +135,11 @@ private:
     QElapsedTimer frameLimiter_;
     QElapsedTimer smartCandidateLimiter_;
     bool repaintQueued_ = false;
-    int pendingUpdateTimerId_ = 0;
+    QTimer* updateTimer_ = nullptr;
     QRect cachedDesktopBounds_;
     bool desktopBoundsValid_ = false;
+    QImage magnifierCache_;
+    QPoint magnifierCachePos_;
 };
 
 } // namespace snappaste

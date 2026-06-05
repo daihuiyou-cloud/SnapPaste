@@ -46,6 +46,11 @@ private:
     QVector<CachedOutput> cachedOutputs_;
     bool cacheValid_ = false;
     void ensureFactoryCache();
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> cachedStagingTexture_;
+    UINT cachedStagingWidth_ = 0;
+    UINT cachedStagingHeight_ = 0;
+    DXGI_FORMAT cachedStagingFormat_ = DXGI_FORMAT_UNKNOWN;
 #endif
 };
 

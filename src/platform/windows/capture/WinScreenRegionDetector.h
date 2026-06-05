@@ -5,6 +5,9 @@
 #include <QRect>
 #include <QVector>
 
+#include <mutex>
+#include <thread>
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
@@ -35,11 +38,14 @@ public:
 private:
 #ifdef Q_OS_WIN
     void rebuildCache(HWND hwnd, const QRect& desktopBounds);
+    void launchUiScan(HWND hwnd);
 
     HWND cachedHwnd_ = nullptr;
     QRect cachedBounds_;
     QVector<QRect> cachedChildRects_;
     QVector<QRect> cachedUiRects_;
+    std::thread uiWorker_;
+    std::mutex uiCacheMutex_;
 #endif
     detail::ComInitializer comInit_;
 };

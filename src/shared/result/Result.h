@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QString>
+
+#include <optional>
 #include <utility>
 
 namespace snappaste {
@@ -10,30 +12,31 @@ class Result final {
 public:
     static Result success(T value)
     {
-        return Result(true, std::move(value), {});
+        Result r;
+        r.ok_ = true;
+        r.value_.emplace(std::move(value));
+        return r;
     }
 
     static Result failure(QString error)
     {
-        return Result(false, T{}, std::move(error));
+        Result r;
+        r.error_ = std::move(error);
+        return r;
     }
 
     bool isOk() const noexcept { return ok_; }
     bool isError() const noexcept { return !ok_; }
-    const T& value() const noexcept { Q_ASSERT(ok_); return value_; }
-    T& value() noexcept { Q_ASSERT(ok_); return value_; }
+    const T& value() const noexcept { Q_ASSERT(ok_); return *value_; }
+    T& value() noexcept { Q_ASSERT(ok_); return *value_; }
+    T takeValue() noexcept { Q_ASSERT(ok_); return std::move(*value_); }
     const QString& error() const noexcept { return error_; }
 
 private:
-    Result(bool ok, T value, QString error)
-        : ok_(ok)
-        , value_(std::move(value))
-        , error_(std::move(error))
-    {
-    }
+    Result() = default;
 
     bool ok_ = false;
-    T value_{};
+    std::optional<T> value_;
     QString error_;
 };
 
