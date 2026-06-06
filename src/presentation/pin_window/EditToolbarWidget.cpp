@@ -152,6 +152,7 @@ void EditToolbarWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton && dragging_) {
         dragging_ = false;
+        emit dragFinished();
         event->accept();
         return;
     }

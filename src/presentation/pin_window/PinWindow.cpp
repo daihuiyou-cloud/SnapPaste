@@ -142,6 +142,9 @@ PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* pare
     connect(editToolbar_, &EditToolbarWidget::doneRequested, this, [this] {
         applyEditAndExit();
     });
+    connect(editToolbar_, &EditToolbarWidget::dragFinished, this, [this] {
+        toolbarOffset_ = editToolbar_->pos() - pos();
+    });
     editToolbar_->hide();
 }
 
@@ -1577,8 +1580,31 @@ void PinWindow::toggleEditMode()
         editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
         editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
         editToolbar_->adjustSize();
-        const int tx = (width() - editToolbar_->width()) / 2;
-        const int ty = height() + 8;
+        int tx = (width() - editToolbar_->width()) / 2;
+        int ty = height() + 8;
+
+        // Clamp horizontal to screen bounds
+        auto* screen = QGuiApplication::screenAt(geometry().center());
+        if (screen) {
+            const auto screenGeo = screen->geometry();
+            constexpr int kMargin = 8;
+            const int globalTx = pos().x() + tx;
+            if (globalTx < screenGeo.left() + kMargin) {
+                tx = screenGeo.left() + kMargin - pos().x();
+            } else if (globalTx + editToolbar_->width() + kMargin > screenGeo.right()) {
+                tx = screenGeo.right() - kMargin - editToolbar_->width() - pos().x();
+            }
+
+            // If below doesn't fit, try above
+            const int belowBottom = pos().y() + ty + editToolbar_->height();
+            if (belowBottom + kMargin > screenGeo.bottom()) {
+                const int aboveTop = pos().y() - editToolbar_->height() - 8;
+                if (aboveTop >= screenGeo.top() + kMargin) {
+                    ty = -editToolbar_->height() - 8;
+                }
+            }
+        }
+
         toolbarOffset_ = QPoint(tx, ty);
         editToolbar_->move(pos() + toolbarOffset_);
         editToolbar_->show();

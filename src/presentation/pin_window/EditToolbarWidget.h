@@ -25,6 +25,7 @@ signals:
     void undoRequested();
     void redoRequested();
     void doneRequested();
+    void dragFinished();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
