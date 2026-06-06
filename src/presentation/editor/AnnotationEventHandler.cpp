@@ -413,8 +413,8 @@ void AnnotationEventHandler::updateMoveCursor(QMouseEvent* event)
         canvas_.setCursor(cursor);
     } else if (tool == AnnotationTool::Text)
         canvas_.setCursor(Qt::IBeamCursor);
-    else if (tool == AnnotationTool::Eraser || tool == AnnotationTool::Mosaic)
-        canvas_.setCursor(Qt::PointingHandCursor);
+    else if (tool == AnnotationTool::Pen || tool == AnnotationTool::Eraser || tool == AnnotationTool::Mosaic)
+        canvas_.updateBrushCursor();
     else
         canvas_.setCursor(Qt::ArrowCursor);
 }

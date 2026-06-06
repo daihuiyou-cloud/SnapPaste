@@ -49,6 +49,7 @@ void AnnotationCanvas::wireCallbacks()
     };
 
     toolManager_.onToolChanged = [this](AnnotationTool tool) {
+        updateBrushCursor();
         emit toolChanged(tool);
     };
 
