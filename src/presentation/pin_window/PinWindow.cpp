@@ -1,5 +1,5 @@
 #include "presentation/pin_window/PinWindow.h"
-#include "presentation/pin_window/EditToolbar.h"
+#include "presentation/pin_window/EditToolbarWidget.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -119,6 +119,30 @@ PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* pare
     editToolManager_.onSelectionChanged = [this] {
         update();
     };
+
+    // Floating edit toolbar
+    editToolbar_ = new EditToolbarWidget(iconProvider_, nullptr);
+    connect(editToolbar_, &EditToolbarWidget::toolSelected, this, [this](AnnotationTool tool) {
+        editToolManager_.setTool(tool);
+        setCursor(Qt::CrossCursor);
+        update();
+    });
+    connect(editToolbar_, &EditToolbarWidget::undoRequested, this, [this] {
+        editToolManager_.undo();
+        editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+        editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
+        update();
+    });
+    connect(editToolbar_, &EditToolbarWidget::redoRequested, this, [this] {
+        editToolManager_.redo();
+        editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+        editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
+        update();
+    });
+    connect(editToolbar_, &EditToolbarWidget::doneRequested, this, [this] {
+        applyEditAndExit();
+    });
+    editToolbar_->hide();
 }
 
 qint64 PinWindow::id() const noexcept
@@ -439,6 +463,9 @@ void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 
 void PinWindow::closeEvent(QCloseEvent* event)
 {
+    if (editToolbar_ && editToolbar_->isVisible()) {
+        editToolbar_->hide();
+    }
     if (!closeRequested_) {
         closeRequested_ = true;
         QPointer<PinWindow> self(this);
@@ -484,6 +511,8 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
                 } else {
                     editToolManager_.undo();
                 }
+                editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+                editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
                 update();
                 event->accept();
                 return;
@@ -493,6 +522,8 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
             if (editToolManager_.selectedIndex() >= 0) {
                 editToolManager_.pushUndo();
                 editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
+                editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+                editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
                 update();
                 event->accept();
                 return;
@@ -638,7 +669,6 @@ void PinWindow::leaveEvent(QEvent* event)
     Q_UNUSED(event)
     hovered_ = false;
     hoveredButton_ = -1;
-    editHoveredButton_ = -1;
     if (ocrActive_) {
         ocrHoveredBlock_ = -1;
     }
@@ -718,12 +748,6 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
     }
 
     if (!dragging_ && !resizing_) {
-        if (editing_) {
-            editHoveredButton_ = EditToolbar::fits(width(), height())
-                ? EditToolbar::buttonAt(event->pos(), width()) : -1;
-            update();
-        }
-
         if (ocrActive_) {
             int prev = ocrHoveredBlock_;
             ocrHoveredBlock_ = ocrBlockAt(event->pos());
@@ -847,25 +871,6 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
     const auto pos = event->pos();
 
     if (editing_) {
-        if (EditToolbar::fits(width(), height())) {
-            const int btn = EditToolbar::buttonAt(pos, width());
-            if (btn >= 0) {
-                if (btn < 9) {
-                    editToolManager_.setTool(EditToolbar::toolAt(btn));
-                    setCursor(Qt::CrossCursor);
-                } else if (btn == 9) {
-                    editToolManager_.undo();
-                } else if (btn == 10) {
-                    editToolManager_.redo();
-                } else if (btn == 11) {
-                    applyEditAndExit();
-                }
-                update();
-                event->accept();
-                return;
-            }
-        }
-
         QPoint imgPt = toEditImage(pos);
         if (editToolManager_.currentTool() == AnnotationTool::Select) {
             int sel = editToolManager_.selectedIndex();
@@ -1137,13 +1142,6 @@ void PinWindow::paintEvent(QPaintEvent* event)
             }
             painter.restore();
         }
-
-        bool showEditTools = hovered_ || hasFocus();
-        if (showEditTools && EditToolbar::fits(width(), height())) {
-            EditToolbar::draw(painter, width(), height(), iconProvider_,
-                              editHoveredButton_,
-                              editToolManager_.currentTool());
-        }
     }
 
     if (!editing_) {
@@ -1219,6 +1217,14 @@ void PinWindow::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
     if (ocrActive_) {
         rebuildOcrBlockRects();
+    }
+}
+
+void PinWindow::moveEvent(QMoveEvent* event)
+{
+    QWidget::moveEvent(event);
+    if (editToolbar_ && editToolbar_->isVisible()) {
+        editToolbar_->move(pos() + toolbarOffset_);
     }
 }
 
@@ -1549,6 +1555,7 @@ void PinWindow::toggleEditMode()
     if (editing_) {
         // Cancel edit — discard annotations, restore original state
         editing_ = false;
+        editToolbar_->hide();
         editToolManager_.clearAnnotations();
         item_.state = savedEditState_;
         invalidateRenderedCache();
@@ -1564,7 +1571,19 @@ void PinWindow::toggleEditMode()
         resize(logicalImageSize() * item_.state.transform.scale);
         editToolManager_.setImage(item_.image, item_.state.transform.scale);
         editing_ = true;
-        editHoveredButton_ = -1;
+
+        // Show and position floating toolbar below PinWindow
+        editToolbar_->setCurrentTool(editToolManager_.currentTool());
+        editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+        editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
+        editToolbar_->adjustSize();
+        const int tx = (width() - editToolbar_->width()) / 2;
+        const int ty = height() + 8;
+        toolbarOffset_ = QPoint(tx, ty);
+        editToolbar_->move(pos() + toolbarOffset_);
+        editToolbar_->show();
+        editToolbar_->raise();
+
         update();
     }
 }
@@ -1580,6 +1599,7 @@ void PinWindow::applyEditAndExit()
     item_.state.transform.flippedHorizontally = savedEditState_.transform.flippedHorizontally;
     item_.state.transform.flippedVertically = savedEditState_.transform.flippedVertically;
     editing_ = false;
+    editToolbar_->hide();
     editToolManager_.clearAnnotations();
     savedEditState_ = PinnedImageState();
     invalidateRenderedCache();

@@ -9,6 +9,8 @@
 #include "presentation/icons/IIconProvider.h"
 #include "presentation/pin_window/PinToolbar.h"
 
+class QMoveEvent;
+
 #include <QElapsedTimer>
 #include <QPropertyAnimation>
 #include <QScreen>
@@ -18,6 +20,8 @@
 #include <QWidget>
 
 namespace snappaste {
+
+class EditToolbarWidget;
 
 class PinWindow final : public QWidget {
     Q_OBJECT
@@ -51,6 +55,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
@@ -136,7 +141,8 @@ private:
     AnnotationToolManager editToolManager_;
     AnnotationRenderer editRenderer_;
     PinnedImageState savedEditState_;
-    int editHoveredButton_ = -1;
+    EditToolbarWidget* editToolbar_ = nullptr;
+    QPoint toolbarOffset_;
 };
 
 } // namespace snappaste
