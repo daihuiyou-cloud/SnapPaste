@@ -499,6 +499,40 @@ void Application::openPinWindow(PinnedItem item)
     connect(window, &PinWindow::saveRequested, this, [this](const QImage& image) {
         context_.captureViewModel().saveImage(image, "pin");
     });
+    connect(window, &PinWindow::ocrRequested, this, [this](const QImage& image) {
+        if (image.isNull()) {
+            showStatus(tr("No image region selected for OCR."));
+            return;
+        }
+        if (ocrService_) {
+            ocrService_->cancel();
+        }
+        auto weakAlive = alive_;
+        QPointer<Application> guard(this);
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        showStatus(tr("OCR processing..."));
+
+        ocrService_->recognizeTextAsync(image, [weakAlive, guard](OcrResult outcome) {
+            if (!*weakAlive || guard.isNull()) return;
+            QApplication::restoreOverrideCursor();
+            if (!outcome.ok) {
+                guard->showStatus(outcome.message);
+                return;
+            }
+
+            auto* win = new OcrResultWindow(std::move(outcome.image), std::move(outcome.blocks), outcome.text, nullptr);
+            guard->ocrWindow_ = win;
+#pragma warning(push)
+#pragma warning(disable: 4573)
+            QObject::connect(win, &QObject::destroyed, win, [guard] {
+                if (guard) guard->ocrWindow_.clear();
+            });
+            QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
+#pragma warning(pop)
+            guard->showStatus(
+                tr("OCR - %1 characters").arg(outcome.text.length()));
+        });
+    });
     if (window->state().options.visible) {
         window->show();
         window->raise();
@@ -584,7 +618,6 @@ CaptureOverlay& Application::overlay()
         connect(overlay_.get(), &CaptureOverlay::pinRequested, this, &Application::pinRegion);
         connect(overlay_.get(), &CaptureOverlay::saveRequested, this, &Application::saveRegion);
         connect(overlay_.get(), &CaptureOverlay::editRequested, this, &Application::editRegion);
-        connect(overlay_.get(), &CaptureOverlay::ocrRequested, this, &Application::ocrRegion);
         connect(overlay_.get(), &CaptureOverlay::cancelled, this, [this] {
             pendingPinPosition_.reset();
             pendingPinAvoidRegion_.reset();

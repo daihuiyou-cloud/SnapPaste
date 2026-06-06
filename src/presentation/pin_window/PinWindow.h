@@ -30,6 +30,7 @@ signals:
     void closeRequested(qint64 id);
     void copyRequested(const QImage& image);
     void saveRequested(const QImage& image);
+    void ocrRequested(const QImage& image);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -73,6 +74,7 @@ private:
     ResizeEdge resizeEdgeAt(const QPoint& pos) const;
     QRect constrainedResizeGeometry(const QPoint& globalPos) const;
     void applyResizeToScale();
+    QImage extractOcrRegion(const QRect& widgetRect) const;
 
     PinnedItem item_;
     IIconProvider& iconProvider_;
@@ -99,6 +101,10 @@ private:
     int renderedVersion_ = 0;
     bool savedClickThrough_ = false;
     bool visibleSaved_ = false;
+    bool ocrSelecting_ = false;
+    bool ocrDragging_ = false;
+    QPoint ocrDragStart_;
+    QPoint ocrDragCurrent_;
     static constexpr int kMaxPinUndo = 20;
     static constexpr int kStateEmitIntervalMs = 50;
     QVector<PinnedImageState> undoStack_;

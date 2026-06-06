@@ -76,7 +76,6 @@ CaptureActionBar::CaptureActionBar(IIconProvider& iconProvider, QWidget* parent)
         {IconName::Pin, tr("Pin (F3)"), tr("Pin")},
         {IconName::Save, tr("Save (Ctrl+S)"), tr("Save")},
         {IconName::Edit, tr("Edit (Space)"), tr("Edit")},
-        {IconName::Text, tr("OCR (O)"), tr("OCR")},
         {IconName::Close, tr("Cancel (Esc)"), tr("Cancel")}
     };
 
@@ -88,14 +87,12 @@ CaptureActionBar::CaptureActionBar(IIconProvider& iconProvider, QWidget* parent)
     auto* pinBtn = createActionButton(actions[1], iconProvider_, this);
     auto* saveBtn = createActionButton(actions[2], iconProvider_, this);
     auto* editBtn = createActionButton(actions[3], iconProvider_, this);
-    auto* ocrBtn = createActionButton(actions[4], iconProvider_, this);
-    auto* closeBtn = createActionButton(actions[5], iconProvider_, this);
+    auto* closeBtn = createActionButton(actions[4], iconProvider_, this);
 
     layout->addWidget(copyBtn);
     layout->addWidget(pinBtn);
     layout->addWidget(saveBtn);
     layout->addWidget(editBtn);
-    layout->addWidget(ocrBtn);
     layout->addWidget(closeBtn);
     setLayout(layout);
 
@@ -103,7 +100,6 @@ CaptureActionBar::CaptureActionBar(IIconProvider& iconProvider, QWidget* parent)
     connect(pinBtn, &QToolButton::clicked, this, &CaptureActionBar::pinRequested);
     connect(saveBtn, &QToolButton::clicked, this, &CaptureActionBar::saveRequested);
     connect(editBtn, &QToolButton::clicked, this, &CaptureActionBar::editRequested);
-    connect(ocrBtn, &QToolButton::clicked, this, &CaptureActionBar::ocrRequested);
     connect(closeBtn, &QToolButton::clicked, this, &CaptureActionBar::cancelRequested);
 }
 
@@ -163,9 +159,6 @@ void CaptureActionBar::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_Space:
         emit editRequested();
-        return;
-    case Qt::Key_O:
-        emit ocrRequested();
         return;
     case Qt::Key_Escape:
         emit cancelRequested();

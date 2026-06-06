@@ -80,7 +80,6 @@ CaptureOverlay::CaptureOverlay(IIconProvider& iconProvider,
     connect(actionBar_, &CaptureActionBar::pinRequested, this, [this] { confirmSelection(&CaptureOverlay::pinRequested); });
     connect(actionBar_, &CaptureActionBar::saveRequested, this, [this] { confirmSelection(&CaptureOverlay::saveRequested); });
     connect(actionBar_, &CaptureActionBar::editRequested, this, [this] { confirmSelection(&CaptureOverlay::editRequested); });
-    connect(actionBar_, &CaptureActionBar::ocrRequested, this, [this] { confirmSelection(&CaptureOverlay::ocrRequested); });
     connect(actionBar_, &CaptureActionBar::cancelRequested, this, [this] { cancel(); });
     actionBar_->hide();
 
@@ -226,11 +225,6 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
             finishReady();
             confirmSelection(&CaptureOverlay::editRequested);
             return;
-        case Qt::Key_O:
-            selection_ = candidateRegion();
-            finishReady();
-            confirmSelection(&CaptureOverlay::ocrRequested);
-            return;
         case Qt::Key_S:
             if (event->modifiers().testFlag(Qt::ControlModifier)) {
                 selection_ = candidateRegion();
@@ -265,9 +259,6 @@ void CaptureOverlay::keyPressEvent(QKeyEvent* event)
         return;
     case Qt::Key_Space:
         confirmSelection(&CaptureOverlay::editRequested);
-        return;
-    case Qt::Key_O:
-        confirmSelection(&CaptureOverlay::ocrRequested);
         return;
     case Qt::Key_Tab: {
         refreshSmartCandidates(selection_.center());

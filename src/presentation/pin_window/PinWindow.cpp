@@ -378,6 +378,17 @@ void PinWindow::focusOutEvent(QFocusEvent* event)
 
 void PinWindow::keyPressEvent(QKeyEvent* event)
 {
+    if (ocrSelecting_ || ocrDragging_) {
+        if (event->key() == Qt::Key_Escape) {
+            ocrSelecting_ = false;
+            ocrDragging_ = false;
+            setCursor(Qt::ArrowCursor);
+            update();
+            event->accept();
+            return;
+        }
+    }
+
     switch (event->key()) {
     case Qt::Key_Escape:
         requestClose();
@@ -543,6 +554,14 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
+    if (ocrSelecting_) {
+        ocrDragging_ = true;
+        ocrDragCurrent_ = event->pos();
+        update();
+        event->accept();
+        return;
+    }
+
     if (!dragging_ && !resizing_) {
         hoveredButton_ = (hovered_ || controlsVisible_) && PinToolbar::fits(width(), height())
             ? PinToolbar::buttonAt(event->pos(), width()) : -1;
@@ -652,8 +671,9 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
     const auto pos = event->pos();
 
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        dragDropping_ = true;
-        dragOffset_ = pos;
+        dragging_ = true;
+        dragOffset_ = event->globalPos() - frameGeometry().topLeft();
+        cachedDragScreen_ = QGuiApplication::screenAt(frameGeometry().center());
         event->accept();
         return;
     }
@@ -730,14 +750,34 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    dragging_ = true;
-    dragOffset_ = event->globalPos() - frameGeometry().topLeft();
-    cachedDragScreen_ = QGuiApplication::screenAt(frameGeometry().center());
+    ocrSelecting_ = true;
+    ocrDragging_ = false;
+    ocrDragStart_ = pos;
+    ocrDragCurrent_ = pos;
+    setCursor(Qt::CrossCursor);
     event->accept();
 }
 
 void PinWindow::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (ocrSelecting_) {
+        ocrSelecting_ = false;
+        if (ocrDragging_) {
+            ocrDragging_ = false;
+            auto sel = QRect(ocrDragStart_, ocrDragCurrent_).normalized();
+            if (sel.width() > 4 && sel.height() > 4) {
+                auto region = extractOcrRegion(sel);
+                if (!region.isNull()) {
+                    emit ocrRequested(region);
+                }
+            }
+        }
+        setCursor(Qt::ArrowCursor);
+        update();
+        event->accept();
+        return;
+    }
+
     dragDropping_ = false;
     dragging_ = false;
     resizing_ = false;
@@ -814,6 +854,15 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.setPen(kOverflowText);
             painter.setFont(kOverflowDotsFont);
             painter.drawText(ob, Qt::AlignCenter, tr("..."));
+        }
+    }
+
+    if (ocrSelecting_ || ocrDragging_) {
+        auto sel = QRect(ocrDragStart_, ocrDragCurrent_).normalized().intersected(rect());
+        if (sel.isValid() && sel.width() > 0 && sel.height() > 0) {
+            painter.fillRect(sel, QColor(47, 191, 159, 40));
+            painter.setPen(QPen(QColor(47, 191, 159), 2));
+            painter.drawRect(sel);
         }
     }
 }
@@ -1011,6 +1060,23 @@ void PinWindow::toggleClickThrough()
     item_.state.options.clickThrough = !item_.state.options.clickThrough;
     windowInteraction_.setClickThrough(this, item_.state.options.clickThrough);
     emitStateChanged();
+}
+
+QImage PinWindow::extractOcrRegion(const QRect& widgetRect) const
+{
+    auto rendered = renderedImage();
+    if (rendered.isNull()) return {};
+    double sx = static_cast<double>(rendered.width()) / width();
+    double sy = static_cast<double>(rendered.height()) / height();
+    QRect imgRect(
+        static_cast<int>(widgetRect.x() * sx),
+        static_cast<int>(widgetRect.y() * sy),
+        static_cast<int>(widgetRect.width() * sx),
+        static_cast<int>(widgetRect.height() * sy)
+    );
+    imgRect = imgRect.intersected(rendered.rect());
+    if (imgRect.isEmpty()) return {};
+    return rendered.copy(imgRect);
 }
 
 QImage PinWindow::renderedImage() const

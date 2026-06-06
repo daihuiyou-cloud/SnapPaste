@@ -22,7 +22,6 @@ signals:
     void pinRequested();
     void saveRequested();
     void editRequested();
-    void ocrRequested();
     void cancelRequested();
 
 private:

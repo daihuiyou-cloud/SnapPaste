@@ -130,7 +130,6 @@ private slots:
         QSignalSpy pinSpy(&actionBar, &CaptureActionBar::pinRequested);
         QSignalSpy saveSpy(&actionBar, &CaptureActionBar::saveRequested);
         QSignalSpy editSpy(&actionBar, &CaptureActionBar::editRequested);
-        QSignalSpy ocrSpy(&actionBar, &CaptureActionBar::ocrRequested);
         QSignalSpy cancelSpy(&actionBar, &CaptureActionBar::cancelRequested);
 
         QKeyEvent enterEvent(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
@@ -141,8 +140,6 @@ private slots:
         QApplication::sendEvent(&actionBar, &saveEvent);
         QKeyEvent editEvent(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier);
         QApplication::sendEvent(&actionBar, &editEvent);
-        QKeyEvent ocrEvent(QEvent::KeyPress, Qt::Key_O, Qt::NoModifier);
-        QApplication::sendEvent(&actionBar, &ocrEvent);
         QKeyEvent cancelEvent(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
         QApplication::sendEvent(&actionBar, &cancelEvent);
 
@@ -150,7 +147,6 @@ private slots:
         QCOMPARE(pinSpy.size(), 1);
         QCOMPARE(saveSpy.size(), 1);
         QCOMPARE(editSpy.size(), 1);
-        QCOMPARE(ocrSpy.size(), 1);
         QCOMPARE(cancelSpy.size(), 1);
     }
 
