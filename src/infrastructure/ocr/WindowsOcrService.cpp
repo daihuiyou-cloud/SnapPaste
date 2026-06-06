@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <cstring>
+#include <algorithm>
 #include <functional>
 #include <numeric>
 #include <thread>
@@ -56,10 +57,12 @@ QImage preprocessForOcr(const QImage& src)
 
     // Step 2: Auto-contrast (histogram stretch) to enhance faint/low-contrast text
     int minVal = 255, maxVal = 0;
+    long long sum = 0;
     for (int y = 0; y < h; ++y) {
         const auto* line = gray.constScanLine(y);
         for (int x = 0; x < w; ++x) {
             const auto v = line[x];
+            sum += v;
             if (v < minVal) minVal = v;
             if (v > maxVal) maxVal = v;
         }
@@ -74,26 +77,56 @@ QImage preprocessForOcr(const QImage& src)
         });
     }
 
+    // Auto-invert: Windows OCR prefers dark text on light background.
+    // If the image is predominantly dark (mean <= 127), invert it.
+    if (static_cast<double>(sum) / (w * h) <= 127.0) {
+        parallelRows(h, [&](int y) {
+            auto* line = gray.scanLine(y);
+            for (int x = 0; x < w; ++x)
+                line[x] = 255 - line[x];
+        });
+    }
+
+    // Mild 3x3 median filter to remove salt-and-pepper noise and anti-aliasing artifacts
+    {
+        QImage denoised(gray.size(), QImage::Format_Grayscale8);
+        parallelRows(h, [&](int y) {
+            auto* dst = denoised.scanLine(y);
+            for (int x = 0; x < w; ++x) {
+                uchar values[9];
+                int idx = 0;
+                for (int dy = -1; dy <= 1; ++dy) {
+                    const auto* srcLine = gray.constScanLine(qBound(0, y + dy, h - 1));
+                    for (int dx = -1; dx <= 1; ++dx)
+                        values[idx++] = srcLine[qBound(0, x + dx, w - 1)];
+                }
+                std::nth_element(values, values + 4, values + 9);
+                dst[x] = values[4];
+            }
+        });
+        gray = std::move(denoised);
+    }
+
     // Step 3: Mild unsharp mask sharpening to enhance text edges (anti-aliased fonts)
     // Uses separable box blur (horizontal + vertical passes) instead of naive 3x3 kernel
     if (w > 6 && h > 6) {
         QImage blurred(gray.size(), QImage::Format_Grayscale8);
         QImage tmp(gray.size(), QImage::Format_Grayscale8);
-        // Horizontal blur pass: sliding window of 3 pixels
+        // Horizontal blur pass: sliding window of 3 pixels (rounded division)
         for (int y = 0; y < h; ++y) {
             const auto* scanSrc = gray.constScanLine(y);
             auto* dst = tmp.scanLine(y);
-            dst[0] = (static_cast<int>(scanSrc[0]) + scanSrc[0] + scanSrc[1]) / 3;
+            dst[0] = (2 * scanSrc[0] + scanSrc[1] + 1) / 3;
             for (int x = 1; x < w - 1; ++x)
-                dst[x] = (static_cast<int>(scanSrc[x-1]) + scanSrc[x] + scanSrc[x+1]) / 3;
-            dst[w-1] = (static_cast<int>(scanSrc[w-2]) + scanSrc[w-1] + scanSrc[w-1]) / 3;
+                dst[x] = (scanSrc[x-1] + scanSrc[x] + scanSrc[x+1] + 1) / 3;
+            dst[w-1] = (scanSrc[w-2] + 2 * scanSrc[w-1] + 1) / 3;
         }
-        // Vertical blur pass: sliding window of 3 pixels
+        // Vertical blur pass: sliding window of 3 pixels (rounded division)
         for (int x = 0; x < w; ++x) {
             auto* src0 = tmp.scanLine(0);
             auto* src1 = tmp.scanLine(1);
             auto* dst = blurred.scanLine(0);
-            dst[x] = (static_cast<int>(src0[x]) + src0[x] + src1[x]) / 3;
+            dst[x] = (2 * src0[x] + src1[x] + 1) / 3;
         }
         for (int y = 1; y < h - 1; ++y) {
             auto* srcP = tmp.scanLine(y - 1);
@@ -101,14 +134,14 @@ QImage preprocessForOcr(const QImage& src)
             auto* srcN = tmp.scanLine(y + 1);
             auto* dst = blurred.scanLine(y);
             for (int x = 0; x < w; ++x)
-                dst[x] = (static_cast<int>(srcP[x]) + srcC[x] + srcN[x]) / 3;
+                dst[x] = (srcP[x] + srcC[x] + srcN[x] + 1) / 3;
         }
         {
             auto* srcP = tmp.scanLine(h - 2);
             auto* srcC = tmp.scanLine(h - 1);
             auto* dst = blurred.scanLine(h - 1);
             for (int x = 0; x < w; ++x)
-                dst[x] = (static_cast<int>(srcP[x]) + srcC[x] + srcC[x]) / 3;
+                dst[x] = (srcP[x] + 2 * srcC[x] + 1) / 3;
         }
         // Sharpen: original + (original - blurred) / 2
         parallelRows(h, [&](int y) {
