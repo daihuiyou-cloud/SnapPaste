@@ -303,7 +303,7 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
 
     DXGI_OUTDUPL_FRAME_INFO frameInfo{};
     ComPtr<IDXGIResource> desktopResource;
-    auto hr = cachedDup.duplication->AcquireNextFrame(1000, &frameInfo, desktopResource.GetAddressOf());
+    auto hr = cachedDup.duplication->AcquireNextFrame(16, &frameInfo, desktopResource.GetAddressOf());
     if (FAILED(hr)) {
         if (hr == DXGI_ERROR_ACCESS_LOST || hr == DXGI_ERROR_DEVICE_REMOVED) {
             cachedDup.duplication.Reset();

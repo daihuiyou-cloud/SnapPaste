@@ -80,7 +80,8 @@ void blurVertical(const QImage& src, QImage& dst, int radius)
 QImage blurImage(const QImage& source, int radius)
 {
     if (radius <= 0 || source.isNull()) return source;
-    QImage result = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    QImage result = (source.format() == QImage::Format_ARGB32_Premultiplied)
+        ? source : source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     QImage tmp(result.size(), QImage::Format_ARGB32_Premultiplied);
     for (int i = 0; i < 3; ++i) {
         blurHorizontal(result, tmp, radius);

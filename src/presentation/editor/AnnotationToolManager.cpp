@@ -5,6 +5,8 @@
 #include <QFontMetrics>
 #include <QSettings>
 
+#include <cmath>
+
 namespace snappaste {
 
 AnnotationToolManager::AnnotationToolManager()
@@ -90,8 +92,10 @@ void AnnotationToolManager::setColor(const QColor& color)
 {
     currentColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.color == color) return;
         pushUndo();
-        annotations_[selectedIndex_].color = color;
+        a.color = color;
         if (onModified) onModified();
     }
 }
@@ -100,8 +104,10 @@ void AnnotationToolManager::setFillColor(const QColor& color)
 {
     currentFillColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.fillColor == color) return;
         pushUndo();
-        annotations_[selectedIndex_].fillColor = color;
+        a.fillColor = color;
         if (onModified) onModified();
         if (onSelectionChanged) onSelectionChanged();
     }
@@ -112,8 +118,10 @@ void AnnotationToolManager::setStrokeWidth(int width)
 {
     currentStrokeWidth_ = std::clamp(width, 1, 12);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.strokeWidth == currentStrokeWidth_) return;
         pushUndo();
-        annotations_[selectedIndex_].strokeWidth = currentStrokeWidth_;
+        a.strokeWidth = currentStrokeWidth_;
         if (onModified) onModified();
     }
 }
@@ -122,8 +130,10 @@ void AnnotationToolManager::setStrokeAlpha(int alpha)
 {
     strokeAlpha_ = std::clamp(alpha, 0, 255);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.color.alpha() == strokeAlpha_) return;
         pushUndo();
-        annotations_[selectedIndex_].color.setAlpha(strokeAlpha_);
+        a.color.setAlpha(strokeAlpha_);
         if (onModified) onModified();
     }
     if (onStrokeAlphaChanged) onStrokeAlphaChanged(strokeAlpha_);
@@ -135,8 +145,10 @@ void AnnotationToolManager::setArrowStyle(ArrowStyle style)
     arrowStyle_ = style;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Arrow) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.arrowStyle == style) return;
         pushUndo();
-        annotations_[selectedIndex_].arrowStyle = style;
+        a.arrowStyle = style;
         if (onModified) onModified();
     }
     if (onArrowStyleChanged) onArrowStyleChanged(static_cast<int>(style));
@@ -148,8 +160,10 @@ void AnnotationToolManager::setCornerRadius(int radius)
     cornerRadius_ = std::clamp(radius, 0, 40);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Rectangle) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.cornerRadius == cornerRadius_) return;
         pushUndo();
-        annotations_[selectedIndex_].cornerRadius = cornerRadius_;
+        a.cornerRadius = cornerRadius_;
         if (onModified) onModified();
     }
     if (onCornerRadiusChanged) onCornerRadiusChanged(cornerRadius_);
@@ -252,10 +266,12 @@ void AnnotationToolManager::setTextOutlineEnabled(bool enabled)
 {
     textOutlineEnabled_ = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
-        pushUndo();
-        auto t = annotations_[selectedIndex_].tool;
+        auto& a = annotations_[selectedIndex_];
+        auto t = a.tool;
         if (t == AnnotationTool::Text || t == AnnotationTool::Numbered) {
-            annotations_[selectedIndex_].textOutline = enabled;
+            if (a.textOutline == enabled) return;
+            pushUndo();
+            a.textOutline = enabled;
             if (onModified) onModified();
         }
     }
@@ -266,10 +282,11 @@ void AnnotationToolManager::setFilled(bool filled)
 {
     filled_ = filled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
-        pushUndo();
         auto& a = annotations_[selectedIndex_];
         if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse
             || a.tool == AnnotationTool::Arrow) {
+            if (a.filled == filled) return;
+            pushUndo();
             a.filled = filled;
             if (onModified) onModified();
             if (onSelectionChanged) onSelectionChanged();
@@ -283,8 +300,10 @@ void AnnotationToolManager::setTextBackgroundEnabled(bool enabled)
     textBackgroundEnabled_ = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.textBackground == enabled) return;
         pushUndo();
-        annotations_[selectedIndex_].textBackground = enabled;
+        a.textBackground = enabled;
         if (onModified) onModified();
     }
     if (onUpdateRequired) onUpdateRequired();
@@ -295,8 +314,10 @@ void AnnotationToolManager::setTextBackgroundColor(const QColor& color)
     textBackgroundColor_ = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
+        auto& a = annotations_[selectedIndex_];
+        if (a.textBackgroundColor == color) return;
         pushUndo();
-        annotations_[selectedIndex_].textBackgroundColor = color;
+        a.textBackgroundColor = color;
         if (onModified) onModified();
     }
     if (onUpdateRequired) onUpdateRequired();
@@ -307,8 +328,11 @@ void AnnotationToolManager::setMosaicBlurred(bool blurred)
     mosaicBlurred_ = blurred;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
+        auto& a = annotations_[selectedIndex_];
+        int newRadius = blurred ? currentStrokeWidth_ : 0;
+        if (a.blurRadius == newRadius) return;
         pushUndo();
-        annotations_[selectedIndex_].blurRadius = blurred ? currentStrokeWidth_ : 0;
+        a.blurRadius = newRadius;
         if (onModified) onModified();
     }
     if (onUpdateRequired) onUpdateRequired();
@@ -556,9 +580,62 @@ void AnnotationToolManager::updateDrawingStroke(const QPoint& rawPos)
     }
 }
 
+namespace {
+
+QVector<QPoint> rdpSimplify(const QVector<QPoint>& points, double epsilon)
+{
+    if (points.size() <= 2) return points;
+
+    double maxDist = 0;
+    int maxIdx = 0;
+    const auto& first = points.first();
+    const auto& last = points.last();
+    double dx = static_cast<double>(last.x() - first.x());
+    double dy = static_cast<double>(last.y() - first.y());
+    double len2 = dx * dx + dy * dy;
+
+    for (int i = 1; i < points.size() - 1; ++i) {
+        double dist;
+        if (len2 == 0) {
+            dist = std::hypot(points[i].x() - first.x(), points[i].y() - first.y());
+        } else {
+            double t = ((points[i].x() - first.x()) * dx + (points[i].y() - first.y()) * dy) / len2;
+            if (t <= 0.0) {
+                dist = std::hypot(points[i].x() - first.x(), points[i].y() - first.y());
+            } else if (t >= 1.0) {
+                dist = std::hypot(points[i].x() - last.x(), points[i].y() - last.y());
+            } else {
+                double projX = first.x() + t * dx;
+                double projY = first.y() + t * dy;
+                dist = std::hypot(points[i].x() - projX, points[i].y() - projY);
+            }
+        }
+        if (dist > maxDist) {
+            maxDist = dist;
+            maxIdx = i;
+        }
+    }
+
+    if (maxDist > epsilon) {
+        auto left = rdpSimplify(points.mid(0, maxIdx + 1), epsilon);
+        auto right = rdpSimplify(points.mid(maxIdx), epsilon);
+        left.append(right.mid(1));
+        return left;
+    }
+
+    return {first, last};
+}
+
+} // namespace
+
 void AnnotationToolManager::finishDrawing()
 {
     drawing_ = false;
+    if (draft_.tool == AnnotationTool::Pen || draft_.tool == AnnotationTool::Mosaic) {
+        if (draft_.points.size() > 2) {
+            draft_.points = rdpSimplify(draft_.points, 1.0);
+        }
+    }
 }
 
 void AnnotationToolManager::clearAnnotations()

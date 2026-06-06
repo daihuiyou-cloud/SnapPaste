@@ -378,14 +378,13 @@ void AnnotationRenderer::drawMosaicAnnotation(QPainter* painter, const QImage& s
     }
 
     auto blitThumb = [&](const QRect& clipped, int bw, int bh) {
-        QRect thumbRect(
-            clipped.left() / kThumbFraction,
-            clipped.top() / kThumbFraction,
+        QRectF srcRect(
+            clipped.left() / static_cast<double>(kThumbFraction),
+            clipped.top() / static_cast<double>(kThumbFraction),
             bw, bh);
-        auto pixelated = mosaicThumbCache_.copy(thumbRect);
         painter->save();
         painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
-        painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), pixelated);
+        painter->drawImage(QRectF(clipped.topLeft(), clipped.size()), mosaicThumbCache_, srcRect);
         painter->restore();
     };
 

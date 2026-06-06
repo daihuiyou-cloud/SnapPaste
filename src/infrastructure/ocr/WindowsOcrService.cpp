@@ -75,27 +75,42 @@ QImage preprocessForOcr(const QImage& src)
     }
 
     // Step 3: Mild unsharp mask sharpening to enhance text edges (anti-aliased fonts)
+    // Uses separable box blur (horizontal + vertical passes) instead of naive 3x3 kernel
     if (w > 6 && h > 6) {
         QImage blurred(gray.size(), QImage::Format_Grayscale8);
-        const int lastRow = h - 1;
-        const int lastCol = w - 1;
-        parallelRows(h, [&](int y) {
-            for (int x = 0; x < w; ++x) {
-                int sum = 0;
-                int y0 = (std::max)(0, y - 1);
-                int y1 = (std::min)(lastRow, y + 1);
-                int x0 = (std::max)(0, x - 1);
-                int x1 = (std::min)(lastCol, x + 1);
-                for (int dy = y0; dy <= y1; ++dy) {
-                    const auto* srcLine = gray.constScanLine(dy);
-                    for (int dx = x0; dx <= x1; ++dx) {
-                        sum += srcLine[dx];
-                    }
-                }
-                int count = (y1 - y0 + 1) * (x1 - x0 + 1);
-                blurred.scanLine(y)[x] = static_cast<uchar>(sum / count);
-            }
-        });
+        QImage tmp(gray.size(), QImage::Format_Grayscale8);
+        // Horizontal blur pass: sliding window of 3 pixels
+        for (int y = 0; y < h; ++y) {
+            const auto* scanSrc = gray.constScanLine(y);
+            auto* dst = tmp.scanLine(y);
+            dst[0] = (static_cast<int>(scanSrc[0]) + scanSrc[0] + scanSrc[1]) / 3;
+            for (int x = 1; x < w - 1; ++x)
+                dst[x] = (static_cast<int>(scanSrc[x-1]) + scanSrc[x] + scanSrc[x+1]) / 3;
+            dst[w-1] = (static_cast<int>(scanSrc[w-2]) + scanSrc[w-1] + scanSrc[w-1]) / 3;
+        }
+        // Vertical blur pass: sliding window of 3 pixels
+        for (int x = 0; x < w; ++x) {
+            auto* src0 = tmp.scanLine(0);
+            auto* src1 = tmp.scanLine(1);
+            auto* dst = blurred.scanLine(0);
+            dst[x] = (static_cast<int>(src0[x]) + src0[x] + src1[x]) / 3;
+        }
+        for (int y = 1; y < h - 1; ++y) {
+            auto* srcP = tmp.scanLine(y - 1);
+            auto* srcC = tmp.scanLine(y);
+            auto* srcN = tmp.scanLine(y + 1);
+            auto* dst = blurred.scanLine(y);
+            for (int x = 0; x < w; ++x)
+                dst[x] = (static_cast<int>(srcP[x]) + srcC[x] + srcN[x]) / 3;
+        }
+        {
+            auto* srcP = tmp.scanLine(h - 2);
+            auto* srcC = tmp.scanLine(h - 1);
+            auto* dst = blurred.scanLine(h - 1);
+            for (int x = 0; x < w; ++x)
+                dst[x] = (static_cast<int>(srcP[x]) + srcC[x] + srcC[x]) / 3;
+        }
+        // Sharpen: original + (original - blurred) / 2
         parallelRows(h, [&](int y) {
             const auto* origLine = gray.constScanLine(y);
             const auto* blurLine = blurred.constScanLine(y);
