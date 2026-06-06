@@ -15,7 +15,6 @@
 #include <QPointer>
 #include <QPropertyAnimation>
 #include <QScreen>
-#include <QTextStream>
 #include <QTimer>
 
 #include <algorithm>
@@ -1113,12 +1112,11 @@ void CaptureOverlay::drawMagnifier(QPainter& painter)
     const auto infoRect = rect.adjusted(kPad, kPad + kGrid + kSpacing, -kPad, -kPad);
     if (sampledColor_.has_value()) {
         const auto color = sampledColor_.value();
-        QString text;
-        QTextStream ts(&text);
-        ts << color.name(QColor::HexRgb).toUpper() << "\nrgb("
-           << color.red() << "," << color.green() << "," << color.blue() << ")\n"
-           << lastMouseGlobal_.x() << "," << lastMouseGlobal_.y();
-        painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop, text);
+        painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
+            QStringLiteral("%1\nrgb(%2,%3,%4)\n%5,%6")
+                .arg(color.name(QColor::HexRgb).toUpper())
+                .arg(color.red()).arg(color.green()).arg(color.blue())
+                .arg(lastMouseGlobal_.x()).arg(lastMouseGlobal_.y()));
     } else {
         painter.drawText(infoRect, Qt::AlignLeft | Qt::AlignTop,
             tr("%1,%2").arg(lastMouseGlobal_.x(), lastMouseGlobal_.y()));

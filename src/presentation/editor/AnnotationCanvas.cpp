@@ -524,11 +524,11 @@ void AnnotationCanvas::updateBrushCursor()
     pm.fill(Qt::transparent);
     QPainter p(&pm);
     p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(QPen(QColor(255, 255, 255, 160), 1));
+    p.setPen(QPen(QColor(0, 0, 0, 180), 1.5));
     p.setBrush(Qt::NoBrush);
-    p.drawEllipse(QPointF(size / 2.0, size / 2.0), diameter / 2.0, diameter / 2.0);
-    p.setPen(QPen(QColor(0, 0, 0, 80), 1));
     p.drawEllipse(QPointF(size / 2.0, size / 2.0), diameter / 2.0 + 1, diameter / 2.0 + 1);
+    p.setPen(QPen(QColor(255, 255, 255, 220), 1.5));
+    p.drawEllipse(QPointF(size / 2.0, size / 2.0), diameter / 2.0, diameter / 2.0);
     if (tool == AnnotationTool::Pen || tool == AnnotationTool::Mosaic) {
         p.setPen(QPen(QColor(255, 255, 255, 120), 1));
         p.drawLine(QPointF(size / 2.0 - 6, size / 2.0), QPointF(size / 2.0 + 6, size / 2.0));

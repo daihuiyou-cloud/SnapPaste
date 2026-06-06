@@ -20,6 +20,10 @@
 #include <windows.h>
 #endif
 
+#if defined(_M_X64) || defined(_M_IX86)
+#include <emmintrin.h>
+#endif
+
 namespace snappaste {
 
 #ifdef Q_OS_WIN
@@ -168,15 +172,50 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
         for (int y = 0; y < height; ++y) {
             const auto* src = reinterpret_cast<const uint32_t*>(static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch));
             auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
-            for (int x = 0; x < width; ++x) {
+            int x = 0;
+#if defined(_M_X64) || defined(_M_IX86)
+            const auto magic255 = _mm_set1_epi32(255);
+            const auto magic511_02 = _mm_set_epi32(0, 511, 0, 511);
+            const auto mask10 = _mm_set1_epi32(0x3FF);
+            for (; x + 4 <= width; x += 4) {
+                auto v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src + x));
+                auto r10 = _mm_and_si128(_mm_srli_epi32(v, 20), mask10);
+                auto g10 = _mm_and_si128(_mm_srli_epi32(v, 10), mask10);
+                auto b10 = _mm_and_si128(v, mask10);
+                auto a2 = _mm_srli_epi32(v, 30);
+                auto aMask = _mm_cmpeq_epi32(a2, _mm_setzero_si128());
+                auto a8 = _mm_andnot_si128(aMask, _mm_set1_epi32(255));
+                auto scale = [&](__m128i vv) {
+                    auto even = _mm_mul_epu32(vv, magic255);
+                    even = _mm_add_epi32(even, magic511_02);
+                    even = _mm_srli_epi64(even, 10);
+                    auto shifted = _mm_srli_si128(vv, 4);
+                    auto odd = _mm_mul_epu32(shifted, magic255);
+                    odd = _mm_add_epi32(odd, magic511_02);
+                    odd = _mm_srli_epi64(odd, 10);
+                    auto lo = _mm_unpacklo_epi32(even, odd);
+                    auto hi = _mm_unpackhi_epi32(even, odd);
+                    return _mm_unpacklo_epi64(lo, hi);
+                };
+                auto r8 = scale(r10);
+                auto g8 = scale(g10);
+                auto b8 = scale(b10);
+                r8 = _mm_slli_epi32(r8, 16);
+                g8 = _mm_slli_epi32(g8, 8);
+                a8 = _mm_slli_epi32(a8, 24);
+                auto result = _mm_or_si128(b8, _mm_or_si128(g8, _mm_or_si128(r8, a8)));
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(pixels + x), result);
+            }
+#endif
+            for (; x < width; ++x) {
                 uint32_t p = src[x];
                 int r = (p >> 20) & 0x3ff;
                 int g = (p >> 10) & 0x3ff;
                 int b = p & 0x3ff;
                 int a = (p >> 30) & 0x3;
-                int r8 = (r * 255 + 511) / 1023;
-                int g8 = (g * 255 + 511) / 1023;
-                int b8 = (b * 255 + 511) / 1023;
+                int r8 = (r * 255 + 511) >> 10;
+                int g8 = (g * 255 + 511) >> 10;
+                int b8 = (b * 255 + 511) >> 10;
                 int a8 = a ? 255 : 0;
                 pixels[x] = qRgba(r8, g8, b8, a8);
             }
@@ -187,15 +226,58 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
         for (int y = 0; y < height; ++y) {
             const auto* src = reinterpret_cast<const uint16_t*>(static_cast<const uchar*>(mapped.pData) + (y * mapped.RowPitch));
             auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
-            for (int x = 0; x < width; ++x) {
+            int x = 0;
+#if defined(_M_X64) || defined(_M_IX86)
+            const auto magic255_16 = _mm_set1_epi32(255);
+            const auto magicHalf_02 = _mm_set_epi32(0, 32767, 0, 32767);
+            const auto zero = _mm_setzero_si128();
+            for (; x + 4 <= width; x += 4) {
+                auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src + x * 4));
+                auto v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src + x * 4 + 8));
+                auto pix0 = _mm_unpacklo_epi16(v0, zero);
+                auto pix1 = _mm_unpackhi_epi16(v0, zero);
+                auto pix2 = _mm_unpacklo_epi16(v1, zero);
+                auto pix3 = _mm_unpackhi_epi16(v1, zero);
+                auto t0 = _mm_unpacklo_epi32(pix0, pix1);
+                auto t1 = _mm_unpackhi_epi32(pix0, pix1);
+                auto t2 = _mm_unpacklo_epi32(pix2, pix3);
+                auto t3 = _mm_unpackhi_epi32(pix2, pix3);
+                auto R = _mm_unpacklo_epi64(t0, t2);
+                auto G = _mm_unpackhi_epi64(t0, t2);
+                auto B = _mm_unpacklo_epi64(t1, t3);
+                auto A = _mm_unpackhi_epi64(t1, t3);
+                auto scale16 = [&](__m128i vv) {
+                    auto even = _mm_mul_epu32(vv, magic255_16);
+                    even = _mm_add_epi32(even, magicHalf_02);
+                    even = _mm_srli_epi64(even, 16);
+                    auto shifted = _mm_srli_si128(vv, 4);
+                    auto odd = _mm_mul_epu32(shifted, magic255_16);
+                    odd = _mm_add_epi32(odd, magicHalf_02);
+                    odd = _mm_srli_epi64(odd, 16);
+                    auto lo = _mm_unpacklo_epi32(even, odd);
+                    auto hi = _mm_unpackhi_epi32(even, odd);
+                    return _mm_unpacklo_epi64(lo, hi);
+                };
+                R = scale16(R);
+                G = scale16(G);
+                B = scale16(B);
+                A = scale16(A);
+                R = _mm_slli_epi32(R, 16);
+                G = _mm_slli_epi32(G, 8);
+                A = _mm_slli_epi32(A, 24);
+                auto result = _mm_or_si128(B, _mm_or_si128(G, _mm_or_si128(R, A)));
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(pixels + x), result);
+            }
+#endif
+            for (; x < width; ++x) {
                 int r = src[x * 4 + 0];
                 int g = src[x * 4 + 1];
                 int b = src[x * 4 + 2];
                 int a = src[x * 4 + 3];
-                int r8 = (r * 255 + 32767) / 65535;
-                int g8 = (g * 255 + 32767) / 65535;
-                int b8 = (b * 255 + 32767) / 65535;
-                int a8 = (a * 255 + 32767) / 65535;
+                int r8 = (r * 255 + 32767) >> 16;
+                int g8 = (g * 255 + 32767) >> 16;
+                int b8 = (b * 255 + 32767) >> 16;
+                int a8 = (a * 255 + 32767) >> 16;
                 pixels[x] = qRgba(r8, g8, b8, a8);
             }
         }
@@ -209,7 +291,21 @@ QImage mappedTextureToImage(const D3D11_MAPPED_SUBRESOURCE& mapped, int width, i
             // R8G8B8A8 memory order = R G B A (little-endian uint32 = 0xAABBGGRR)
             // Format_RGB32 on LE = B G R A (uint32 = 0xAARRGGBB)
             // Swap byte 0 <-> byte 2 in each pixel
-            for (int x = 0; x < width; ++x) {
+            int x = 0;
+#if defined(_M_X64) || defined(_M_IX86)
+            const auto maskGA = _mm_set1_epi32(static_cast<int>(0xFF00FF00));
+            const auto maskR = _mm_set1_epi32(0x00FF0000);
+            const auto maskB = _mm_set1_epi32(0x000000FF);
+            for (; x + 4 <= width; x += 4) {
+                auto v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pixels + x));
+                auto ga = _mm_and_si128(v, maskGA);
+                auto r = _mm_and_si128(_mm_slli_epi32(v, 16), maskR);
+                auto b = _mm_and_si128(_mm_srli_epi32(v, 16), maskB);
+                auto result = _mm_or_si128(ga, _mm_or_si128(r, b));
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(pixels + x), result);
+            }
+#endif
+            for (; x < width; ++x) {
                 auto px = pixels[x];
                 pixels[x] = (px & 0xFF00FF00u) | ((px & 0x000000FFu) << 16) | ((px >> 16) & 0x000000FFu);
             }
@@ -373,24 +469,6 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
 
     auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
     context.Unmap(stagingTexture.Get(), 0);
-
-    if (!image.isNull()) {
-        bool allBlack = true;
-        const int stepY = qMax(1, height / 8);
-        const int stepX = qMax(1, width / 8);
-        for (int y = 0; y < height && allBlack; y += stepY) {
-            auto* pixels = reinterpret_cast<const QRgb*>(image.constScanLine(y));
-            for (int x = 0; x < width; x += stepX) {
-                if (qRed(pixels[x]) != 0 || qGreen(pixels[x]) != 0 || qBlue(pixels[x]) != 0) {
-                    allBlack = false;
-                    break;
-                }
-            }
-        }
-        if (allBlack) {
-            return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI returned a black frame."));
-        }
-    }
 
     return Result<QImage>::success(std::move(image));
 }
