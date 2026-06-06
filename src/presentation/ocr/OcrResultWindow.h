@@ -70,6 +70,7 @@ private:
     QRect normalGeometry_;
 
     QLabel* imageLabel_ = nullptr;
+    QWidget* blockOverlay_ = nullptr;
     QLabel* selectionInfo_ = nullptr;
     QPushButton* copyBtn_ = nullptr;
     QPushButton* pasteBtn_ = nullptr;

@@ -13,6 +13,7 @@
 #include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QStyle>
 #include <QSplitter>
 #include <QTimer>
 #include <QTimerEvent>
@@ -48,6 +49,54 @@ QString titleBtnStyle(const char* hoverColor)
         .arg(hoverColor)
         .arg(hoverColor);
 }
+
+class BlockOverlay : public QWidget {
+public:
+    using QWidget::QWidget;
+
+    void setState(const QVector<QRect>& rects, int hovered, const QSet<int>& selected)
+    {
+        rects_ = rects;
+        hovered_ = hovered;
+        selected_ = selected;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+
+        for (int i = 0; i < rects_.size(); ++i) {
+            bool hover = (i == hovered_);
+            bool sel = selected_.contains(i);
+
+            int bw = (hover || sel) ? 2 : 1;
+            QColor fill, border;
+
+            if (hover) {
+                fill = QColor(47, 191, 159, 100);
+                border = QColor(47, 191, 159, 240);
+            } else if (sel) {
+                fill = QColor(47, 191, 159, 70);
+                border = QColor(47, 191, 159, 180);
+            } else {
+                fill = QColor(47, 191, 159, 20);
+                border = QColor(47, 191, 159, 90);
+            }
+
+            p.setBrush(fill);
+            p.setPen(QPen(border, bw));
+            p.drawRoundedRect(rects_[i].adjusted(0, 0, -1, -1), 2, 2);
+        }
+    }
+
+private:
+    QVector<QRect> rects_;
+    int hovered_ = -1;
+    QSet<int> selected_;
+};
 
 } // namespace
 
@@ -161,6 +210,11 @@ OcrResultWindow::OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
     imageLabel_->setMouseTracking(true);
     imageScrollArea_->setWidget(imageLabel_);
 
+    blockOverlay_ = new BlockOverlay(imageLabel_);
+    blockOverlay_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    blockOverlay_->setAttribute(Qt::WA_TranslucentBackground, true);
+    blockOverlay_->show();
+
     imageLayout->addWidget(imageScrollArea_);
     splitter->addWidget(imagePanel);
 
@@ -191,7 +245,13 @@ OcrResultWindow::OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
 
     textListContainer_ = new QWidget(textScrollArea_);
-    textListContainer_->setStyleSheet("background: transparent;");
+    textListContainer_->setStyleSheet(
+        "QFrame { background: transparent; border: none;"
+        " border-left: 3px solid transparent; border-bottom: 1px solid #1c2128; }"
+        "QFrame[blockState=\"hovered\"] { background: #252c38; border: none;"
+        " border-left: 3px solid #3a5a5a; border-bottom: 1px solid #1c2128; }"
+        "QFrame[blockState=\"selected\"] { background: #1a2d2a; border: none;"
+        " border-left: 3px solid #2fbf9f; border-bottom: 1px solid #1c2128; }");
     auto* textListLayout = new QVBoxLayout(textListContainer_);
     textListLayout->setContentsMargins(0, 0, 0, 0);
     textListLayout->setSpacing(0);
@@ -216,6 +276,7 @@ OcrResultWindow::OcrResultWindow(QImage source, QVector<OcrBlockInfo> blocks,
         textLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
         rowLayout->addWidget(textLabel, 1);
 
+        row->setProperty("blockState", QStringLiteral(""));
         textListLayout->addWidget(row);
         textRows_.append(row);
     }
@@ -320,43 +381,18 @@ void OcrResultWindow::rebuildCache()
     }
     p.end();
 
-    updateImageOverlay();
+    imageLabel_->setPixmap(basePixmap_);
+    imageLabel_->setFixedSize(basePixmap_.size());
+    blockOverlay_->setGeometry(imageLabel_->rect());
+    static_cast<BlockOverlay*>(blockOverlay_)->setState(scaledRects_, hoveredIndex_, selectedIndices_);
 }
 
 void OcrResultWindow::updateImageOverlay()
 {
-    if (source_.isNull() || basePixmap_.isNull()) return;
-
-    QPixmap pm = basePixmap_;
-    QPainter p(&pm);
-    p.setRenderHint(QPainter::Antialiasing);
-
-    for (int i = 0; i < scaledRects_.size(); ++i) {
-        bool hover = (i == hoveredIndex_);
-        bool sel = selectedIndices_.contains(i);
-
-        int bw = (hover || sel) ? 2 : 1;
-        QColor fill, border;
-
-        if (hover) {
-            fill = QColor(47, 191, 159, 100);
-            border = QColor(47, 191, 159, 240);
-        } else if (sel) {
-            fill = QColor(47, 191, 159, 70);
-            border = QColor(47, 191, 159, 180);
-        } else {
-            fill = QColor(47, 191, 159, 20);
-            border = QColor(47, 191, 159, 90);
-        }
-
-        p.setBrush(fill);
-        p.setPen(QPen(border, bw));
-        p.drawRoundedRect(scaledRects_[i].adjusted(0, 0, -1, -1), 2, 2);
+    auto* ov = static_cast<BlockOverlay*>(blockOverlay_);
+    if (ov) {
+        ov->setState(scaledRects_, hoveredIndex_, selectedIndices_);
     }
-    p.end();
-
-    imageLabel_->setPixmap(pm);
-    imageLabel_->setFixedSize(pm.size());
 }
 
 void OcrResultWindow::updateTextRow(int i)
@@ -366,19 +402,13 @@ void OcrResultWindow::updateTextRow(int i)
     bool sel = selectedIndices_.contains(i);
     bool hover = (i == hoveredIndex_);
 
-    if (sel) {
-        row->setStyleSheet(
-            "QFrame { background: #1a2d2a; border: none; border-left: 3px solid #2fbf9f;"
-            " border-bottom: 1px solid #1c2128; }");
-    } else if (hover) {
-        row->setStyleSheet(
-            "QFrame { background: #252c38; border: none; border-left: 3px solid #3a5a5a;"
-            " border-bottom: 1px solid #1c2128; }");
-    } else {
-        row->setStyleSheet(
-            "QFrame { background: transparent; border: none; border-left: 3px solid transparent;"
-            " border-bottom: 1px solid #1c2128; }");
-    }
+    const char* state = sel  ? "selected"
+                     : hover ? "hovered"
+                             : "";
+    row->setProperty("blockState", state);
+    row->style()->unpolish(row);
+    row->style()->polish(row);
+    row->update();
 }
 
 void OcrResultWindow::updateTextRows()
