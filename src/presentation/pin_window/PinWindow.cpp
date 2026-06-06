@@ -1131,6 +1131,12 @@ void PinWindow::paintEvent(QPaintEvent* event)
     }
 
     if (editing_) {
+        painter.fillRect(rect(), kControlOverlay);
+        painter.setPen(QPen(kPinAccent, 2));
+        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
+        painter.setPen(QPen(kControlBorder, 1));
+        painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
+
         if (!editToolManager_.image().isNull()) {
             painter.save();
             double zf = editToolManager_.zoomFactor();
