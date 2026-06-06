@@ -18,6 +18,7 @@
 #include <QPainter>
 #include <QEasingCurve>
 #include <QPointer>
+#include <QResizeEvent>
 #include <QScreen>
 #include <QShowEvent>
 #include <QToolTip>
@@ -442,10 +443,6 @@ void PinWindow::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Escape:
-        if (ocrActive_) {
-            clearOcrOverlay();
-            return;
-        }
         requestClose();
         return;
     case Qt::Key_C:
@@ -551,7 +548,6 @@ void PinWindow::leaveEvent(QEvent* event)
     hoveredButton_ = -1;
     if (ocrActive_) {
         ocrHoveredBlock_ = -1;
-        update();
     }
     update();
 }
@@ -948,6 +944,14 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.setFont(kOverflowDotsFont);
             painter.drawText(ob, Qt::AlignCenter, tr("..."));
         }
+    }
+}
+
+void PinWindow::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    if (ocrActive_) {
+        rebuildOcrBlockRects();
     }
 }
 

@@ -11,7 +11,7 @@ SnapPaste 是一个 Windows 平台的轻量级截图工具，使用 Qt5 Widgets 
 - 截图历史：保存截图记录和缩略图，便于回看已保存内容。
 - 设置管理：支持保存目录、图片格式、主题模式和热键配置。
 - 深浅色主题：可跟随系统，也可切换为浅色或深色主题。
-- Windows OCR：在可用的 Windows SDK / WinRT OCR 环境下，可识别选区文字并复制到剪贴板。
+- Windows OCR：在可用的 Windows SDK / WinRT OCR 环境下，可识别图像中的文字，支持在贴图窗口中以内联覆盖层方式展示文字区块，并支持选择复制。
 
 ## 默认快捷键
 
@@ -32,7 +32,6 @@ SnapPaste 是一个 Windows 平台的轻量级截图工具，使用 Qt5 Widgets 
 | 选区贴图 | `F3` |
 | 选区保存 | `Ctrl+S` |
 | 选区编辑 | `Space` |
-| 选区 OCR | `O` |
 | 移动到/切换候选区域 | `Tab` / `方向键` |
 | 截图全屏 | `F` |
 | 取消截图 | `Esc` |
@@ -53,6 +52,10 @@ SnapPaste 是一个 Windows 平台的轻量级截图工具，使用 Qt5 Widgets 
 | 适应屏幕 | `Ctrl+9` |
 | 撤销变换 | `Ctrl+Z` |
 | 拖拽图片到其他窗口 | `Ctrl+拖拽` |
+| 触发 OCR 识别 | 工具栏按钮 |
+| （OCR 覆盖层）退出识别 | `Esc` |
+| （OCR 覆盖层）复制选中文字 | `Ctrl+C` |
+| （OCR 覆盖层）全选文字区块 | `Ctrl+A` |
 
 ## 环境要求
 
@@ -120,7 +123,7 @@ src/
     icons/                图标提供
     main_window/          主窗口
     ocr/                  OCR 结果窗口
-    pin_window/           贴图窗口（拖拽、缩放、旋转、工具栏）
+    pin_window/           贴图窗口（拖拽、缩放、旋转、工具栏、OCR 覆盖层）
     settings/             设置面板
     toast/                Windows 通知
     tray/                 系统托盘
@@ -176,6 +179,7 @@ presentation -> domain -> infrastructure -> platform/windows
 - **异步回调**：`recognizeTextAsync()` 在工作线程完成后通过 `QMetaObject::invokeMethod` 将结果派发到主线程，避免中间线程阻塞。
 - **请求级取消**：每个 OCR 任务在投递时捕获当前 `requestId`，执行时与 `currentRequestId_` 比对；`cancel()` 仅递增计数器即可使所有未执行任务失效，无竞态。
 - **预处理**：灰度化 → 自动对比度拉伸（增强低对比度文字）→ Unsharp Mask 锐化（增强反走样文字边缘）→ 平滑缩放上采样（针对极小文字）。
+- **贴图内联 OCR**：在 `PinWindow` 工具栏上提供 OCR 按钮，识别结果以半透明文字区块覆盖层直接展示在贴图图像上。区块支持悬停高亮、点击选中、右键菜单复制。覆盖层通过 `Ctrl+C` / `Ctrl+A` 快捷键操作，`Esc` 退出。区块位置随图像变换（旋转/翻转/缩放）自动映射。
 
 ### 事件通信
 
@@ -205,3 +209,4 @@ SnapPaste 会在用户本地应用数据目录下保存配置、数据库、截�
 
 - **OCR 性能**：引入专用工作线程 + OcrEngine 缓存 + 异步回调接口，消除每次 OCR 的 COM 初始化和引擎创建开销；撤销无益的二值化/锐化预处理；`cancel()` 改用 `requestId` 比对机制，消除竞态。
 - **截图性能**：缓存 `chipButtons` 和常用控件指针，消除 `syncPanelDefaults` 中的重复 `findChild`/`findChildren` 调用。
+- **贴图内联 OCR**：OCR 识别结果从独立窗口改为贴图窗口内联文字区块覆盖层（WeChat 风格）。区块支持悬停高亮、点击选中、复制，位置随图像变换自动映射。移除截图浮层动作栏中的 OCR 按钮，移至贴图窗口工具栏。
