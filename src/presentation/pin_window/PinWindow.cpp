@@ -107,6 +107,18 @@ PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* pare
     showAnimation_->setDuration(100);
     showAnimation_->setEasingCurve(QEasingCurve::OutCubic);
     applyState();
+
+    // Wire edit mode callbacks
+    editToolManager_.onModified = [this] {
+        editRenderer_.invalidateCache();
+        update();
+    };
+    editToolManager_.onUpdateRequired = [this] {
+        update();
+    };
+    editToolManager_.onSelectionChanged = [this] {
+        update();
+    };
 }
 
 qint64 PinWindow::id() const noexcept
@@ -856,19 +868,59 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
         QPoint imgPt = toEditImage(pos);
         if (editToolManager_.currentTool() == AnnotationTool::Select) {
+            int sel = editToolManager_.selectedIndex();
+            if (sel >= 0 && sel < editToolManager_.annotationCount()) {
+                const auto r = editToolManager_.annotationAt(sel).bounds;
+                const QPoint corners[] = {r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()};
+                for (int ci = 0; ci < 4; ++ci) {
+                    if (QRect(corners[ci].x() - 8, corners[ci].y() - 8, 16, 16).contains(imgPt)) {
+                        editToolManager_.pushUndo();
+                        editToolManager_.startResizing(ci, r, editToolManager_.annotationAt(sel).points);
+                        event->accept();
+                        return;
+                    }
+                }
+                const QPoint midpoints[] = {
+                    QPoint(r.center().x(), r.top()), QPoint(r.right(), r.center().y()),
+                    QPoint(r.center().x(), r.bottom()), QPoint(r.left(), r.center().y())};
+                for (int mi = 0; mi < 4; ++mi) {
+                    if (QRect(midpoints[mi].x() - 7, midpoints[mi].y() - 7, 14, 14).contains(imgPt)) {
+                        editToolManager_.pushUndo();
+                        editToolManager_.startResizing(4 + mi, r, editToolManager_.annotationAt(sel).points);
+                        event->accept();
+                        return;
+                    }
+                }
+            }
             for (int i = editToolManager_.annotationCount() - 1; i >= 0; --i) {
                 if (AnnotationRenderer::hitTestAnnotation(editToolManager_.annotationAt(i), imgPt)) {
-                    editToolManager_.selectAnnotation(i);
+                    editToolManager_.pushUndo();
+                    editToolManager_.setSelectedIndex(i);
+                    editToolManager_.startMoving(editToolManager_.annotationAt(i).bounds.topLeft() - imgPt);
+                    if (editToolManager_.onSelectionChanged) editToolManager_.onSelectionChanged();
                     update();
                     event->accept();
                     return;
                 }
             }
             editToolManager_.setSelectedIndex(-1);
+            if (editToolManager_.onSelectionChanged) editToolManager_.onSelectionChanged();
             update();
         } else {
-            editToolManager_.pushUndo();
-            editToolManager_.startDrawing(imgPt);
+            bool hitExisting = false;
+            for (int i = editToolManager_.annotationCount() - 1; i >= 0; --i) {
+                if (AnnotationRenderer::hitTestAnnotation(editToolManager_.annotationAt(i), imgPt)) {
+                    if (i != editToolManager_.selectedIndex()) {
+                        editToolManager_.setSelectedIndex(i);
+                        if (editToolManager_.onSelectionChanged) editToolManager_.onSelectionChanged();
+                    }
+                    hitExisting = true;
+                    break;
+                }
+            }
+            if (!hitExisting) {
+                editToolManager_.startDrawing(imgPt);
+            }
         }
         event->accept();
         return;
@@ -979,11 +1031,45 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 void PinWindow::mouseReleaseEvent(QMouseEvent* event)
 {
     if (editing_) {
-        if (editToolManager_.drawing()) {
-            editToolManager_.finishDrawing();
+        if (editToolManager_.resizing() || editToolManager_.moving()) {
+            editToolManager_.setResizing(false);
+            editToolManager_.setMoving(false);
+            editRenderer_.invalidateCache();
+            update();
+            event->accept();
+            return;
         }
-        editToolManager_.setMoving(false);
-        editToolManager_.setResizing(false);
+
+        if (!editToolManager_.drawing() || editToolManager_.draft().tool == AnnotationTool::Numbered) {
+            event->accept();
+            return;
+        }
+
+        // Finalize and commit the drawing
+        auto finishPos = toEditImage(event->pos());
+        editToolManager_.setCurrent(finishPos);
+        editToolManager_.draftMut().bounds = QRect(editToolManager_.start(), finishPos).normalized();
+        editToolManager_.finishDrawing();
+
+        auto& draft = editToolManager_.draftMut();
+        if (draft.tool == AnnotationTool::Arrow) {
+            draft.points = {editToolManager_.start(), finishPos};
+        }
+        if (draft.bounds.width() > 2 || draft.bounds.height() > 2
+            || (draft.tool == AnnotationTool::Pen && draft.points.size() >= 2)
+            || (draft.tool == AnnotationTool::Mosaic && draft.points.size() >= 2)) {
+            editToolManager_.pushUndo();
+            editToolManager_.annotationsMut().push_back(std::move(draft));
+            editToolManager_.setSelectedIndex(editToolManager_.annotationCount() - 1);
+            if (editToolManager_.onSelectionChanged) editToolManager_.onSelectionChanged();
+            auto tool = editToolManager_.currentTool();
+            if (tool != AnnotationTool::Select && tool != AnnotationTool::Text
+                && tool != AnnotationTool::Numbered && tool != AnnotationTool::Mosaic
+                && tool != AnnotationTool::Eraser) {
+                editToolManager_.setTool(AnnotationTool::Select);
+            }
+        }
+        editRenderer_.invalidateCache();
         update();
         event->accept();
         return;
