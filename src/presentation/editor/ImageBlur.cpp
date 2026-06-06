@@ -20,7 +20,7 @@ void blurHorizontal(const QImage& src, QImage& dst, int radius)
             auto px = in[x]; a += qAlpha(px); r += qRed(px); g += qGreen(px); b += qBlue(px); ++cnt;
         }
         for (int x = 0; x < w; ++x) {
-            if (cnt > 0) out[x] = qRgba(r / cnt, g / cnt, b / cnt, a / cnt);
+            if (cnt > 0) out[x] = qRgba((r + cnt/2) / cnt, (g + cnt/2) / cnt, (b + cnt/2) / cnt, (a + cnt/2) / cnt);
             int left = x - radius;
             if (left >= 0) { auto px = in[left]; a -= qAlpha(px); r -= qRed(px); g -= qGreen(px); b -= qBlue(px); --cnt; }
             int right = x + radius + 1;
@@ -55,7 +55,7 @@ void blurVertical(const QImage& src, QImage& dst, int radius)
             for (int x = x0; x < xEnd; ++x) {
                 int idx = x - x0;
                 if (cnt[idx] > 0)
-                    dstLine[x] = qRgba(r[idx] / cnt[idx], g[idx] / cnt[idx], b[idx] / cnt[idx], a[idx] / cnt[idx]);
+                    dstLine[x] = qRgba((r[idx] + cnt[idx]/2) / cnt[idx], (g[idx] + cnt[idx]/2) / cnt[idx], (b[idx] + cnt[idx]/2) / cnt[idx], (a[idx] + cnt[idx]/2) / cnt[idx]);
             }
 
             for (int x = x0; x < xEnd; ++x) {

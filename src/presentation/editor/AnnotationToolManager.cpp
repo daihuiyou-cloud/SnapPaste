@@ -586,44 +586,66 @@ QVector<QPoint> rdpSimplify(const QVector<QPoint>& points, double epsilon)
 {
     if (points.size() <= 2) return points;
 
-    double maxDist = 0;
-    int maxIdx = 0;
-    const auto& first = points.first();
-    const auto& last = points.last();
-    double dx = static_cast<double>(last.x() - first.x());
-    double dy = static_cast<double>(last.y() - first.y());
-    double len2 = dx * dx + dy * dy;
+    struct Segment { int start; int end; };
+    QVector<Segment> stack;
+    stack.reserve(32);
+    stack.push_back({0, static_cast<int>(points.size()) - 1});
 
-    for (int i = 1; i < points.size() - 1; ++i) {
-        double dist;
-        if (len2 == 0) {
-            dist = std::hypot(points[i].x() - first.x(), points[i].y() - first.y());
-        } else {
-            double t = ((points[i].x() - first.x()) * dx + (points[i].y() - first.y()) * dy) / len2;
-            if (t <= 0.0) {
-                dist = std::hypot(points[i].x() - first.x(), points[i].y() - first.y());
-            } else if (t >= 1.0) {
-                dist = std::hypot(points[i].x() - last.x(), points[i].y() - last.y());
+    QVector<bool> keep(points.size(), false);
+    keep[0] = keep[points.size() - 1] = true;
+
+    while (!stack.isEmpty()) {
+        auto seg = stack.takeLast();
+        int s = seg.start, e = seg.end;
+        if (e - s <= 1) continue;
+
+        const auto& first = points[s];
+        const auto& last = points[e];
+        double dx = static_cast<double>(last.x() - first.x());
+        double dy = static_cast<double>(last.y() - first.y());
+        double len2 = dx * dx + dy * dy;
+
+        double maxDist = epsilon;
+        int maxIdx = s;
+        for (int i = s + 1; i < e; ++i) {
+            const auto& pt = points[i];
+            double dist;
+            if (len2 == 0) {
+                dist = std::hypot(pt.x() - first.x(), pt.y() - first.y());
             } else {
-                double projX = first.x() + t * dx;
-                double projY = first.y() + t * dy;
-                dist = std::hypot(points[i].x() - projX, points[i].y() - projY);
+                double t = ((pt.x() - first.x()) * dx + (pt.y() - first.y()) * dy) / len2;
+                if (t <= 0.0) {
+                    dist = std::hypot(pt.x() - first.x(), pt.y() - first.y());
+                } else if (t >= 1.0) {
+                    dist = std::hypot(pt.x() - last.x(), pt.y() - last.y());
+                } else {
+                    double projX = first.x() + t * dx;
+                    double projY = first.y() + t * dy;
+                    dist = std::hypot(pt.x() - projX, pt.y() - projY);
+                }
+            }
+            if (dist > maxDist) {
+                maxDist = dist;
+                maxIdx = i;
             }
         }
-        if (dist > maxDist) {
-            maxDist = dist;
-            maxIdx = i;
+
+        if (maxIdx != s) {
+            keep[maxIdx] = true;
+            if (maxIdx - s > 1)
+                stack.push_back({s, maxIdx});
+            if (e - maxIdx > 1)
+                stack.push_back({maxIdx, e});
         }
     }
 
-    if (maxDist > epsilon) {
-        auto left = rdpSimplify(points.mid(0, maxIdx + 1), epsilon);
-        auto right = rdpSimplify(points.mid(maxIdx), epsilon);
-        left.append(right.mid(1));
-        return left;
+    QVector<QPoint> result;
+    result.reserve(keep.size());
+    for (int i = 0; i < points.size(); ++i) {
+        if (keep[i])
+            result.push_back(points[i]);
     }
-
-    return {first, last};
+    return result;
 }
 
 } // namespace

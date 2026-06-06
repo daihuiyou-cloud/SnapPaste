@@ -8,6 +8,8 @@
 #include <QStaticText>
 #include <QTextOption>
 
+#include <utility>
+
 #include <algorithm>
 #include <cmath>
 
@@ -299,22 +301,45 @@ void AnnotationRenderer::drawTextAnnotation(QPainter* painter, const Annotation&
         }
     }
 
-    if (annotation.textOutline) {
-        painter->save();
-        painter->setPen(QColor(255, 255, 255, 200));
-        QStaticText st(annotation.text);
-        st.setTextFormat(Qt::PlainText);
-        QTextOption textOpt(static_cast<Qt::Alignment>(align));
-        textOpt.setWrapMode(QTextOption::WordWrap);
-        st.setTextOption(textOpt);
-        st.setPerformanceHint(QStaticText::AggressiveCaching);
-        auto b = annotation.bounds;
-        st.setTextWidth(b.width() - 2);
-        painter->drawStaticText(b.topLeft() + QPoint(-1, -1), st);
-        painter->drawStaticText(b.topLeft() + QPoint( 1, -1), st);
-        painter->drawStaticText(b.topLeft() + QPoint(-1,  1), st);
-        painter->drawStaticText(b.topLeft() + QPoint( 1,  1), st);
-        painter->restore();
+    if (annotation.textOutline && !annotation.text.isEmpty()) {
+        auto fm = painter->fontMetrics();
+        int textWidth = fm.horizontalAdvance(annotation.text);
+        bool isSingleLine = textWidth <= (annotation.bounds.width() - 4)
+                            && !annotation.text.contains(QLatin1Char('\n'));
+        if (isSingleLine) {
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing);
+            QPainterPath textPath;
+            auto b = annotation.bounds;
+            textPath.addText(QPointF(b.left() + 2, b.top() + 2 + fm.ascent()),
+                             textFontCache_.font, annotation.text);
+            painter->setPen(QPen(QColor(255, 255, 255, 200), 2.5));
+            painter->setBrush(Qt::NoBrush);
+            painter->drawPath(textPath);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(annotation.color);
+            painter->drawPath(textPath);
+            painter->restore();
+        } else {
+            painter->save();
+            painter->setPen(QColor(255, 255, 255, 200));
+            QStaticText st(annotation.text);
+            st.setTextFormat(Qt::PlainText);
+            QTextOption textOpt(static_cast<Qt::Alignment>(align));
+            textOpt.setWrapMode(QTextOption::WordWrap);
+            st.setTextOption(textOpt);
+            st.setPerformanceHint(QStaticText::AggressiveCaching);
+            auto b = annotation.bounds;
+            st.setTextWidth(b.width() - 2);
+            painter->drawStaticText(b.topLeft() + QPoint(-1, -1), st);
+            painter->drawStaticText(b.topLeft() + QPoint( 1, -1), st);
+            painter->drawStaticText(b.topLeft() + QPoint(-1,  1), st);
+            painter->drawStaticText(b.topLeft() + QPoint( 1,  1), st);
+            painter->restore();
+            painter->setPen(QPen(annotation.color, 1));
+            painter->drawText(annotation.bounds, flags, annotation.text);
+        }
+        return;
     }
     painter->setPen(QPen(annotation.color, 1));
     painter->drawText(annotation.bounds, flags, annotation.text);
