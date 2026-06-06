@@ -1,4 +1,5 @@
 #include "presentation/pin_window/PinWindow.h"
+#include "presentation/pin_window/EditToolbar.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -273,6 +274,51 @@ QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
 
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
+    if (editing_) {
+        QMenu menu(this);
+        if (editToolManager_.selectedIndex() >= 0) {
+            auto* delAction = menu.addAction(tr("Delete\tDel"));
+            auto* duplicateAction = menu.addAction(tr("Duplicate"));
+            auto* bringForward = menu.addAction(tr("Bring Forward"));
+            auto* sendBackward = menu.addAction(tr("Send Backward"));
+            menu.addSeparator();
+            auto* doneAction = menu.addAction(tr("Done\tEsc"));
+            const auto* action = menu.exec(event->globalPos());
+            if (action == delAction) {
+                editToolManager_.pushUndo();
+                editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
+            } else if (action == duplicateAction) {
+                editToolManager_.pushUndo();
+                editToolManager_.duplicateAnnotation(editToolManager_.selectedIndex());
+            } else if (action == bringForward) {
+                int sel = editToolManager_.selectedIndex();
+                int swap = sel + 1;
+                if (swap < editToolManager_.annotationCount()) {
+                    editToolManager_.pushUndo();
+                    qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
+                    editToolManager_.setSelectedIndex(swap);
+                }
+            } else if (action == sendBackward) {
+                int sel = editToolManager_.selectedIndex();
+                int swap = sel - 1;
+                if (swap >= 0) {
+                    editToolManager_.pushUndo();
+                    qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
+                    editToolManager_.setSelectedIndex(swap);
+                }
+            } else if (action == doneAction) {
+                applyEditAndExit();
+            }
+        } else {
+            auto* doneAction = menu.addAction(tr("Done\tEsc"));
+            if (menu.exec(event->globalPos()) == doneAction) {
+                applyEditAndExit();
+            }
+        }
+        update();
+        return;
+    }
+
     if (ocrActive_) {
         QMenu menu(this);
         auto* copySel = menu.addAction(tr("Copy Selected"));
@@ -413,6 +459,40 @@ void PinWindow::focusOutEvent(QFocusEvent* event)
 
 void PinWindow::keyPressEvent(QKeyEvent* event)
 {
+    if (editing_) {
+        switch (event->key()) {
+        case Qt::Key_Escape:
+            toggleEditMode();
+            event->accept();
+            return;
+        case Qt::Key_Z:
+            if (event->modifiers().testFlag(Qt::ControlModifier)) {
+                if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                    editToolManager_.redo();
+                } else {
+                    editToolManager_.undo();
+                }
+                update();
+                event->accept();
+                return;
+            }
+            break;
+        case Qt::Key_Delete:
+            if (editToolManager_.selectedIndex() >= 0) {
+                editToolManager_.pushUndo();
+                editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
+                update();
+                event->accept();
+                return;
+            }
+            break;
+        default:
+            break;
+        }
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
     if (ocrActive_) {
         switch (event->key()) {
         case Qt::Key_Escape:
@@ -546,6 +626,7 @@ void PinWindow::leaveEvent(QEvent* event)
     Q_UNUSED(event)
     hovered_ = false;
     hoveredButton_ = -1;
+    editHoveredButton_ = -1;
     if (ocrActive_) {
         ocrHoveredBlock_ = -1;
     }
@@ -609,7 +690,28 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
+    if (editing_ && editToolManager_.drawing()) {
+        editToolManager_.updateDrawingStroke(toEditImage(event->pos()));
+        update();
+    }
+
+    if (editing_ && editToolManager_.moving()) {
+        editToolManager_.updateMove(toEditImage(event->pos()));
+        update();
+    }
+
+    if (editing_ && editToolManager_.resizing()) {
+        editToolManager_.updateResize(toEditImage(event->pos()), event->modifiers().testFlag(Qt::ShiftModifier));
+        update();
+    }
+
     if (!dragging_ && !resizing_) {
+        if (editing_) {
+            editHoveredButton_ = EditToolbar::fits(width(), height())
+                ? EditToolbar::buttonAt(event->pos(), width()) : -1;
+            update();
+        }
+
         if (ocrActive_) {
             int prev = ocrHoveredBlock_;
             ocrHoveredBlock_ = ocrBlockAt(event->pos());
@@ -635,11 +737,12 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Copy"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Click Through"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top"),
-            QT_TRANSLATE_NOOP("snappaste::PinWindow", "OCR")
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "OCR"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Edit")
         };
-        if (btn >= 0 && !ocrActive_) {
+        if (btn >= 0 && !ocrActive_ && !editing_) {
             QToolTip::showText(event->globalPos(), tr(kTooltipLabels[btn]), this);
-        } else if (btn < 0 && ocrHoveredBlock_ < 0) {
+        } else if (btn < 0 && ocrHoveredBlock_ < 0 && !editing_) {
             QToolTip::hideText();
         }
         switch (resizeEdgeAt(event->pos())) {
@@ -731,6 +834,46 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
     const auto pos = event->pos();
 
+    if (editing_) {
+        if (EditToolbar::fits(width(), height())) {
+            const int btn = EditToolbar::buttonAt(pos, width());
+            if (btn >= 0) {
+                if (btn < 9) {
+                    editToolManager_.setTool(static_cast<AnnotationTool>(btn));
+                    setCursor(Qt::CrossCursor);
+                } else if (btn == 9) {
+                    editToolManager_.undo();
+                } else if (btn == 10) {
+                    editToolManager_.redo();
+                } else if (btn == 11) {
+                    applyEditAndExit();
+                }
+                update();
+                event->accept();
+                return;
+            }
+        }
+
+        QPoint imgPt = toEditImage(pos);
+        if (editToolManager_.currentTool() == AnnotationTool::Select) {
+            for (int i = editToolManager_.annotationCount() - 1; i >= 0; --i) {
+                if (AnnotationRenderer::hitTestAnnotation(editToolManager_.annotationAt(i), imgPt)) {
+                    editToolManager_.selectAnnotation(i);
+                    update();
+                    event->accept();
+                    return;
+                }
+            }
+            editToolManager_.setSelectedIndex(-1);
+            update();
+        } else {
+            editToolManager_.pushUndo();
+            editToolManager_.startDrawing(imgPt);
+        }
+        event->accept();
+        return;
+    }
+
     if (ocrActive_) {
         int idx = ocrBlockAt(pos);
         if (idx >= 0) {
@@ -767,6 +910,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
                 case 6: toggleClickThrough(); break;
                 case 7: toggleAlwaysOnTop(); break;
                 case 8: triggerOcr(); break;
+                case 9: toggleEditMode(); break;
                 }
                 event->accept();
                 return;
@@ -834,6 +978,17 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
 void PinWindow::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (editing_) {
+        if (editToolManager_.drawing()) {
+            editToolManager_.finishDrawing();
+        }
+        editToolManager_.setMoving(false);
+        editToolManager_.setResizing(false);
+        update();
+        event->accept();
+        return;
+    }
+
     dragDropping_ = false;
     dragging_ = false;
     resizing_ = false;
@@ -881,68 +1036,94 @@ void PinWindow::paintEvent(QPaintEvent* event)
             tr("%1%").arg(zoomPct));
     }
 
-    if (ocrActive_ && !ocrBlocks_.isEmpty()) {
-        for (int i = 0; i < ocrBlockWidgetRects_.size(); ++i) {
-            const auto& r = ocrBlockWidgetRects_[i];
-            bool hover = (i == ocrHoveredBlock_);
-            bool sel = ocrSelectedBlocks_.contains(i);
-
-            if (hover) {
-                painter.fillRect(r, kOcrBlockHoverFill);
-                painter.setPen(QPen(kOcrBlockHoverBorder, 2));
-            } else if (sel) {
-                painter.fillRect(r, kOcrBlockSelectedFill);
-                painter.setPen(QPen(kOcrBlockSelectedBorder, 2));
-            } else {
-                painter.fillRect(r, kOcrBlockFill);
-                painter.setPen(QPen(kOcrBlockBorder, 1));
+    if (editing_) {
+        if (!editToolManager_.image().isNull()) {
+            painter.save();
+            double zf = editToolManager_.zoomFactor();
+            painter.scale(zf, zf);
+            editRenderer_.drawAnnotations(painter, editToolManager_.image(),
+                                          editToolManager_.annotations(),
+                                          editToolManager_.fontSize());
+            if (editToolManager_.drawing()) {
+                editRenderer_.drawDraft(painter, editToolManager_.image(),
+                                        editToolManager_.draft(),
+                                        editToolManager_.fontSize());
             }
-            painter.drawRect(r.adjusted(0, 0, -1, -1));
+            painter.restore();
         }
 
-        painter.setPen(kZoomTextColor);
-        painter.setFont(kOcrInfoFont());
-        int selCount = ocrSelectedBlocks_.size();
-        if (selCount > 0) {
-            painter.drawText(rect().adjusted(8, 8, -8, -8),
-                Qt::AlignBottom | Qt::AlignLeft,
-                tr("OCR - %1/%2 selected").arg(selCount).arg(ocrBlocks_.size()));
-        } else {
-            painter.drawText(rect().adjusted(8, 8, -8, -8),
-                Qt::AlignBottom | Qt::AlignLeft,
-                tr("OCR - %1 blocks  (Esc to exit)").arg(ocrBlocks_.size()));
+        bool showEditTools = hovered_ || hasFocus();
+        if (showEditTools && EditToolbar::fits(width(), height())) {
+            EditToolbar::draw(painter, width(), height(), iconProvider_,
+                              editHoveredButton_,
+                              editToolManager_.currentTool());
         }
     }
 
-    if (item_.state.options.clickThrough) {
-        QPen dashPen(kPinAccent, 2, Qt::DashLine);
-        dashPen.setDashPattern({6, 4});
-        painter.setPen(dashPen);
-        painter.setBrush(kClickThroughFill);
-        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
-    }
+    if (!editing_) {
+        if (ocrActive_ && !ocrBlocks_.isEmpty()) {
+            for (int i = 0; i < ocrBlockWidgetRects_.size(); ++i) {
+                const auto& r = ocrBlockWidgetRects_[i];
+                bool hover = (i == ocrHoveredBlock_);
+                bool sel = ocrSelectedBlocks_.contains(i);
 
-    const auto showControls = hovered_ || hasFocus() || controlsVisible_;
-    if (showControls && !ocrActive_) {
-        painter.fillRect(rect(), kControlOverlay);
-        painter.setPen(QPen(kPinAccent, 2));
-        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
-        painter.setPen(QPen(kControlBorder, 1));
-        painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
+                if (hover) {
+                    painter.fillRect(r, kOcrBlockHoverFill);
+                    painter.setPen(QPen(kOcrBlockHoverBorder, 2));
+                } else if (sel) {
+                    painter.fillRect(r, kOcrBlockSelectedFill);
+                    painter.setPen(QPen(kOcrBlockSelectedBorder, 2));
+                } else {
+                    painter.fillRect(r, kOcrBlockFill);
+                    painter.setPen(QPen(kOcrBlockBorder, 1));
+                }
+                painter.drawRect(r.adjusted(0, 0, -1, -1));
+            }
 
-        if (PinToolbar::fits(width(), height())) {
-            PinToolbar::draw(painter, width(), height(), iconProvider_,
-                             showControls ? hoveredButton_ : -1,
-                             item_.state.options.clickThrough,
-                             item_.state.options.alwaysOnTop);
-        } else {
-            const auto ob = PinToolbar::overflowRect(width(), height());
-            painter.setBrush(kOverflowBg);
-            painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(ob, 3, 3);
-            painter.setPen(kOverflowText);
-            painter.setFont(kOverflowDotsFont);
-            painter.drawText(ob, Qt::AlignCenter, tr("..."));
+            painter.setPen(kZoomTextColor);
+            painter.setFont(kOcrInfoFont());
+            int selCount = ocrSelectedBlocks_.size();
+            if (selCount > 0) {
+                painter.drawText(rect().adjusted(8, 8, -8, -8),
+                    Qt::AlignBottom | Qt::AlignLeft,
+                    tr("OCR - %1/%2 selected").arg(selCount).arg(ocrBlocks_.size()));
+            } else {
+                painter.drawText(rect().adjusted(8, 8, -8, -8),
+                    Qt::AlignBottom | Qt::AlignLeft,
+                    tr("OCR - %1 blocks  (Esc to exit)").arg(ocrBlocks_.size()));
+            }
+        }
+
+        if (item_.state.options.clickThrough) {
+            QPen dashPen(kPinAccent, 2, Qt::DashLine);
+            dashPen.setDashPattern({6, 4});
+            painter.setPen(dashPen);
+            painter.setBrush(kClickThroughFill);
+            painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
+        }
+
+        const auto showControls = hovered_ || hasFocus() || controlsVisible_;
+        if (showControls && !ocrActive_) {
+            painter.fillRect(rect(), kControlOverlay);
+            painter.setPen(QPen(kPinAccent, 2));
+            painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
+            painter.setPen(QPen(kControlBorder, 1));
+            painter.drawRoundedRect(rect().adjusted(4, 4, -5, -5), 3, 3);
+
+            if (PinToolbar::fits(width(), height())) {
+                PinToolbar::draw(painter, width(), height(), iconProvider_,
+                                 showControls ? hoveredButton_ : -1,
+                                 item_.state.options.clickThrough,
+                                 item_.state.options.alwaysOnTop);
+            } else {
+                const auto ob = PinToolbar::overflowRect(width(), height());
+                painter.setBrush(kOverflowBg);
+                painter.setPen(Qt::NoPen);
+                painter.drawRoundedRect(ob, 3, 3);
+                painter.setPen(kOverflowText);
+                painter.setFont(kOverflowDotsFont);
+                painter.drawText(ob, Qt::AlignCenter, tr("..."));
+            }
         }
     }
 }
@@ -1275,6 +1456,54 @@ QSize PinWindow::logicalImageSize() const
 void PinWindow::invalidateRenderedCache()
 {
     ++renderedVersion_;
+}
+
+void PinWindow::toggleEditMode()
+{
+    if (editing_) {
+        // Cancel edit — discard annotations, restore original state
+        editing_ = false;
+        editToolManager_.clearAnnotations();
+        item_.state = savedEditState_;
+        invalidateRenderedCache();
+        applyState();
+        update();
+    } else {
+        clearOcrOverlay();
+        savedEditState_ = item_.state;
+        item_.state.transform.rotationDegrees = 0;
+        item_.state.transform.flippedHorizontally = false;
+        item_.state.transform.flippedVertically = false;
+        invalidateRenderedCache();
+        resize(logicalImageSize() * item_.state.transform.scale);
+        editToolManager_.setImage(item_.image, item_.state.transform.scale);
+        editing_ = true;
+        editHoveredButton_ = -1;
+        update();
+    }
+}
+
+void PinWindow::applyEditAndExit()
+{
+    if (!editing_) return;
+    if (editToolManager_.annotationCount() > 0) {
+        item_.image = editRenderer_.renderToImage(
+            item_.image, editToolManager_.annotations(), editToolManager_.fontSize());
+    }
+    editing_ = false;
+    editToolManager_.clearAnnotations();
+    savedEditState_ = PinnedImageState();
+    invalidateRenderedCache();
+    applyState();
+    emitStateChanged();
+    update();
+}
+
+QPoint PinWindow::toEditImage(QPoint widgetPt) const
+{
+    double zf = editToolManager_.zoomFactor();
+    return QPoint(static_cast<int>(widgetPt.x() / zf),
+                  static_cast<int>(widgetPt.y() / zf));
 }
 
 } // namespace snappaste

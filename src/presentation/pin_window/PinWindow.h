@@ -1,8 +1,11 @@
 #pragma once
 
+#include "domain/editor/Annotation.h"
 #include "domain/ocr/OcrTypes.h"
 #include "domain/pin/PinnedItem.h"
 #include "platform/windows/window/WindowInteractionService.h"
+#include "presentation/editor/AnnotationRenderer.h"
+#include "presentation/editor/AnnotationToolManager.h"
 #include "presentation/icons/IIconProvider.h"
 #include "presentation/pin_window/PinToolbar.h"
 
@@ -87,6 +90,10 @@ private:
     void ocrCopySelected();
     void ocrCopyAll();
 
+    void toggleEditMode();
+    void applyEditAndExit();
+    QPoint toEditImage(QPoint widgetPt) const;
+
     PinnedItem item_;
     IIconProvider& iconProvider_;
     WindowInteractionService windowInteraction_;
@@ -124,6 +131,12 @@ private:
     int ocrHoveredBlock_ = -1;
     QSet<int> ocrSelectedBlocks_;
     QVector<QRect> ocrBlockWidgetRects_;
+
+    bool editing_ = false;
+    AnnotationToolManager editToolManager_;
+    AnnotationRenderer editRenderer_;
+    PinnedImageState savedEditState_;
+    int editHoveredButton_ = -1;
 };
 
 } // namespace snappaste

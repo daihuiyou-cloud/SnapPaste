@@ -611,7 +611,6 @@ CaptureOverlay& Application::overlay()
         connect(overlay_.get(), &CaptureOverlay::copyRequested, this, &Application::copyRegion);
         connect(overlay_.get(), &CaptureOverlay::pinRequested, this, &Application::pinRegion);
         connect(overlay_.get(), &CaptureOverlay::saveRequested, this, &Application::saveRegion);
-        connect(overlay_.get(), &CaptureOverlay::editRequested, this, &Application::editRegion);
         connect(overlay_.get(), &CaptureOverlay::cancelled, this, [this] {
             pendingPinPosition_.reset();
             pendingPinAvoidRegion_.reset();

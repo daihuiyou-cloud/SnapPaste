@@ -1,4 +1,4 @@
-#include "presentation/pin_window/PinToolbar.h"
+#include "presentation/pin_window/EditToolbar.h"
 
 #include <QPainter>
 
@@ -6,71 +6,67 @@ namespace snappaste {
 
 namespace {
 
+struct IconSlot {
+    IconName icon;
+    AnnotationTool tool;
+};
+
 const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
 {
     static QVector<QPixmap> cache;
     if (cache.isEmpty()) {
-        const IconName icons[] = {
-            IconName::Close,
-            IconName::RotateLeft,
-            IconName::RotateRight,
-            IconName::FlipHorizontal,
-            IconName::FlipVertical,
-            IconName::Copy,
-            IconName::ClickThrough,
-            IconName::Pin,
-            IconName::Text,
-            IconName::Edit
+        cache.reserve(EditToolbar::kButtonCount);
+
+        auto load = [&](IconName name) {
+            cache.push_back(iconProvider.icon(name).pixmap(EditToolbar::kIconSize, EditToolbar::kIconSize));
         };
-        cache.reserve(10);
-        for (auto name : icons)
-            cache.push_back(iconProvider.icon(name).pixmap(PinToolbar::kIconSize, PinToolbar::kIconSize));
+
+        load(IconName::Select);
+        load(IconName::Rectangle);
+        load(IconName::Ellipse);
+        load(IconName::Arrow);
+        load(IconName::Line);
+        load(IconName::Pen);
+        load(IconName::Text);
+        load(IconName::Mosaic);
+        load(IconName::Highlight);
+        load(IconName::Undo);
+        load(IconName::Redo);
+        load(IconName::Edit);
     }
     return cache;
 }
 
 } // namespace
 
-QRect PinToolbar::rect(int parentWidth)
+QRect EditToolbar::rect(int parentWidth)
 {
     const int tbWidth = kButtonCount * (kBtnSize + kBtnPad) + kBtnPad;
     return QRect((parentWidth - tbWidth) / 2, 4, tbWidth, kHeight);
 }
 
-QVector<QRect> PinToolbar::buttonRects(int parentWidth)
+QVector<QRect> EditToolbar::buttonRects(int parentWidth)
 {
-    struct Cache { int width = 0; QVector<QRect> rects; };
-    static Cache cache;
-    if (cache.width == parentWidth) {
-        return cache.rects;
-    }
-    cache.width = parentWidth;
-    cache.rects.clear();
+    QVector<QRect> rects;
+    rects.reserve(kButtonCount);
     const auto tb = rect(parentWidth);
-    cache.rects.reserve(kButtonCount);
     int x = tb.left() + kBtnPad;
     const int y = tb.top() + (tb.height() - kBtnSize) / 2;
     for (int i = 0; i < kButtonCount; ++i) {
-        cache.rects.append(QRect(x, y, kBtnSize, kBtnSize));
+        rects.append(QRect(x, y, kBtnSize, kBtnSize));
         x += kBtnSize + kBtnPad;
     }
-    return cache.rects;
+    return rects;
 }
 
-QRect PinToolbar::overflowRect(int parentWidth, int parentHeight)
-{
-    return QRect(parentWidth - kOverflowBtnSize - 4, parentHeight - kOverflowBtnSize - 4,
-                 kOverflowBtnSize, kOverflowBtnSize);
-}
-
-bool PinToolbar::fits(int parentWidth, int parentHeight)
+bool EditToolbar::fits(int parentWidth, int parentHeight)
 {
     const auto tb = rect(parentWidth);
     return parentWidth >= tb.width() && parentHeight >= tb.bottom() + 4;
 }
 
-void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider,
-                      int hoveredButton, bool clickThroughActive, bool alwaysOnTopActive)
+void EditToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider,
+                       int hoveredButton, AnnotationTool currentTool)
 {
     Q_UNUSED(parentHeight)
 
@@ -81,12 +77,11 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
 
     const auto btns = buttonRects(parentWidth);
     const auto& pixmaps = cachedToolbarPixmaps(iconProvider);
-    constexpr int kToggleIdxClickThrough = 6;
-    constexpr int kToggleIdxAlwaysOnTop = 7;
 
     for (int i = 0; i < btns.size(); ++i) {
-        const bool active = (i == kToggleIdxClickThrough && clickThroughActive)
-                         || (i == kToggleIdxAlwaysOnTop && alwaysOnTopActive);
+        const bool isTool = (i < 9);
+        AnnotationTool btnTool = static_cast<AnnotationTool>(i);
+        const bool active = isTool && btnTool == currentTool;
 
         if (active) {
             painter.fillRect(btns[i], QColor(47, 191, 159, 50));
@@ -106,7 +101,7 @@ void PinToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIco
     }
 }
 
-int PinToolbar::buttonAt(const QPoint& pos, int parentWidth)
+int EditToolbar::buttonAt(const QPoint& pos, int parentWidth)
 {
     const auto btns = buttonRects(parentWidth);
     for (int i = 0; i < btns.size(); ++i) {

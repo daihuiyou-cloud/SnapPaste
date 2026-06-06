@@ -80,6 +80,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/pin_window/PinWindow.cpp
     src/presentation/pin_window/PinToolbar.h
     src/presentation/pin_window/PinToolbar.cpp
+    src/presentation/pin_window/EditToolbar.h
+    src/presentation/pin_window/EditToolbar.cpp
 )
 
 add_library(SnapPasteCore STATIC ${SNAPPASTE_CORE_SOURCES})
