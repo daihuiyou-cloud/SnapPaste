@@ -839,7 +839,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
             const int btn = EditToolbar::buttonAt(pos, width());
             if (btn >= 0) {
                 if (btn < 9) {
-                    editToolManager_.setTool(static_cast<AnnotationTool>(btn));
+                    editToolManager_.setTool(EditToolbar::toolAt(btn));
                     setCursor(Qt::CrossCursor);
                 } else if (btn == 9) {
                     editToolManager_.undo();
@@ -1490,6 +1490,9 @@ void PinWindow::applyEditAndExit()
         item_.image = editRenderer_.renderToImage(
             item_.image, editToolManager_.annotations(), editToolManager_.fontSize());
     }
+    item_.state.transform.rotationDegrees = savedEditState_.transform.rotationDegrees;
+    item_.state.transform.flippedHorizontally = savedEditState_.transform.flippedHorizontally;
+    item_.state.transform.flippedVertically = savedEditState_.transform.flippedVertically;
     editing_ = false;
     editToolManager_.clearAnnotations();
     savedEditState_ = PinnedImageState();

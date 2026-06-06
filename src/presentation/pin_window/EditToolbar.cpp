@@ -6,9 +6,16 @@ namespace snappaste {
 
 namespace {
 
-struct IconSlot {
-    IconName icon;
-    AnnotationTool tool;
+constexpr AnnotationTool kButtonToolMap[] = {
+    AnnotationTool::Select,      // 0
+    AnnotationTool::Rectangle,   // 1
+    AnnotationTool::Ellipse,     // 2
+    AnnotationTool::Arrow,       // 3
+    AnnotationTool::Line,        // 4
+    AnnotationTool::Pen,         // 5
+    AnnotationTool::Text,        // 6
+    AnnotationTool::Mosaic,      // 7
+    AnnotationTool::Highlight    // 8
 };
 
 const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
@@ -80,7 +87,7 @@ void EditToolbar::draw(QPainter& painter, int parentWidth, int parentHeight, IIc
 
     for (int i = 0; i < btns.size(); ++i) {
         const bool isTool = (i < 9);
-        AnnotationTool btnTool = static_cast<AnnotationTool>(i);
+        auto btnTool = isTool ? kButtonToolMap[i] : AnnotationTool::Select;
         const bool active = isTool && btnTool == currentTool;
 
         if (active) {
@@ -110,6 +117,14 @@ int EditToolbar::buttonAt(const QPoint& pos, int parentWidth)
         }
     }
     return -1;
+}
+
+AnnotationTool EditToolbar::toolAt(int buttonIndex)
+{
+    if (buttonIndex >= 0 && buttonIndex < static_cast<int>(sizeof(kButtonToolMap) / sizeof(kButtonToolMap[0]))) {
+        return kButtonToolMap[buttonIndex];
+    }
+    return AnnotationTool::Select;
 }
 
 } // namespace snappaste

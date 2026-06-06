@@ -24,6 +24,7 @@ struct EditToolbar {
     static void draw(QPainter& painter, int parentWidth, int parentHeight, IIconProvider& iconProvider,
                      int hoveredButton, AnnotationTool currentTool);
     static int buttonAt(const QPoint& pos, int parentWidth);
+    static AnnotationTool toolAt(int buttonIndex);
 };
 
 } // namespace snappaste
