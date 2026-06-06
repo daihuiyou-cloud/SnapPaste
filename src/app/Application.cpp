@@ -499,9 +499,10 @@ void Application::openPinWindow(PinnedItem item)
     connect(window, &PinWindow::saveRequested, this, [this](const QImage& image) {
         context_.captureViewModel().saveImage(image, "pin");
     });
-    connect(window, &PinWindow::ocrRequested, this, [this](const QImage& image) {
+    QPointer<PinWindow> pinGuard(window);
+    connect(window, &PinWindow::ocrRequested, this, [this, pinGuard](qint64 /*id*/, const QImage& image) {
         if (image.isNull()) {
-            showStatus(tr("No image region selected for OCR."));
+            showStatus(tr("No image available for OCR."));
             return;
         }
         if (ocrService_) {
@@ -512,23 +513,16 @@ void Application::openPinWindow(PinnedItem item)
         QApplication::setOverrideCursor(Qt::WaitCursor);
         showStatus(tr("OCR processing..."));
 
-        ocrService_->recognizeTextAsync(image, [weakAlive, guard](OcrResult outcome) {
+        ocrService_->recognizeTextAsync(image, [weakAlive, guard, pinGuard](OcrResult outcome) {
             if (!*weakAlive || guard.isNull()) return;
             QApplication::restoreOverrideCursor();
             if (!outcome.ok) {
                 guard->showStatus(outcome.message);
                 return;
             }
-
-            auto* win = new OcrResultWindow(std::move(outcome.image), std::move(outcome.blocks), outcome.text, nullptr);
-            guard->ocrWindow_ = win;
-#pragma warning(push)
-#pragma warning(disable: 4573)
-            QObject::connect(win, &QObject::destroyed, win, [guard] {
-                if (guard) guard->ocrWindow_.clear();
-            });
-            QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
-#pragma warning(pop)
+            if (!pinGuard.isNull()) {
+                pinGuard->setOcrResult(std::move(outcome));
+            }
             guard->showStatus(
                 tr("OCR - %1 characters").arg(outcome.text.length()));
         });

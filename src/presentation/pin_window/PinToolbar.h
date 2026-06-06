@@ -15,7 +15,7 @@ struct PinToolbar {
     static constexpr int kBtnSize = 20;
     static constexpr int kIconSize = 14;
     static constexpr int kBtnPad = 4;
-    static constexpr int kButtonCount = 8;
+    static constexpr int kButtonCount = 9;
     static constexpr int kOverflowBtnSize = 18;
 
     static QRect rect(int parentWidth);

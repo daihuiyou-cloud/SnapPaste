@@ -18,9 +18,10 @@ const QVector<QPixmap>& cachedToolbarPixmaps(IIconProvider& iconProvider)
             IconName::FlipVertical,
             IconName::Copy,
             IconName::ClickThrough,
-            IconName::Pin
+            IconName::Pin,
+            IconName::Text
         };
-        cache.reserve(8);
+        cache.reserve(9);
         for (auto name : icons)
             cache.push_back(iconProvider.icon(name).pixmap(PinToolbar::kIconSize, PinToolbar::kIconSize));
     }

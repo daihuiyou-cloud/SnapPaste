@@ -47,6 +47,13 @@ const QColor kControlBorder(255, 255, 255, 110);
 const QColor kOverflowBg(20, 26, 33, 200);
 const QColor kOverflowText("#bcbec6");
 
+const QColor kOcrBlockFill(47, 191, 159, 30);
+const QColor kOcrBlockBorder(47, 191, 159, 120);
+const QColor kOcrBlockHoverFill(47, 191, 159, 80);
+const QColor kOcrBlockHoverBorder(47, 191, 159, 220);
+const QColor kOcrBlockSelectedFill(47, 191, 159, 60);
+const QColor kOcrBlockSelectedBorder(47, 191, 159, 200);
+
 const QFont& kThumbnailFont()
 {
     static const QFont f = [] {
@@ -69,6 +76,17 @@ const QFont& kZoomFont()
 }
 
 const QFont kOverflowDotsFont("Segoe UI", 10, QFont::Bold);
+
+const QFont& kOcrInfoFont()
+{
+    static const QFont f = [] {
+        QFont font = QApplication::font();
+        font.setPointSize(10);
+        font.setBold(true);
+        return font;
+    }();
+    return f;
+}
 
 } // namespace
 
@@ -252,10 +270,26 @@ QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
     return geometry;
 }
 
-
-
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
+    if (ocrActive_) {
+        QMenu menu(this);
+        auto* copySel = menu.addAction(tr("Copy Selected"));
+        auto* copyAll = menu.addAction(tr("Copy All Text\tCtrl+C"));
+        menu.addSeparator();
+        auto* exitOcr = menu.addAction(tr("Exit OCR Recognition\tEsc"));
+
+        const auto* action = menu.exec(event->globalPos());
+        if (action == copySel) {
+            ocrCopySelected();
+        } else if (action == copyAll) {
+            ocrCopyAll();
+        } else if (action == exitOcr) {
+            clearOcrOverlay();
+        }
+        return;
+    }
+
     QMenu menu(this);
     auto* copyAction = menu.addAction(iconProvider_.icon(IconName::Copy), tr("Copy\tCtrl+C"));
     auto* saveAction = menu.addAction(iconProvider_.icon(IconName::Save), tr("Save\tCtrl+S"));
@@ -378,19 +412,40 @@ void PinWindow::focusOutEvent(QFocusEvent* event)
 
 void PinWindow::keyPressEvent(QKeyEvent* event)
 {
-    if (ocrSelecting_ || ocrDragging_) {
-        if (event->key() == Qt::Key_Escape) {
-            ocrSelecting_ = false;
-            ocrDragging_ = false;
-            setCursor(Qt::ArrowCursor);
-            update();
+    if (ocrActive_) {
+        switch (event->key()) {
+        case Qt::Key_Escape:
+            clearOcrOverlay();
             event->accept();
             return;
+        case Qt::Key_C:
+            if (event->modifiers().testFlag(Qt::ControlModifier)) {
+                ocrCopySelected();
+                event->accept();
+                return;
+            }
+            break;
+        case Qt::Key_A:
+            if (event->modifiers().testFlag(Qt::ControlModifier)) {
+                ocrSelectedBlocks_.clear();
+                for (int i = 0; i < ocrBlocks_.size(); ++i)
+                    ocrSelectedBlocks_.insert(i);
+                update();
+                event->accept();
+                return;
+            }
+            break;
+        default:
+            break;
         }
     }
 
     switch (event->key()) {
     case Qt::Key_Escape:
+        if (ocrActive_) {
+            clearOcrOverlay();
+            return;
+        }
         requestClose();
         return;
     case Qt::Key_C:
@@ -494,6 +549,10 @@ void PinWindow::leaveEvent(QEvent* event)
     Q_UNUSED(event)
     hovered_ = false;
     hoveredButton_ = -1;
+    if (ocrActive_) {
+        ocrHoveredBlock_ = -1;
+        update();
+    }
     update();
 }
 
@@ -554,15 +613,20 @@ void PinWindow::mouseDoubleClickEvent(QMouseEvent* event)
 
 void PinWindow::mouseMoveEvent(QMouseEvent* event)
 {
-    if (ocrSelecting_) {
-        ocrDragging_ = true;
-        ocrDragCurrent_ = event->pos();
-        update();
-        event->accept();
-        return;
-    }
-
     if (!dragging_ && !resizing_) {
+        if (ocrActive_) {
+            int prev = ocrHoveredBlock_;
+            ocrHoveredBlock_ = ocrBlockAt(event->pos());
+            if (ocrHoveredBlock_ != prev) {
+                if (ocrHoveredBlock_ >= 0) {
+                    QToolTip::showText(event->globalPos(), ocrBlocks_[ocrHoveredBlock_].text, this);
+                } else {
+                    QToolTip::hideText();
+                }
+                update();
+            }
+        }
+
         hoveredButton_ = (hovered_ || controlsVisible_) && PinToolbar::fits(width(), height())
             ? PinToolbar::buttonAt(event->pos(), width()) : -1;
         const int btn = hoveredButton_;
@@ -574,11 +638,12 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Flip Vertical"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Copy"),
             QT_TRANSLATE_NOOP("snappaste::PinWindow", "Click Through"),
-            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top")
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "Always on Top"),
+            QT_TRANSLATE_NOOP("snappaste::PinWindow", "OCR")
         };
-        if (btn >= 0) {
+        if (btn >= 0 && !ocrActive_) {
             QToolTip::showText(event->globalPos(), tr(kTooltipLabels[btn]), this);
-        } else {
+        } else if (btn < 0 && ocrHoveredBlock_ < 0) {
             QToolTip::hideText();
         }
         switch (resizeEdgeAt(event->pos())) {
@@ -590,7 +655,7 @@ void PinWindow::mouseMoveEvent(QMouseEvent* event)
         case EdgeBottomRight: setCursor(Qt::SizeFDiagCursor); break;
         case EdgeTopRight:
         case EdgeBottomLeft:  setCursor(Qt::SizeBDiagCursor); break;
-        case EdgeNone:      setCursor(Qt::ArrowCursor); break;
+        case EdgeNone:      setCursor(ocrActive_ && ocrHoveredBlock_ >= 0 ? Qt::PointingHandCursor : Qt::ArrowCursor); break;
         }
     }
 
@@ -670,10 +735,24 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
 
     const auto pos = event->pos();
 
+    if (ocrActive_) {
+        int idx = ocrBlockAt(pos);
+        if (idx >= 0) {
+            if (ocrSelectedBlocks_.contains(idx)) {
+                ocrSelectedBlocks_.remove(idx);
+            } else {
+                ocrSelectedBlocks_.insert(idx);
+            }
+            update();
+            event->accept();
+            return;
+        }
+        clearOcrOverlay();
+    }
+
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        dragging_ = true;
-        dragOffset_ = event->globalPos() - frameGeometry().topLeft();
-        cachedDragScreen_ = QGuiApplication::screenAt(frameGeometry().center());
+        dragDropping_ = true;
+        dragOffset_ = pos;
         event->accept();
         return;
     }
@@ -691,6 +770,7 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
                 case 5: emit copyRequested(renderedImage()); break;
                 case 6: toggleClickThrough(); break;
                 case 7: toggleAlwaysOnTop(); break;
+                case 8: triggerOcr(); break;
                 }
                 event->accept();
                 return;
@@ -750,34 +830,14 @@ void PinWindow::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    ocrSelecting_ = true;
-    ocrDragging_ = false;
-    ocrDragStart_ = pos;
-    ocrDragCurrent_ = pos;
-    setCursor(Qt::CrossCursor);
+    dragging_ = true;
+    dragOffset_ = event->globalPos() - frameGeometry().topLeft();
+    cachedDragScreen_ = QGuiApplication::screenAt(frameGeometry().center());
     event->accept();
 }
 
 void PinWindow::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (ocrSelecting_) {
-        ocrSelecting_ = false;
-        if (ocrDragging_) {
-            ocrDragging_ = false;
-            auto sel = QRect(ocrDragStart_, ocrDragCurrent_).normalized();
-            if (sel.width() > 4 && sel.height() > 4) {
-                auto region = extractOcrRegion(sel);
-                if (!region.isNull()) {
-                    emit ocrRequested(region);
-                }
-            }
-        }
-        setCursor(Qt::ArrowCursor);
-        update();
-        event->accept();
-        return;
-    }
-
     dragDropping_ = false;
     dragging_ = false;
     resizing_ = false;
@@ -825,6 +885,39 @@ void PinWindow::paintEvent(QPaintEvent* event)
             tr("%1%").arg(zoomPct));
     }
 
+    if (ocrActive_ && !ocrBlocks_.isEmpty()) {
+        for (int i = 0; i < ocrBlockWidgetRects_.size(); ++i) {
+            const auto& r = ocrBlockWidgetRects_[i];
+            bool hover = (i == ocrHoveredBlock_);
+            bool sel = ocrSelectedBlocks_.contains(i);
+
+            if (hover) {
+                painter.fillRect(r, kOcrBlockHoverFill);
+                painter.setPen(QPen(kOcrBlockHoverBorder, 2));
+            } else if (sel) {
+                painter.fillRect(r, kOcrBlockSelectedFill);
+                painter.setPen(QPen(kOcrBlockSelectedBorder, 2));
+            } else {
+                painter.fillRect(r, kOcrBlockFill);
+                painter.setPen(QPen(kOcrBlockBorder, 1));
+            }
+            painter.drawRect(r.adjusted(0, 0, -1, -1));
+        }
+
+        painter.setPen(kZoomTextColor);
+        painter.setFont(kOcrInfoFont());
+        int selCount = ocrSelectedBlocks_.size();
+        if (selCount > 0) {
+            painter.drawText(rect().adjusted(8, 8, -8, -8),
+                Qt::AlignBottom | Qt::AlignLeft,
+                tr("OCR - %1/%2 selected").arg(selCount).arg(ocrBlocks_.size()));
+        } else {
+            painter.drawText(rect().adjusted(8, 8, -8, -8),
+                Qt::AlignBottom | Qt::AlignLeft,
+                tr("OCR - %1 blocks  (Esc to exit)").arg(ocrBlocks_.size()));
+        }
+    }
+
     if (item_.state.options.clickThrough) {
         QPen dashPen(kPinAccent, 2, Qt::DashLine);
         dashPen.setDashPattern({6, 4});
@@ -834,7 +927,7 @@ void PinWindow::paintEvent(QPaintEvent* event)
     }
 
     const auto showControls = hovered_ || hasFocus() || controlsVisible_;
-    if (showControls) {
+    if (showControls && !ocrActive_) {
         painter.fillRect(rect(), kControlOverlay);
         painter.setPen(QPen(kPinAccent, 2));
         painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 5, 5);
@@ -854,15 +947,6 @@ void PinWindow::paintEvent(QPaintEvent* event)
             painter.setPen(kOverflowText);
             painter.setFont(kOverflowDotsFont);
             painter.drawText(ob, Qt::AlignCenter, tr("..."));
-        }
-    }
-
-    if (ocrSelecting_ || ocrDragging_) {
-        auto sel = QRect(ocrDragStart_, ocrDragCurrent_).normalized().intersected(rect());
-        if (sel.isValid() && sel.width() > 0 && sel.height() > 0) {
-            painter.fillRect(sel, QColor(47, 191, 159, 40));
-            painter.setPen(QPen(QColor(47, 191, 159), 2));
-            painter.drawRect(sel);
         }
     }
 }
@@ -1062,21 +1146,106 @@ void PinWindow::toggleClickThrough()
     emitStateChanged();
 }
 
-QImage PinWindow::extractOcrRegion(const QRect& widgetRect) const
+void PinWindow::triggerOcr()
 {
-    auto rendered = renderedImage();
-    if (rendered.isNull()) return {};
-    double sx = static_cast<double>(rendered.width()) / width();
-    double sy = static_cast<double>(rendered.height()) / height();
-    QRect imgRect(
-        static_cast<int>(widgetRect.x() * sx),
-        static_cast<int>(widgetRect.y() * sy),
-        static_cast<int>(widgetRect.width() * sx),
-        static_cast<int>(widgetRect.height() * sy)
-    );
-    imgRect = imgRect.intersected(rendered.rect());
-    if (imgRect.isEmpty()) return {};
-    return rendered.copy(imgRect);
+    if (ocrActive_) {
+        clearOcrOverlay();
+        return;
+    }
+    emit ocrRequested(item_.id, item_.image);
+}
+
+void PinWindow::setOcrResult(OcrResult result)
+{
+    if (!result.ok || result.blocks.isEmpty()) {
+        return;
+    }
+
+    ocrActive_ = true;
+    ocrBlocks_ = std::move(result.blocks);
+    ocrFullText_ = std::move(result.text);
+    ocrHoveredBlock_ = -1;
+    ocrSelectedBlocks_.clear();
+    rebuildOcrBlockRects();
+    controlsVisible_ = false;
+    hovered_ = false;
+    update();
+}
+
+void PinWindow::clearOcrOverlay()
+{
+    ocrActive_ = false;
+    ocrBlocks_.clear();
+    ocrBlockWidgetRects_.clear();
+    ocrFullText_.clear();
+    ocrHoveredBlock_ = -1;
+    ocrSelectedBlocks_.clear();
+    update();
+}
+
+void PinWindow::rebuildOcrBlockRects()
+{
+    ocrBlockWidgetRects_.resize(ocrBlocks_.size());
+
+    QTransform transform;
+    transform.rotate(item_.state.transform.rotationDegrees);
+    transform.scale(item_.state.transform.flippedHorizontally ? -1.0 : 1.0,
+                    item_.state.transform.flippedVertically ? -1.0 : 1.0);
+
+    const auto rdr = renderedImage();
+    if (rdr.isNull()) return;
+    double sx = static_cast<double>(width()) / rdr.width();
+    double sy = static_cast<double>(height()) / rdr.height();
+
+    for (int i = 0; i < ocrBlocks_.size(); ++i) {
+        auto mappedRect = transform.mapRect(ocrBlocks_[i].rect);
+        ocrBlockWidgetRects_[i] = QRect(
+            static_cast<int>(mappedRect.x() * sx),
+            static_cast<int>(mappedRect.y() * sy),
+            static_cast<int>(mappedRect.width() * sx),
+            static_cast<int>(mappedRect.height() * sy)
+        ).intersected(rect());
+    }
+}
+
+int PinWindow::ocrBlockAt(const QPoint& pos) const
+{
+    for (int i = ocrBlockWidgetRects_.size() - 1; i >= 0; --i) {
+        if (ocrBlockWidgetRects_[i].contains(pos)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void PinWindow::ocrCopySelected()
+{
+    if (ocrSelectedBlocks_.isEmpty()) {
+        for (int i = 0; i < ocrBlocks_.size(); ++i)
+            ocrSelectedBlocks_.insert(i);
+    }
+
+    QStringList parts;
+    QVector<int> sorted;
+    sorted.reserve(ocrSelectedBlocks_.size());
+    for (int idx : ocrSelectedBlocks_)
+        sorted.append(idx);
+    std::sort(sorted.begin(), sorted.end());
+    for (int i : sorted) {
+        parts.push_back(ocrBlocks_[i].text);
+    }
+    QString text = parts.join("\n");
+    if (text.isEmpty()) return;
+
+    { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(text); }
+    QToolTip::showText(QCursor::pos(), tr("Copied %1 characters").arg(text.length()), this);
+}
+
+void PinWindow::ocrCopyAll()
+{
+    if (ocrFullText_.isEmpty()) return;
+    { const QSignalBlocker blocker(QApplication::clipboard()); QApplication::clipboard()->setText(ocrFullText_); }
+    QToolTip::showText(QCursor::pos(), tr("Copied all %1 characters").arg(ocrFullText_.length()), this);
 }
 
 QImage PinWindow::renderedImage() const
