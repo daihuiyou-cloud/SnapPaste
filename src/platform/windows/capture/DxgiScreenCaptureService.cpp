@@ -467,6 +467,37 @@ Result<QImage> captureSegmentWithDxgi(const QVector<DxgiScreenCaptureService::Ca
         return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "Failed to map DXGI readback texture."));
     }
 
+    {
+        auto isPixelBlack = [&](int px, int py) -> bool {
+            if (px < 0 || px >= width || py < 0 || py >= height)
+                return false;
+            const auto* row = static_cast<const uchar*>(mapped.pData) + (static_cast<long long>(py) * mapped.RowPitch);
+            switch (stagingDesc.Format) {
+            case DXGI_FORMAT_B8G8R8A8_UNORM:
+            case DXGI_FORMAT_B8G8R8X8_UNORM:
+            case DXGI_FORMAT_R8G8B8A8_UNORM:
+                return (reinterpret_cast<const uint32_t*>(row)[px] & 0x00FFFFFF) == 0;
+            case DXGI_FORMAT_R10G10B10A2_UNORM:
+                return (reinterpret_cast<const uint32_t*>(row)[px] & 0x3FFFFFFF) == 0;
+            case DXGI_FORMAT_R16G16B16A16_UNORM: {
+                const auto* p = reinterpret_cast<const uint16_t*>(row) + static_cast<long long>(px) * 4;
+                return p[0] == 0 && p[1] == 0 && p[2] == 0;
+            }
+            default:
+                return false;
+            }
+        };
+        bool allBlack = isPixelBlack(0, 0) &&
+                        isPixelBlack(width - 1, 0) &&
+                        isPixelBlack(0, height - 1) &&
+                        isPixelBlack(width - 1, height - 1) &&
+                        isPixelBlack(width / 2, height / 2);
+        if (allBlack) {
+            context.Unmap(stagingTexture.Get(), 0);
+            return Result<QImage>::failure(QCoreApplication::translate("AppErrors", "DXGI returned an all-black frame; falling back to GDI."));
+        }
+    }
+
     auto image = mappedTextureToImage(mapped, width, height, stagingDesc.Format);
     context.Unmap(stagingTexture.Get(), 0);
 
