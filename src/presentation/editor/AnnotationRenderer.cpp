@@ -102,7 +102,7 @@ void AnnotationRenderer::drawDraftSizeLabel(QPainter& painter,
         return;
     }
     auto dims = draft.bounds.size();
-    QString label = QStringLiteral("%1 \u00D7 %2").arg(dims.width(), dims.height());
+    QString label = QStringLiteral("%1 \u00D7 %2").arg(dims.width()).arg(dims.height());
     painter.save();
     painter.setPen(Qt::NoPen);
     auto textRect = painter.fontMetrics().boundingRect(label);
