@@ -7,8 +7,6 @@
 #include <QString>
 #include <QVector>
 
-#include <functional>
-
 namespace snappaste {
 
 struct ToolSettings {

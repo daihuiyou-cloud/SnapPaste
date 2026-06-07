@@ -1,7 +1,5 @@
 #include "app/PinManager.h"
 
-#include "presentation/pin_window/EditToolbarWidget.h"
-
 #include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
@@ -37,7 +35,12 @@ void PinManager::openPinWindow(PinnedItem item,
     }
 
     if (position.has_value()) {
-        item.state.position = pinnedPositionFor(item.image.size(), position.value(), avoidRegion);
+        if (pendingPinSlot_ < 0) {
+            allocatePinSlot();
+        }
+        const auto offset = pendingPinSlot_ * kPinCascadeOffset;
+        const auto cascadedPos = position.value() + QPoint(offset, offset);
+        item.state.position = pinnedPositionFor(item.image.size(), cascadedPos, avoidRegion);
         pinViewModel_.updateState(item.id, item.state);
     }
 
