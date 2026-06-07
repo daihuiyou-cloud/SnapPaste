@@ -314,68 +314,81 @@ QRect PinWindow::constrainedResizeGeometry(const QPoint& globalPos) const
 void PinWindow::contextMenuEvent(QContextMenuEvent* event)
 {
     if (editing_) {
-        QMenu menu(this);
-        if (editToolManager_.selectedIndex() >= 0) {
-            auto* delAction = menu.addAction(tr("Delete\tDel"));
-            auto* duplicateAction = menu.addAction(tr("Duplicate"));
-            auto* bringForward = menu.addAction(tr("Bring Forward"));
-            auto* sendBackward = menu.addAction(tr("Send Backward"));
-            menu.addSeparator();
-            auto* doneAction = menu.addAction(tr("Done\tEsc"));
-            const auto* action = menu.exec(event->globalPos());
-            if (action == delAction) {
-                editToolManager_.pushUndo();
-                editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
-            } else if (action == duplicateAction) {
-                editToolManager_.pushUndo();
-                editToolManager_.duplicateAnnotation(editToolManager_.selectedIndex());
-            } else if (action == bringForward) {
-                int sel = editToolManager_.selectedIndex();
-                int swap = sel + 1;
-                if (swap < editToolManager_.annotationCount()) {
-                    editToolManager_.pushUndo();
-                    qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
-                    editToolManager_.setSelectedIndex(swap);
-                }
-            } else if (action == sendBackward) {
-                int sel = editToolManager_.selectedIndex();
-                int swap = sel - 1;
-                if (swap >= 0) {
-                    editToolManager_.pushUndo();
-                    qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
-                    editToolManager_.setSelectedIndex(swap);
-                }
-            } else if (action == doneAction) {
-                applyEditAndExit();
-            }
-        } else {
-            auto* doneAction = menu.addAction(tr("Done\tEsc"));
-            if (menu.exec(event->globalPos()) == doneAction) {
-                applyEditAndExit();
-            }
-        }
-        update();
+        showEditContextMenu(event);
         return;
     }
-
     if (ocrActive_) {
-        QMenu menu(this);
-        auto* copySel = menu.addAction(tr("Copy Selected"));
-        auto* copyAll = menu.addAction(tr("Copy All Text\tCtrl+C"));
-        menu.addSeparator();
-        auto* exitOcr = menu.addAction(tr("Exit OCR Recognition\tEsc"));
-
-        const auto* action = menu.exec(event->globalPos());
-        if (action == copySel) {
-            ocrCopySelected();
-        } else if (action == copyAll) {
-            ocrCopyAll();
-        } else if (action == exitOcr) {
-            clearOcrOverlay();
-        }
+        showOcrContextMenu(event);
         return;
     }
+    showNormalContextMenu(event);
+}
 
+void PinWindow::showEditContextMenu(QContextMenuEvent* event)
+{
+    QMenu menu(this);
+    if (editToolManager_.selectedIndex() >= 0) {
+        auto* delAction = menu.addAction(tr("Delete\tDel"));
+        auto* duplicateAction = menu.addAction(tr("Duplicate"));
+        auto* bringForward = menu.addAction(tr("Bring Forward"));
+        auto* sendBackward = menu.addAction(tr("Send Backward"));
+        menu.addSeparator();
+        auto* doneAction = menu.addAction(tr("Done\tEsc"));
+        const auto* action = menu.exec(event->globalPos());
+        if (action == delAction) {
+            editToolManager_.pushUndo();
+            editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
+        } else if (action == duplicateAction) {
+            editToolManager_.pushUndo();
+            editToolManager_.duplicateAnnotation(editToolManager_.selectedIndex());
+        } else if (action == bringForward) {
+            int sel = editToolManager_.selectedIndex();
+            int swap = sel + 1;
+            if (swap < editToolManager_.annotationCount()) {
+                editToolManager_.pushUndo();
+                qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
+                editToolManager_.setSelectedIndex(swap);
+            }
+        } else if (action == sendBackward) {
+            int sel = editToolManager_.selectedIndex();
+            int swap = sel - 1;
+            if (swap >= 0) {
+                editToolManager_.pushUndo();
+                qSwap(editToolManager_.annotationsMut()[sel], editToolManager_.annotationsMut()[swap]);
+                editToolManager_.setSelectedIndex(swap);
+            }
+        } else if (action == doneAction) {
+            applyEditAndExit();
+        }
+    } else {
+        auto* doneAction = menu.addAction(tr("Done\tEsc"));
+        if (menu.exec(event->globalPos()) == doneAction) {
+            applyEditAndExit();
+        }
+    }
+    update();
+}
+
+void PinWindow::showOcrContextMenu(QContextMenuEvent* event)
+{
+    QMenu menu(this);
+    auto* copySel = menu.addAction(tr("Copy Selected"));
+    auto* copyAll = menu.addAction(tr("Copy All Text\tCtrl+C"));
+    menu.addSeparator();
+    auto* exitOcr = menu.addAction(tr("Exit OCR Recognition\tEsc"));
+
+    const auto* action = menu.exec(event->globalPos());
+    if (action == copySel) {
+        ocrCopySelected();
+    } else if (action == copyAll) {
+        ocrCopyAll();
+    } else if (action == exitOcr) {
+        clearOcrOverlay();
+    }
+}
+
+void PinWindow::showNormalContextMenu(QContextMenuEvent* event)
+{
     QMenu menu(this);
     auto* copyAction = menu.addAction(iconProvider_.icon(IconName::Copy), tr("Copy\tCtrl+C"));
     auto* saveAction = menu.addAction(iconProvider_.icon(IconName::Save), tr("Save\tCtrl+S"));
@@ -502,71 +515,86 @@ void PinWindow::focusOutEvent(QFocusEvent* event)
 void PinWindow::keyPressEvent(QKeyEvent* event)
 {
     if (editing_) {
-        switch (event->key()) {
-        case Qt::Key_Escape:
-            toggleEditMode();
-            event->accept();
-            return;
-        case Qt::Key_Z:
-            if (event->modifiers().testFlag(Qt::ControlModifier)) {
-                if (event->modifiers().testFlag(Qt::ShiftModifier)) {
-                    editToolManager_.redo();
-                } else {
-                    editToolManager_.undo();
-                }
-                editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
-                editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
-                update();
-                event->accept();
-                return;
-            }
-            break;
-        case Qt::Key_Delete:
-            if (editToolManager_.selectedIndex() >= 0) {
-                editToolManager_.pushUndo();
-                editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
-                editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
-                editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
-                update();
-                event->accept();
-                return;
-            }
-            break;
-        default:
-            break;
-        }
-        QWidget::keyPressEvent(event);
+        handleEditModeKey(event);
         return;
     }
-
     if (ocrActive_) {
-        switch (event->key()) {
-        case Qt::Key_Escape:
-            clearOcrOverlay();
+        handleOcrModeKey(event);
+        return;
+    }
+    handleNormalModeKey(event);
+}
+
+void PinWindow::handleEditModeKey(QKeyEvent* event)
+{
+    switch (event->key()) {
+    case Qt::Key_Escape:
+        toggleEditMode();
+        event->accept();
+        return;
+    case Qt::Key_Z:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                editToolManager_.redo();
+            } else {
+                editToolManager_.undo();
+            }
+            editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+            editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
+            update();
             event->accept();
             return;
-        case Qt::Key_C:
-            if (event->modifiers().testFlag(Qt::ControlModifier)) {
-                ocrCopySelected();
-                event->accept();
-                return;
-            }
-            break;
-        case Qt::Key_A:
-            if (event->modifiers().testFlag(Qt::ControlModifier)) {
-                ocrSelectedBlocks_.clear();
-                for (int i = 0; i < ocrBlocks_.size(); ++i)
-                    ocrSelectedBlocks_.insert(i);
-                update();
-                event->accept();
-                return;
-            }
-            break;
-        default:
-            break;
         }
+        break;
+    case Qt::Key_Delete:
+        if (editToolManager_.selectedIndex() >= 0) {
+            editToolManager_.pushUndo();
+            editToolManager_.deleteAnnotation(editToolManager_.selectedIndex());
+            editToolbar_->setCanUndo(editToolManager_.undoCount() > 0);
+            editToolbar_->setCanRedo(editToolManager_.redoCount() > 0);
+            update();
+            event->accept();
+            return;
+        }
+        break;
+    default:
+        break;
     }
+    QWidget::keyPressEvent(event);
+}
 
+void PinWindow::handleOcrModeKey(QKeyEvent* event)
+{
+    switch (event->key()) {
+    case Qt::Key_Escape:
+        clearOcrOverlay();
+        event->accept();
+        return;
+    case Qt::Key_C:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            ocrCopySelected();
+            event->accept();
+            return;
+        }
+        break;
+    case Qt::Key_A:
+        if (event->modifiers().testFlag(Qt::ControlModifier)) {
+            ocrSelectedBlocks_.clear();
+            for (int i = 0; i < ocrBlocks_.size(); ++i)
+                ocrSelectedBlocks_.insert(i);
+            update();
+            event->accept();
+            return;
+        }
+        break;
+    default:
+        break;
+    }
+    QWidget::keyPressEvent(event);
+}
+
+void PinWindow::handleNormalModeKey(QKeyEvent* event)
+{
     switch (event->key()) {
     case Qt::Key_Escape:
         requestClose();

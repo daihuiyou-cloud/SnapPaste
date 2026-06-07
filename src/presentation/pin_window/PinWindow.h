@@ -88,6 +88,16 @@ private:
     QRect constrainedResizeGeometry(const QPoint& globalPos) const;
     void applyResizeToScale();
 
+    // Mode-specific key event handlers
+    void handleEditModeKey(QKeyEvent* event);
+    void handleOcrModeKey(QKeyEvent* event);
+    void handleNormalModeKey(QKeyEvent* event);
+
+    // Mode-specific context menu
+    void showEditContextMenu(QContextMenuEvent* event);
+    void showOcrContextMenu(QContextMenuEvent* event);
+    void showNormalContextMenu(QContextMenuEvent* event);
+
     void triggerOcr();
     void clearOcrOverlay();
     void rebuildOcrBlockRects();
