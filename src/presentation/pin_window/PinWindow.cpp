@@ -121,7 +121,7 @@ PinWindow::PinWindow(PinnedItem item, IIconProvider& iconProvider, QWidget* pare
     };
 
     // Floating edit toolbar
-    editToolbar_ = new EditToolbarWidget(iconProvider_, nullptr);
+    editToolbar_ = new EditToolbarWidget(iconProvider_, this);
     connect(editToolbar_, &EditToolbarWidget::toolSelected, this, [this](AnnotationTool tool) {
         editToolManager_.setTool(tool);
         setCursor(Qt::CrossCursor);

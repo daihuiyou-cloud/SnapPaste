@@ -1,6 +1,9 @@
 #include "domain/capture/CaptureSelectionHistory.h"
 #include "domain/capture/CaptureWorkflow.h"
+#include "domain/editor/Annotation.h"
 #include "domain/pin/PinnedItem.h"
+#include "presentation/editor/AnnotationToolManager.h"
+#include "presentation/editor/ToolSettings.h"
 #include "presentation/viewmodels/SettingsViewModel.h"
 #include "presentation/capture_actions/CaptureActionBar.h"
 #include "presentation/viewmodels/CaptureViewModel.h"
@@ -175,6 +178,138 @@ private slots:
         QVERIFY(!captureService.usedPlainRegion);
         QCOMPARE(captureService.receivedSegments.size(), 2);
         QCOMPARE(result.value().size(), QSize(40, 10));
+    }
+
+    void toolSettingsAddRecentColorMaintainsMaxSize()
+    {
+        ToolSettings settings;
+        for (int i = 0; i < 10; ++i) {
+            settings.addRecentColor(QColor::fromHsv(i * 36, 255, 255));
+        }
+        QCOMPARE(settings.customColors.size(), 6);
+    }
+
+    void toolSettingsAddRecentColorDeduplicates()
+    {
+        ToolSettings settings;
+        settings.customColors = {Qt::red, Qt::green, Qt::blue};
+        settings.addRecentColor(Qt::green);
+        QCOMPARE(settings.customColors.size(), 3);
+        QCOMPARE(settings.customColors.first(), Qt::green);
+    }
+
+    void annotationToolManagerUndoRedoAnnotationChanges()
+    {
+        AnnotationToolManager mgr;
+        QImage img(100, 100, QImage::Format_ARGB32);
+        img.fill(Qt::white);
+        mgr.setImage(img, 1.0);
+
+        mgr.setTool(AnnotationTool::Rectangle);
+        mgr.startDrawing(QPoint(10, 10));
+        mgr.updateDrawingStroke(QPoint(50, 50));
+        mgr.finishDrawing();
+        mgr.pushUndo();
+        mgr.annotationsMut().push_back(mgr.draft());
+        QCOMPARE(mgr.annotationCount(), 1);
+
+        mgr.selectAnnotation(0);
+        mgr.deleteAnnotation(0);
+        QCOMPARE(mgr.annotationCount(), 0);
+
+        mgr.undo();
+        QCOMPARE(mgr.annotationCount(), 1);
+
+        mgr.redo();
+        QCOMPARE(mgr.annotationCount(), 0);
+    }
+
+    void annotationToolManagerSetToolChangesTool()
+    {
+        AnnotationToolManager mgr;
+        mgr.setTool(AnnotationTool::Arrow);
+        QCOMPARE(mgr.currentTool(), AnnotationTool::Arrow);
+        mgr.setTool(AnnotationTool::Pen);
+        QCOMPARE(mgr.currentTool(), AnnotationTool::Pen);
+    }
+
+    void annotationToolManagerDefaultToolIsRectangle()
+    {
+        AnnotationToolManager mgr;
+        QCOMPARE(mgr.currentTool(), AnnotationTool::Rectangle);
+    }
+
+    void annotationToolManagerSetColorAffectsDraft()
+    {
+        AnnotationToolManager mgr;
+        QImage img(100, 100, QImage::Format_ARGB32);
+        img.fill(Qt::white);
+        mgr.setImage(img, 1.0);
+
+        mgr.setColor(QColor(Qt::blue));
+        QCOMPARE(mgr.color(), QColor(Qt::blue));
+
+        mgr.startDrawing(QPoint(0, 0));
+        QCOMPARE(mgr.draft().color, QColor(Qt::blue));
+        mgr.finishDrawing();
+    }
+
+    void annotationToolManagerZoomFactorPersistence()
+    {
+        AnnotationToolManager mgr;
+        mgr.setZoomFactor(2.5);
+        QCOMPARE(mgr.zoomFactor(), 2.5);
+        mgr.setZoomFactor(0.5);
+        QCOMPARE(mgr.zoomFactor(), 0.5);
+    }
+
+    void annotationToolManagerSettingsAccessor()
+    {
+        AnnotationToolManager mgr;
+        auto& s = mgr.settings();
+        s.fontSize = 24;
+        QCOMPARE(mgr.fontSize(), 24);
+    }
+
+    void annotationToolManagerClearAnnotationsResetsState()
+    {
+        AnnotationToolManager mgr;
+        QImage img(100, 100, QImage::Format_ARGB32);
+        img.fill(Qt::white);
+        mgr.setImage(img, 1.0);
+
+        mgr.setTool(AnnotationTool::Ellipse);
+        mgr.startDrawing(QPoint(10, 10));
+        mgr.updateDrawingStroke(QPoint(90, 90));
+        mgr.finishDrawing();
+        mgr.annotationsMut().push_back(mgr.draft());
+        mgr.selectAnnotation(0);
+        QCOMPARE(mgr.annotationCount(), 1);
+        QCOMPARE(mgr.selectedIndex(), 0);
+
+        mgr.clearAnnotations();
+        QCOMPARE(mgr.annotationCount(), 0);
+        QCOMPARE(mgr.selectedIndex(), -1);
+    }
+
+    void annotationToolManagerDrawingStateMachine()
+    {
+        AnnotationToolManager mgr;
+        QImage img(100, 100, QImage::Format_ARGB32);
+        img.fill(Qt::white);
+        mgr.setImage(img, 1.0);
+
+        QVERIFY(!mgr.drawing());
+        mgr.startDrawing(QPoint(20, 20));
+        QVERIFY(mgr.drawing());
+        QCOMPARE(mgr.start(), QPoint(20, 20));
+        QCOMPARE(mgr.current(), QPoint(20, 20));
+
+        mgr.updateDrawingStroke(QPoint(80, 40));
+        QCOMPARE(mgr.current(), QPoint(80, 40));
+
+        mgr.finishDrawing();
+        QVERIFY(!mgr.drawing());
     }
 
     void captureViewModelSavesExplicitImageWithoutReplacingCurrentImage()

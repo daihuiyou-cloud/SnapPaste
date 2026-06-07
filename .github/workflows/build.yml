@@ -1,0 +1,31 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 5.15
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 5.15.2
+          arch: win64_msvc2019_64
+          modules: qt5compat qtlinguist
+          cache: true
+
+      - name: Configure CMake
+        run: cmake -B build -DSNAPPASTE_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release -- -maxcpucount
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure --timeout 60

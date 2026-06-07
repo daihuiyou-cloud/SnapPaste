@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/editor/Annotation.h"
+#include "presentation/editor/ToolSettings.h"
 
 #include <QColor>
 #include <QCursor>
@@ -18,6 +19,9 @@ namespace snappaste {
 class AnnotationToolManager {
 public:
     AnnotationToolManager();
+
+    ToolSettings& settings() { return settings_; }
+    const ToolSettings& settings() const { return settings_; }
 
     // --- Callbacks (wired by AnnotationCanvas) ---
     std::function<void()> onModified;
@@ -68,72 +72,72 @@ public:
     const QString& preeditString() const { return preeditString_; }
     void setPreeditString(QString s) { preeditString_ = std::move(s); }
 
-    // --- Tool state ---
-    AnnotationTool currentTool() const { return currentTool_; }
+    // --- Tool state (forwarders to settings_) ---
+    AnnotationTool currentTool() const { return settings_.currentTool; }
     void setTool(AnnotationTool tool);
 
-    QColor color() const { return currentColor_; }
+    QColor color() const { return settings_.currentColor; }
     void setColor(const QColor& color);
 
-    QColor fillColor() const { return currentFillColor_; }
+    QColor fillColor() const { return settings_.currentFillColor; }
     void setFillColor(const QColor& color);
 
-    int strokeWidth() const { return currentStrokeWidth_; }
+    int strokeWidth() const { return settings_.currentStrokeWidth; }
     void setStrokeWidth(int width);
 
-    int strokeAlpha() const { return strokeAlpha_; }
+    int strokeAlpha() const { return settings_.strokeAlpha; }
     void setStrokeAlpha(int alpha);
 
-    ArrowStyle arrowStyle() const { return arrowStyle_; }
+    ArrowStyle arrowStyle() const { return settings_.arrowStyle; }
     void setArrowStyle(ArrowStyle style);
 
-    int cornerRadius() const { return cornerRadius_; }
+    int cornerRadius() const { return settings_.cornerRadius; }
     void setCornerRadius(int radius);
 
-    int fontSize() const { return fontSize_; }
+    int fontSize() const { return settings_.fontSize; }
     void setFontSize(int size, bool persist = true);
 
-    QString fontFamily() const { return currentFontFamily_; }
+    QString fontFamily() const { return settings_.currentFontFamily; }
     void setFontFamily(const QString& family);
 
-    bool bold() const { return bold_; }
+    bool bold() const { return settings_.bold; }
     void setBold(bool b);
 
-    bool italic() const { return italic_; }
+    bool italic() const { return settings_.italic; }
     void setItalic(bool i);
 
-    bool underline() const { return underline_; }
+    bool underline() const { return settings_.underline; }
     void setUnderline(bool u);
 
-    int textAlignment() const { return textAlignment_; }
+    int textAlignment() const { return settings_.textAlignment; }
     void setTextAlignment(int align);
 
-    bool textOutlineEnabled() const { return textOutlineEnabled_; }
+    bool textOutlineEnabled() const { return settings_.textOutlineEnabled; }
     void setTextOutlineEnabled(bool enabled);
 
-    bool filled() const { return filled_; }
+    bool filled() const { return settings_.filled; }
     void setFilled(bool filled);
 
-    bool textBackgroundEnabled() const { return textBackgroundEnabled_; }
+    bool textBackgroundEnabled() const { return settings_.textBackgroundEnabled; }
     void setTextBackgroundEnabled(bool enabled);
 
-    QColor textBackgroundColor() const { return textBackgroundColor_; }
+    QColor textBackgroundColor() const { return settings_.textBackgroundColor; }
     void setTextBackgroundColor(const QColor& color);
 
-    bool mosaicBlurred() const { return mosaicBlurred_; }
+    bool mosaicBlurred() const { return settings_.mosaicBlurred; }
     void setMosaicBlurred(bool blurred);
 
-    bool pickingColor() const { return pickingColor_; }
+    bool pickingColor() const { return settings_.pickingColor; }
     void setPickingColor(bool picking);
 
-    double cropAspectRatio() const { return cropAspectRatio_; }
+    double cropAspectRatio() const { return settings_.cropAspectRatio; }
     void setCropAspectRatio(double ratio);
 
-    bool gridEnabled() const { return gridEnabled_; }
+    bool gridEnabled() const { return settings_.gridEnabled; }
     void setGridEnabled(bool enabled);
 
-    double zoomFactor() const { return zoomFactor_; }
-    void setZoomFactor(double z) { zoomFactor_ = z; }
+    double zoomFactor() const { return settings_.zoomFactor; }
+    void setZoomFactor(double z) { settings_.zoomFactor = z; }
 
     // --- Drawing state ---
     bool drawing() const { return drawing_; }
@@ -169,8 +173,8 @@ public:
     void setPanStart(const QPoint& p) { panStart_ = p; }
 
     // --- Recent tools / colors ---
-    const QVector<AnnotationTool>& recentTools() const { return recentTools_; }
-    const QVector<QColor>& recentColors() const { return customColors_; }
+    const QVector<AnnotationTool>& recentTools() const { return settings_.recentTools; }
+    const QVector<QColor>& recentColors() const { return settings_.customColors; }
     void addRecentColor(const QColor& color);
 
     // --- Annotation manipulation ---
@@ -207,6 +211,8 @@ public:
     void clearAnnotations();
 
 private:
+    ToolSettings settings_;
+
     // Image
     QImage image_;
     QImage baseImage_;
@@ -239,30 +245,6 @@ private:
     int cursorPos_ = 0;
     QString preeditString_;
 
-    // Tool state
-    AnnotationTool currentTool_ = AnnotationTool::Rectangle;
-    QColor currentColor_{"#ff3b30"};
-    QColor currentFillColor_;
-    int currentStrokeWidth_ = 4;
-    int strokeAlpha_ = 255;
-    ArrowStyle arrowStyle_ = ArrowStyle::DefaultArrow;
-    int cornerRadius_ = 0;
-    int fontSize_ = 14;
-    QString currentFontFamily_;
-    bool bold_ = false;
-    bool italic_ = false;
-    bool underline_ = false;
-    int textAlignment_ = -1;
-    bool textOutlineEnabled_ = true;
-    bool filled_ = false;
-    bool textBackgroundEnabled_ = false;
-    QColor textBackgroundColor_{0, 0, 0, 80};
-    bool mosaicBlurred_ = false;
-    bool pickingColor_ = false;
-    double cropAspectRatio_ = 0.0;
-    bool gridEnabled_ = false;
-    double zoomFactor_ = 1.0;
-
     // Drawing
     bool drawing_ = false;
     Annotation draft_;
@@ -281,25 +263,6 @@ private:
     // Pan
     bool panning_ = false;
     QPoint panStart_;
-
-    // Text font cache
-    struct FontCacheKey {
-        QString fontFamily;
-        int fontSize = 0;
-        bool bold = false;
-        bool italic = false;
-        bool underline = false;
-        bool operator==(const FontCacheKey& o) const {
-            return fontFamily == o.fontFamily && fontSize == o.fontSize
-                && bold == o.bold && italic == o.italic && underline == o.underline;
-        }
-    };
-    FontCacheKey fontCacheKey_;
-    QFont cachedFont_;
-
-    // Recent
-    QVector<AnnotationTool> recentTools_;
-    QVector<QColor> customColors_;
 };
 
 } // namespace snappaste

@@ -133,7 +133,6 @@ private:
     QPropertyAnimation* fadeAnimation_ = nullptr;
     QElapsedTimer frameLimiter_;
     QElapsedTimer smartCandidateLimiter_;
-    bool repaintQueued_ = false;
     QTimer* updateTimer_ = nullptr;
     QRect cachedDesktopBounds_;
     bool desktopBoundsValid_ = false;

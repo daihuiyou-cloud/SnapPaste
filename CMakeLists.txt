@@ -22,6 +22,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/app/AppStartup.cpp
     src/app/InfrastructureFactory.h
     src/app/InfrastructureFactory.cpp
+    src/app/PinManager.h
+    src/app/PinManager.cpp
     src/app/ServiceFactory.h
     src/app/ServiceFactory.cpp
     src/app/ViewModelFactory.h
@@ -58,6 +60,8 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/editor/AnnotationCanvas.cpp
     src/presentation/editor/AnnotationToolManager.h
     src/presentation/editor/AnnotationToolManager.cpp
+    src/presentation/editor/ToolSettings.h
+    src/presentation/editor/ToolSettings.cpp
     src/presentation/editor/AnnotationEventHandler.h
     src/presentation/editor/AnnotationEventHandler.cpp
     src/presentation/editor/AnnotationRenderer.h

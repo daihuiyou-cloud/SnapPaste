@@ -1,11 +1,11 @@
 #pragma once
 
 #include "app/AppContext.h"
+#include "app/PinManager.h"
 #include "infrastructure/logging/ILogger.h"
 #include "presentation/capture_overlay/CaptureOverlay.h"
 #include "presentation/editor/EditorWindow.h"
 #include "presentation/main_window/MainWindow.h"
-#include "presentation/pin_window/PinWindow.h"
 #include "presentation/toast/ToastNotifier.h"
 #include "presentation/tray/TrayController.h"
 
@@ -17,8 +17,6 @@
 #include <QPointer>
 #include <atomic>
 #include <functional>
-#include <map>
-#include <set>
 #include <memory>
 #include <optional>
 
@@ -56,14 +54,6 @@ private:
     void registerHotkey();
     QString hotkeyDisplayString(const Hotkey& hk, const char* fallback) const;
     void applyCurrentTheme();
-    void openPinWindow(PinnedItem item);
-    int allocatePinSlot();
-    void freePinSlot(int slot);
-    int pinSlotFor(qint64 id) const;
-    QPoint cascadedPinPosition(const QPoint& basePosition);
-    QPoint pinnedPositionFor(const QSize& imageSize,
-                             const QPoint& preferredPosition,
-                             const std::optional<QRect>& avoidRegion) const;
     CaptureOverlay& overlay();
     EditorWindow& editorWindow();
 
@@ -76,17 +66,13 @@ private:
     std::unique_ptr<CaptureOverlay> overlay_;
     std::unique_ptr<EditorWindow> editorWindow_;
     std::optional<AppSettings> cachedSettings_;
-    std::map<qint64, std::unique_ptr<PinWindow>> pinWindows_;
+    PinManager pinManager_;
     std::optional<QPoint> pendingPinPosition_;
     std::optional<QRect> pendingPinAvoidRegion_;
     QImage lastPinnableImage_;
     PinSource lastPinnableSource_ = PinSource::Screenshot;
     bool preferLastPinnableImage_ = false;
     std::optional<QRect> lastCaptureRegion_;
-    std::map<qint64, int> pinIdToSlot_;
-    std::set<int> freePinSlots_;
-    int nextPinSlot_ = 0;
-    int pendingPinSlot_ = -1;
     std::shared_ptr<std::atomic<bool>> alive_;
     std::shared_ptr<IOcrService> ocrService_;
     QPointer<OcrResultWindow> ocrWindow_;

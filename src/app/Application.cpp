@@ -5,7 +5,6 @@
 #include "presentation/ocr/OcrResultWindow.h"
 #include "presentation/viewmodels/CaptureViewModel.h"
 #include "presentation/viewmodels/HistoryViewModel.h"
-#include "presentation/viewmodels/PinViewModel.h"
 #include "presentation/viewmodels/SettingsViewModel.h"
 #include "shared/events/EventHub.h"
 
@@ -37,8 +36,6 @@ namespace {
 
 constexpr int kCaptureAfterHideDelayMs = 16;
 constexpr int kPinBaseOffset = 16;
-constexpr int kPinCascadeOffset = 24;
-constexpr int kPinCascadeSlots = 8;
 
 } // namespace
 
@@ -48,6 +45,7 @@ Application::Application(QApplication& qtApplication, ILogger& logger)
     , qtApplication_(qtApplication)
     , trayController_(context_.iconProvider(), this)
     , toastNotifier_(this)
+    , pinManager_(context_.iconProvider(), context_.pinViewModel(), this)
     , alive_(std::make_shared<std::atomic<bool>>(true))
 {
     QApplication::setQuitOnLastWindowClosed(false);
@@ -85,23 +83,7 @@ void Application::connectCoreSignals()
     connect(&trayController_, &TrayController::hidePinsRequested, this, &Application::hideAllPins);
     connect(&trayController_, &TrayController::showPinsRequested, this, &Application::showAllPins);
     connect(&trayController_, &TrayController::closeAllPinsRequested, this, [this] {
-        const auto ids = [this] {
-            QVector<qint64> result;
-            result.reserve(pinWindows_.size());
-            for (const auto& entry : pinWindows_) {
-                result.push_back(entry.first);
-            }
-            return result;
-        }();
-        for (const auto id : ids) {
-            context_.pinViewModel().close(id);
-            auto slotIt = pinIdToSlot_.find(id);
-            if (slotIt != pinIdToSlot_.end()) {
-                freePinSlot(slotIt->second);
-            }
-            pinIdToSlot_.erase(id);
-            pinWindows_.erase(id);
-        }
+        pinManager_.closeAll();
         showStatus(tr("All pinned images closed."));
     });
     connect(&trayController_, &TrayController::quitRequested, &qtApplication_, &QApplication::quit);
@@ -143,18 +125,72 @@ void Application::connectCoreSignals()
             lastPinnableSource_ = item.source;
             preferLastPinnableImage_ = true;
         }
-        openPinWindow(item);
+        const auto pos = pendingPinPosition_;
+        const auto avoid = pendingPinAvoidRegion_;
+        pendingPinPosition_.reset();
+        pendingPinAvoidRegion_.reset();
+        pinManager_.openPinWindow(item, pos, avoid);
         showStatus(tr("Pinned image created. Press %1 to repeat.")
             .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->repeatCaptureHotkey, "F4") : QStringLiteral("F4")));
     });
     connect(&context_.pinViewModel(), &PinViewModel::pinRestored, this, [this](const PinnedItem& item) {
-        openPinWindow(item);
+        pinManager_.openPinWindow(item);
     });
     connect(&context_.pinViewModel(), &PinViewModel::errorOccurred, this, [this](const QString& message) {
         pendingPinPosition_.reset();
         pendingPinAvoidRegion_.reset();
         showStatus(message);
     });
+
+    connect(&pinManager_, &PinManager::copyRequested, this, [this](qint64 /*id*/, const QImage& image, PinSource source) {
+        lastPinnableImage_ = image;
+        lastPinnableSource_ = source;
+        preferLastPinnableImage_ = true;
+        const QSignalBlocker blocker(QApplication::clipboard());
+        QApplication::clipboard()->setImage(image);
+        showStatus(tr("Pinned image copied. Press %1 to repeat.")
+            .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->repeatCaptureHotkey, "F4") : QStringLiteral("F4")));
+    });
+    connect(&pinManager_, &PinManager::saveRequested, this, [this](const QImage& image) {
+        context_.captureViewModel().saveImage(image, "pin");
+    });
+
+    QPointer<Application> appGuard(this);
+    connect(&pinManager_, &PinManager::ocrRequested, this, [this, appGuard](qint64 /*id*/, const QImage& image) {
+        if (image.isNull()) {
+            showStatus(tr("No image available for OCR."));
+            return;
+        }
+        if (ocrService_) {
+            ocrService_->cancel();
+        }
+        auto weakAlive = alive_;
+        QPointer<Application> guard(this);
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        showStatus(tr("OCR processing..."));
+
+        ocrService_->recognizeTextAsync(image, [weakAlive, guard](OcrResult outcome) {
+            if (!*weakAlive || guard.isNull()) return;
+            QApplication::restoreOverrideCursor();
+            if (!outcome.ok) {
+                guard->showStatus(outcome.message);
+                return;
+            }
+
+            auto* win = new OcrResultWindow(std::move(outcome.image), std::move(outcome.blocks), outcome.text, nullptr);
+            guard->ocrWindow_ = win;
+#pragma warning(push)
+#pragma warning(disable: 4573)
+            QObject::connect(win, &QObject::destroyed, win, [guard] {
+                if (guard) guard->ocrWindow_.clear();
+            });
+            QObject::connect(win, &OcrResultWindow::pasteRequested, win, [guard] { if (guard) guard->pasteFromClipboard(); });
+#pragma warning(pop)
+            guard->showStatus(
+                tr("OCR - %1 characters").arg(outcome.text.length()));
+        });
+    });
+
     connect(&context_.eventHub(), &EventHub::historyChanged, &context_.historyViewModel(), &HistoryViewModel::refresh);
     connect(&context_.eventHub(), &EventHub::settingsChanged, this, [this] {
         invalidateSettingsCache();
@@ -215,7 +251,7 @@ void Application::openFile()
 
 void Application::pasteFromClipboard()
 {
-    pendingPinPosition_ = cascadedPinPosition(QCursor::pos() + QPoint(kPinBaseOffset, kPinBaseOffset));
+    pendingPinPosition_ = QCursor::pos() + QPoint(kPinBaseOffset, kPinBaseOffset);
     pendingPinAvoidRegion_.reset();
     if (preferLastPinnableImage_ && !lastPinnableImage_.isNull()) {
         context_.pinViewModel().createFromImage(lastPinnableImage_, lastPinnableSource_);
@@ -226,23 +262,13 @@ void Application::pasteFromClipboard()
 
 void Application::hideAllPins()
 {
-    context_.pinViewModel().setAllVisible(false);
-    for (auto& entry : pinWindows_) {
-        if (entry.second) {
-            entry.second->setPinnedVisible(false);
-        }
-    }
+    pinManager_.hideAll();
     showStatus(tr("Pinned images hidden."));
 }
 
 void Application::showAllPins()
 {
-    context_.pinViewModel().setAllVisible(true);
-    for (auto& entry : pinWindows_) {
-        if (entry.second) {
-            entry.second->restoreInteraction();
-        }
-    }
+    pinManager_.showAll();
     showStatus(tr("Pinned images restored."));
 }
 
@@ -261,7 +287,7 @@ void Application::pinRegion(const QRect& region)
             showStatus(tr("Failed to capture image for pinning."));
             return;
         }
-        pendingPinPosition_ = cascadedPinPosition(QCursor::pos() + QPoint(kPinBaseOffset, kPinBaseOffset));
+        pendingPinPosition_ = QCursor::pos() + QPoint(kPinBaseOffset, kPinBaseOffset);
         pendingPinAvoidRegion_ = region;
         context_.pinViewModel().createFromImage(image, PinSource::Screenshot);
     });
@@ -445,159 +471,6 @@ void Application::applyCurrentTheme()
     if (themeResult.isError()) {
         logger_.warning(themeResult.error());
     }
-}
-
-void Application::openPinWindow(PinnedItem item)
-{
-    if (item.image.isNull()) {
-        logger_.warning("Ignoring empty pinned image.");
-        pendingPinPosition_.reset();
-        pendingPinAvoidRegion_.reset();
-        return;
-    }
-
-    if (pendingPinPosition_.has_value()) {
-        item.state.position = pinnedPositionFor(item.image.size(), pendingPinPosition_.value(), pendingPinAvoidRegion_);
-        context_.pinViewModel().updateState(item.id, item.state);
-        pendingPinPosition_.reset();
-        pendingPinAvoidRegion_.reset();
-    }
-
-    auto pinWindow = std::make_unique<PinWindow>(item, context_.iconProvider());
-    auto* window = pinWindow.get();
-    pinWindows_[item.id] = std::move(pinWindow);
-    if (pendingPinSlot_ >= 0) {
-        pinIdToSlot_[item.id] = pendingPinSlot_;
-        pendingPinSlot_ = -1;
-    }
-
-    connect(window, &PinWindow::stateChanged, &context_.pinViewModel(), &PinViewModel::updateState);
-    connect(window, &PinWindow::closeRequested, this, [this](qint64 id) {
-        context_.pinViewModel().close(id);
-        QPointer<Application> guard(this);
-        QTimer::singleShot(0, this, [guard, id, slot = pinSlotFor(id)] {
-            if (guard) {
-                guard->pinWindows_.erase(id);
-                guard->pinIdToSlot_.erase(id);
-                if (slot >= 0) guard->freePinSlot(slot);
-            }
-        });
-    });
-    connect(window, &PinWindow::copyRequested, this, [this, source = item.source](const QImage& image) {
-        if (image.isNull()) {
-            showStatus(tr("No pinned image is available to copy."));
-            return;
-        }
-        lastPinnableImage_ = image;
-        lastPinnableSource_ = source;
-        preferLastPinnableImage_ = true;
-        const QSignalBlocker blocker(QApplication::clipboard());
-        QApplication::clipboard()->setImage(image);
-        showStatus(tr("Pinned image copied. Press %1 to repeat.")
-            .arg(cachedSettings_ ? hotkeyDisplayString(cachedSettings_->repeatCaptureHotkey, "F4") : QStringLiteral("F4")));
-    });
-    connect(window, &PinWindow::saveRequested, this, [this](const QImage& image) {
-        context_.captureViewModel().saveImage(image, "pin");
-    });
-    QPointer<PinWindow> pinGuard(window);
-    connect(window, &PinWindow::ocrRequested, this, [this, pinGuard](qint64 /*id*/, const QImage& image) {
-        if (image.isNull()) {
-            showStatus(tr("No image available for OCR."));
-            return;
-        }
-        if (ocrService_) {
-            ocrService_->cancel();
-        }
-        auto weakAlive = alive_;
-        QPointer<Application> guard(this);
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        showStatus(tr("OCR processing..."));
-
-        ocrService_->recognizeTextAsync(image, [weakAlive, guard, pinGuard](OcrResult outcome) {
-            if (!*weakAlive || guard.isNull()) return;
-            QApplication::restoreOverrideCursor();
-            if (!outcome.ok) {
-                guard->showStatus(outcome.message);
-                return;
-            }
-            if (!pinGuard.isNull()) {
-                pinGuard->setOcrResult(std::move(outcome));
-            }
-            guard->showStatus(
-                tr("OCR - %1 characters").arg(outcome.text.length()));
-        });
-    });
-    if (window->state().options.visible) {
-        window->show();
-        window->raise();
-    }
-}
-
-int Application::allocatePinSlot()
-{
-    if (!freePinSlots_.empty()) {
-        int slot = *freePinSlots_.begin();
-        freePinSlots_.erase(freePinSlots_.begin());
-        return slot;
-    }
-    return (nextPinSlot_++) % kPinCascadeSlots;
-}
-
-void Application::freePinSlot(int slot)
-{
-    freePinSlots_.insert(slot);
-}
-
-int Application::pinSlotFor(qint64 id) const
-{
-    auto it = pinIdToSlot_.find(id);
-    return it != pinIdToSlot_.end() ? it->second : -1;
-}
-
-QPoint Application::cascadedPinPosition(const QPoint& basePosition)
-{
-    const auto slot = allocatePinSlot();
-    const auto offset = slot * kPinCascadeOffset;
-    pendingPinSlot_ = slot;
-    return basePosition + QPoint(offset, offset);
-}
-
-QPoint Application::pinnedPositionFor(const QSize& imageSize,
-                                      const QPoint& preferredPosition,
-                                      const std::optional<QRect>& avoidRegion) const
-{
-    constexpr int kMargin = 12;
-    auto position = preferredPosition;
-    const auto screen = QGuiApplication::screenAt(preferredPosition);
-    const auto fallback = QGuiApplication::primaryScreen();
-    const auto bounds = screen != nullptr ? screen->availableGeometry()
-        : fallback != nullptr ? fallback->availableGeometry()
-        : QRect(0, 0, 1920, 1080);
-    QRect pinRect(position, imageSize);
-
-    if (avoidRegion.has_value() && pinRect.intersects(avoidRegion.value())) {
-        position = QPoint(avoidRegion->right() + kMargin, avoidRegion->top());
-        pinRect.moveTopLeft(position);
-        if (!bounds.contains(pinRect)) {
-            position = QPoint(avoidRegion->left(), avoidRegion->bottom() + kMargin);
-            pinRect.moveTopLeft(position);
-        }
-    }
-
-    if (pinRect.right() > bounds.right() - kMargin) {
-        position.setX(bounds.right() - imageSize.width() - kMargin);
-    }
-    if (pinRect.bottom() > bounds.bottom() - kMargin) {
-        position.setY(bounds.bottom() - imageSize.height() - kMargin);
-    }
-    if (position.x() < bounds.left() + kMargin) {
-        position.setX(bounds.left() + kMargin);
-    }
-    if (position.y() < bounds.top() + kMargin) {
-        position.setY(bounds.top() + kMargin);
-    }
-
-    return position;
 }
 
 CaptureOverlay& Application::overlay()

@@ -11,39 +11,6 @@ namespace snappaste {
 
 AnnotationToolManager::AnnotationToolManager()
 {
-    // Batch-load editor settings from QSettings (single registry read)
-    struct EditorPrefs {
-        int fontSize = 14;
-        QString fontFamily;
-        bool bold = false, italic = false, underline = false;
-        int textAlignment = -1;
-        QVector<QColor> recentColors;
-    };
-    const EditorPrefs prefs = [] {
-        QSettings s;
-        EditorPrefs p;
-        p.fontSize = s.value("editor/fontSize", 14).toInt();
-        p.fontFamily = s.value("editor/fontFamily", QApplication::font().family()).toString();
-        p.bold = s.value("editor/bold", false).toBool();
-        p.italic = s.value("editor/italic", false).toBool();
-        p.underline = s.value("editor/underline", false).toBool();
-        p.textAlignment = s.value("editor/textAlignment", -1).toInt();
-        const auto saved = s.value("editor/recentColors").toList();
-        for (const auto& v : saved) {
-            QColor c(v.toString());
-            if (c.isValid())
-                p.recentColors.append(c);
-        }
-        return p;
-    }();
-
-    fontSize_ = prefs.fontSize;
-    currentFontFamily_ = prefs.fontFamily;
-    bold_ = prefs.bold;
-    italic_ = prefs.italic;
-    underline_ = prefs.underline;
-    textAlignment_ = prefs.textAlignment;
-    customColors_ = prefs.recentColors;
 }
 
 void AnnotationToolManager::setImage(const QImage& image, double zoom)
@@ -60,7 +27,7 @@ void AnnotationToolManager::setImage(const QImage& image, double zoom)
     nextNumber_ = 1;
     imageHistory_.clear();
     redoImageHistory_.clear();
-    zoomFactor_ = zoom;
+    settings_.zoomFactor = zoom;
 }
 
 void AnnotationToolManager::syncImageState(QImage image, QImage baseImage, int brightness, int contrast)
@@ -76,21 +43,21 @@ void AnnotationToolManager::syncImageState(QImage image, QImage baseImage, int b
 
 void AnnotationToolManager::setTool(AnnotationTool tool)
 {
-    if (pickingColor_) {
+    if (settings_.pickingColor) {
         setPickingColor(false);
     }
-    if (currentTool_ == tool) return;
-    currentTool_ = tool;
-    recentTools_.removeAll(tool);
-    recentTools_.prepend(tool);
-    if (recentTools_.size() > 4) recentTools_.resize(4);
+    if (settings_.currentTool == tool) return;
+    settings_.currentTool = tool;
+    settings_.recentTools.removeAll(tool);
+    settings_.recentTools.prepend(tool);
+    if (settings_.recentTools.size() > 4) settings_.recentTools.resize(4);
     if (onToolChanged) onToolChanged(tool);
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::setColor(const QColor& color)
 {
-    currentColor_ = color;
+    settings_.currentColor = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
         if (a.color == color) return;
@@ -102,7 +69,7 @@ void AnnotationToolManager::setColor(const QColor& color)
 
 void AnnotationToolManager::setFillColor(const QColor& color)
 {
-    currentFillColor_ = color;
+    settings_.currentFillColor = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
         if (a.fillColor == color) return;
@@ -116,33 +83,33 @@ void AnnotationToolManager::setFillColor(const QColor& color)
 
 void AnnotationToolManager::setStrokeWidth(int width)
 {
-    currentStrokeWidth_ = std::clamp(width, 1, 12);
+    settings_.currentStrokeWidth = std::clamp(width, 1, 12);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
-        if (a.strokeWidth == currentStrokeWidth_) return;
+        if (a.strokeWidth == settings_.currentStrokeWidth) return;
         pushUndo();
-        a.strokeWidth = currentStrokeWidth_;
+        a.strokeWidth = settings_.currentStrokeWidth;
         if (onModified) onModified();
     }
 }
 
 void AnnotationToolManager::setStrokeAlpha(int alpha)
 {
-    strokeAlpha_ = std::clamp(alpha, 0, 255);
+    settings_.strokeAlpha = std::clamp(alpha, 0, 255);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
-        if (a.color.alpha() == strokeAlpha_) return;
+        if (a.color.alpha() == settings_.strokeAlpha) return;
         pushUndo();
-        a.color.setAlpha(strokeAlpha_);
+        a.color.setAlpha(settings_.strokeAlpha);
         if (onModified) onModified();
     }
-    if (onStrokeAlphaChanged) onStrokeAlphaChanged(strokeAlpha_);
+    if (onStrokeAlphaChanged) onStrokeAlphaChanged(settings_.strokeAlpha);
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::setArrowStyle(ArrowStyle style)
 {
-    arrowStyle_ = style;
+    settings_.arrowStyle = style;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Arrow) {
         auto& a = annotations_[selectedIndex_];
@@ -157,24 +124,24 @@ void AnnotationToolManager::setArrowStyle(ArrowStyle style)
 
 void AnnotationToolManager::setCornerRadius(int radius)
 {
-    cornerRadius_ = std::clamp(radius, 0, 40);
+    settings_.cornerRadius = std::clamp(radius, 0, 40);
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Rectangle) {
         auto& a = annotations_[selectedIndex_];
-        if (a.cornerRadius == cornerRadius_) return;
+        if (a.cornerRadius == settings_.cornerRadius) return;
         pushUndo();
-        a.cornerRadius = cornerRadius_;
+        a.cornerRadius = settings_.cornerRadius;
         if (onModified) onModified();
     }
-    if (onCornerRadiusChanged) onCornerRadiusChanged(cornerRadius_);
+    if (onCornerRadiusChanged) onCornerRadiusChanged(settings_.cornerRadius);
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::setFontSize(int size, bool persist)
 {
     size = qBound(8, size, 72);
-    if (size != fontSize_) {
-        fontSize_ = size;
+    if (size != settings_.fontSize) {
+        settings_.fontSize = size;
         if (editingTextIndex_ >= 0 && editingTextIndex_ < annotations_.size()) {
             pushUndo();
             annotations_[editingTextIndex_].textFontSize = size;
@@ -189,9 +156,9 @@ void AnnotationToolManager::setFontSize(int size, bool persist)
             if (onModified) onModified();
         }
         if (onUpdateRequired) onUpdateRequired();
-        if (onFontSizeChanged) onFontSizeChanged(fontSize_);
+        if (onFontSizeChanged) onFontSizeChanged(settings_.fontSize);
         if (persist)
-            QSettings().setValue("editor/fontSize", fontSize_);
+            QSettings().setValue("editor/fontSize", settings_.fontSize);
     }
 }
 
@@ -234,37 +201,37 @@ void applyTextProperty(T& member, const T& value, AnnotationToolManager& mgr,
 
 void AnnotationToolManager::setFontFamily(const QString& family)
 {
-    applyTextProperty(currentFontFamily_, family, *this,
+    applyTextProperty(settings_.currentFontFamily, family, *this,
         [&family](Annotation& a) { a.fontFamily = family; }, "editor/fontFamily");
 }
 
 void AnnotationToolManager::setBold(bool b)
 {
-    applyTextProperty(bold_, b, *this,
+    applyTextProperty(settings_.bold, b, *this,
         [b](Annotation& a) { a.bold = b; }, "editor/bold");
 }
 
 void AnnotationToolManager::setItalic(bool i)
 {
-    applyTextProperty(italic_, i, *this,
+    applyTextProperty(settings_.italic, i, *this,
         [i](Annotation& a) { a.italic = i; }, "editor/italic");
 }
 
 void AnnotationToolManager::setUnderline(bool u)
 {
-    applyTextProperty(underline_, u, *this,
+    applyTextProperty(settings_.underline, u, *this,
         [u](Annotation& a) { a.underline = u; }, "editor/underline");
 }
 
 void AnnotationToolManager::setTextAlignment(int align)
 {
-    applyTextProperty(textAlignment_, align, *this,
+    applyTextProperty(settings_.textAlignment, align, *this,
         [align](Annotation& a) { a.textAlignment = align; }, "editor/textAlignment");
 }
 
 void AnnotationToolManager::setTextOutlineEnabled(bool enabled)
 {
-    textOutlineEnabled_ = enabled;
+    settings_.textOutlineEnabled = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
         auto t = a.tool;
@@ -280,7 +247,7 @@ void AnnotationToolManager::setTextOutlineEnabled(bool enabled)
 
 void AnnotationToolManager::setFilled(bool filled)
 {
-    filled_ = filled;
+    settings_.filled = filled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()) {
         auto& a = annotations_[selectedIndex_];
         if (a.tool == AnnotationTool::Rectangle || a.tool == AnnotationTool::Ellipse
@@ -297,7 +264,7 @@ void AnnotationToolManager::setFilled(bool filled)
 
 void AnnotationToolManager::setTextBackgroundEnabled(bool enabled)
 {
-    textBackgroundEnabled_ = enabled;
+    settings_.textBackgroundEnabled = enabled;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
         auto& a = annotations_[selectedIndex_];
@@ -311,7 +278,7 @@ void AnnotationToolManager::setTextBackgroundEnabled(bool enabled)
 
 void AnnotationToolManager::setTextBackgroundColor(const QColor& color)
 {
-    textBackgroundColor_ = color;
+    settings_.textBackgroundColor = color;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Text) {
         auto& a = annotations_[selectedIndex_];
@@ -325,11 +292,11 @@ void AnnotationToolManager::setTextBackgroundColor(const QColor& color)
 
 void AnnotationToolManager::setMosaicBlurred(bool blurred)
 {
-    mosaicBlurred_ = blurred;
+    settings_.mosaicBlurred = blurred;
     if (selectedIndex_ >= 0 && selectedIndex_ < annotations_.size()
         && annotations_[selectedIndex_].tool == AnnotationTool::Mosaic) {
         auto& a = annotations_[selectedIndex_];
-        int newRadius = blurred ? currentStrokeWidth_ : 0;
+        int newRadius = blurred ? settings_.currentStrokeWidth : 0;
         if (a.blurRadius == newRadius) return;
         pushUndo();
         a.blurRadius = newRadius;
@@ -340,35 +307,27 @@ void AnnotationToolManager::setMosaicBlurred(bool blurred)
 
 void AnnotationToolManager::setPickingColor(bool picking)
 {
-    pickingColor_ = picking;
+    settings_.pickingColor = picking;
     if (onPickingColorChanged) onPickingColorChanged(picking);
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::setCropAspectRatio(double ratio)
 {
-    cropAspectRatio_ = std::max(0.0, ratio);
-    if (onCropAspectRatioChanged) onCropAspectRatioChanged(cropAspectRatio_);
+    settings_.cropAspectRatio = std::max(0.0, ratio);
+    if (onCropAspectRatioChanged) onCropAspectRatioChanged(settings_.cropAspectRatio);
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::setGridEnabled(bool enabled)
 {
-    gridEnabled_ = enabled;
+    settings_.gridEnabled = enabled;
     if (onUpdateRequired) onUpdateRequired();
 }
 
 void AnnotationToolManager::addRecentColor(const QColor& color)
 {
-    customColors_.removeAll(color);
-    customColors_.prepend(color);
-    if (customColors_.size() > 6) {
-        customColors_.resize(6);
-    }
-    QVariantList saved;
-    for (const auto& c : customColors_)
-        saved.append(c.name());
-    QSettings().setValue("editor/recentColors", saved);
+    settings_.addRecentColor(color);
 }
 
 // --- Annotation manipulation ---
@@ -438,7 +397,7 @@ void AnnotationToolManager::pushUndoSnapshot(bool clearRedo)
 {
     undoStack_.push_back(annotations_);
     if (imageChangedSinceLastUndo_) {
-        imageHistory_.push_back({image_, baseImage_, brightness_, contrast_, zoomFactor_, true});
+        imageHistory_.push_back({image_, baseImage_, brightness_, contrast_, settings_.zoomFactor, true});
         imageChangedSinceLastUndo_ = false;
     } else {
         imageHistory_.push_back({{}, {}, 0, 0, 1.0, false});
@@ -471,7 +430,7 @@ void AnnotationToolManager::undo()
     resizing_ = false;
 
     redoStack_.push_back(std::move(annotations_));
-    redoImageHistory_.push_back({std::move(image_), std::move(baseImage_), brightness_, contrast_, zoomFactor_, true});
+    redoImageHistory_.push_back({std::move(image_), std::move(baseImage_), brightness_, contrast_, settings_.zoomFactor, true});
 
     annotations_ = undoStack_.takeLast();
 
@@ -481,7 +440,7 @@ void AnnotationToolManager::undo()
         baseImage_ = std::move(snap.baseImage);
         brightness_ = snap.brightness;
         contrast_ = snap.contrast;
-        zoomFactor_ = snap.zoomFactor;
+        settings_.zoomFactor = snap.zoomFactor;
     }
 
     if (onImageHistoryRestored) onImageHistoryRestored();
@@ -495,7 +454,7 @@ void AnnotationToolManager::undo()
     selectedIndex_ = -1;
     if (onModified) onModified();
     if (onSelectionChanged) onSelectionChanged();
-    if (onZoomChanged) onZoomChanged(zoomFactor_);
+    if (onZoomChanged) onZoomChanged(settings_.zoomFactor);
 }
 
 void AnnotationToolManager::redo()
@@ -519,7 +478,7 @@ void AnnotationToolManager::redo()
         baseImage_ = std::move(snap.baseImage);
         brightness_ = snap.brightness;
         contrast_ = snap.contrast;
-        zoomFactor_ = snap.zoomFactor;
+        settings_.zoomFactor = snap.zoomFactor;
     }
 
     if (onImageHistoryRestored) onImageHistoryRestored();
@@ -528,7 +487,7 @@ void AnnotationToolManager::redo()
     selectedIndex_ = -1;
     if (onModified) onModified();
     if (onSelectionChanged) onSelectionChanged();
-    if (onZoomChanged) onZoomChanged(zoomFactor_);
+    if (onZoomChanged) onZoomChanged(settings_.zoomFactor);
 }
 
 // --- Drawing ---
@@ -539,23 +498,23 @@ void AnnotationToolManager::startDrawing(const QPoint& pos)
     start_ = pos;
     current_ = start_;
     draft_ = Annotation{};
-    draft_.tool = currentTool_;
-    draft_.color = currentColor_;
-    draft_.color.setAlpha(strokeAlpha_);
-    draft_.strokeWidth = currentStrokeWidth_;
-    draft_.blurRadius = (currentTool_ == AnnotationTool::Mosaic && mosaicBlurred_) ? currentStrokeWidth_ : 0;
-    draft_.filled = filled_;
-    draft_.fillColor = currentFillColor_.isValid() ? currentFillColor_ : QColor();
-    draft_.textBackground = textBackgroundEnabled_;
-    draft_.textBackgroundColor = textBackgroundColor_;
-    draft_.arrowStyle = arrowStyle_;
-    draft_.cornerRadius = cornerRadius_;
-    draft_.textFontSize = fontSize_;
-    draft_.fontFamily = currentFontFamily_;
-    draft_.bold = bold_;
-    draft_.italic = italic_;
-    draft_.underline = underline_;
-    draft_.textAlignment = textAlignment_;
+    draft_.tool = settings_.currentTool;
+    draft_.color = settings_.currentColor;
+    draft_.color.setAlpha(settings_.strokeAlpha);
+    draft_.strokeWidth = settings_.currentStrokeWidth;
+    draft_.blurRadius = (settings_.currentTool == AnnotationTool::Mosaic && settings_.mosaicBlurred) ? settings_.currentStrokeWidth : 0;
+    draft_.filled = settings_.filled;
+    draft_.fillColor = settings_.currentFillColor.isValid() ? settings_.currentFillColor : QColor();
+    draft_.textBackground = settings_.textBackgroundEnabled;
+    draft_.textBackgroundColor = settings_.textBackgroundColor;
+    draft_.arrowStyle = settings_.arrowStyle;
+    draft_.cornerRadius = settings_.cornerRadius;
+    draft_.textFontSize = settings_.fontSize;
+    draft_.fontFamily = settings_.currentFontFamily;
+    draft_.bold = settings_.bold;
+    draft_.italic = settings_.italic;
+    draft_.underline = settings_.underline;
+    draft_.textAlignment = settings_.textAlignment;
     draft_.bounds = QRect(start_, current_);
     draft_.points = {start_};
     draft_.points.reserve(256);
@@ -758,18 +717,18 @@ void AnnotationToolManager::updateTextBounds(int index)
     if (index < 0 || index >= annotations_.size()) return;
     auto& a = annotations_[index];
     if (a.tool != AnnotationTool::Text) return;
-    FontCacheKey key{a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
-                     a.textFontSize > 0 ? a.textFontSize : fontSize_,
+    ToolSettings::FontCacheKey key{a.fontFamily.isEmpty() ? QApplication::font().family() : a.fontFamily,
+                     a.textFontSize > 0 ? a.textFontSize : settings_.fontSize,
                      a.bold, a.italic, a.underline};
-    if (!(key == fontCacheKey_)) {
-        fontCacheKey_ = key;
-        cachedFont_ = QFont(key.fontFamily);
-        cachedFont_.setPixelSize(key.fontSize);
-        cachedFont_.setBold(key.bold);
-        cachedFont_.setItalic(key.italic);
-        cachedFont_.setUnderline(key.underline);
+    if (!(key == settings_.fontCacheKey)) {
+        settings_.fontCacheKey = key;
+        settings_.cachedFont = QFont(key.fontFamily);
+        settings_.cachedFont.setPixelSize(key.fontSize);
+        settings_.cachedFont.setBold(key.bold);
+        settings_.cachedFont.setItalic(key.italic);
+        settings_.cachedFont.setUnderline(key.underline);
     }
-    QFontMetrics fm(cachedFont_);
+    QFontMetrics fm(settings_.cachedFont);
     if (image_.isNull()) return;
     auto logicalW = image_.width() / image_.devicePixelRatio();
     int textWidth = fm.horizontalAdvance(a.text);
