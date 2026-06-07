@@ -4,7 +4,7 @@
 #include "app/PinManager.h"
 #include "infrastructure/logging/ILogger.h"
 #include "presentation/capture_overlay/CaptureOverlay.h"
-#include "presentation/editor/EditorWindow.h"
+
 #include "presentation/main_window/MainWindow.h"
 #include "presentation/toast/ToastNotifier.h"
 #include "presentation/tray/TrayController.h"
@@ -45,7 +45,6 @@ private:
     void copyRegion(const QRect& region);
     void pinRegion(const QRect& region);
     void saveRegion(const QRect& region);
-    void editRegion(const QRect& region);
     void ocrRegion(const QRect& region);
     void showStatus(QString message, std::function<void()> onClick = {});
     void captureAfterOverlayHidden(const QRect& region, std::function<void(const QImage&)> onReady);
@@ -55,7 +54,6 @@ private:
     QString hotkeyDisplayString(const Hotkey& hk, const char* fallback) const;
     void applyCurrentTheme();
     CaptureOverlay& overlay();
-    EditorWindow& editorWindow();
 
     QApplication& qtApplication_;
     ILogger& logger_;
@@ -64,7 +62,7 @@ private:
     ToastNotifier toastNotifier_;
     std::unique_ptr<MainWindow> mainWindow_;
     std::unique_ptr<CaptureOverlay> overlay_;
-    std::unique_ptr<EditorWindow> editorWindow_;
+
     std::optional<AppSettings> cachedSettings_;
     PinManager pinManager_;
     std::optional<QPoint> pendingPinPosition_;

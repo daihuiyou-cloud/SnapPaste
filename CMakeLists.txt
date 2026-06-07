@@ -62,12 +62,13 @@ set(SNAPPASTE_CORE_SOURCES
     src/presentation/editor/AnnotationToolManager.cpp
     src/presentation/editor/ToolSettings.h
     src/presentation/editor/ToolSettings.cpp
+    src/presentation/editor/IToolHandler.h
+    src/presentation/editor/ToolHandlers.h
+    src/presentation/editor/ToolHandlers.cpp
     src/presentation/editor/AnnotationEventHandler.h
     src/presentation/editor/AnnotationEventHandler.cpp
     src/presentation/editor/AnnotationRenderer.h
     src/presentation/editor/AnnotationRenderer.cpp
-    src/presentation/editor/EditorIconFactory.cpp
-    src/presentation/editor/EditorWindow.cpp
     src/presentation/editor/ImageBlur.cpp
     src/presentation/history/HistoryWidget.cpp
     src/presentation/icons/IconProvider.cpp

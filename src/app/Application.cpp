@@ -300,17 +300,6 @@ void Application::saveRegion(const QRect& region)
     });
 }
 
-void Application::editRegion(const QRect& region)
-{
-    captureAfterOverlayHidden(region, [this](const QImage& image) {
-        if (image.isNull()) {
-            showStatus(tr("Failed to capture image for editing."));
-            return;
-        }
-        editorWindow().setImage(image);
-    });
-}
-
 void Application::ocrRegion(const QRect& region)
 {
     captureAfterOverlayHidden(region, [this](const QImage& image) {
@@ -490,23 +479,6 @@ CaptureOverlay& Application::overlay()
         });
     }
     return *overlay_;
-}
-
-EditorWindow& Application::editorWindow()
-{
-    if (!editorWindow_) {
-        editorWindow_ = std::make_unique<EditorWindow>(context_.iconProvider());
-        connect(editorWindow_.get(), &EditorWindow::imageEdited,
-                &context_.captureViewModel(), &CaptureViewModel::setCurrentImage);
-        connect(editorWindow_.get(), &EditorWindow::saveRequested,
-                &context_.captureViewModel(), &CaptureViewModel::saveCurrentImage);
-        connect(editorWindow_.get(), &EditorWindow::copyRequested,
-                &context_.captureViewModel(), &CaptureViewModel::copyCurrentImageToClipboard);
-        connect(editorWindow_.get(), &EditorWindow::pinRequested, this, [this](const QImage& image) {
-            context_.pinViewModel().createFromImage(image, PinSource::Screenshot);
-        });
-    }
-    return *editorWindow_;
 }
 
 } // namespace snappaste

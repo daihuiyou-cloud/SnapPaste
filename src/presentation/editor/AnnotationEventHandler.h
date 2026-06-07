@@ -1,11 +1,15 @@
 #pragma once
 
+#include "presentation/editor/IToolHandler.h"
+
 #include <QColor>
 #include <QPoint>
 #include <QPointF>
 #include <QVariant>
 
 #include <functional>
+#include <memory>
+#include <unordered_map>
 
 class QDragEnterEvent;
 class QDropEvent;
@@ -58,19 +62,13 @@ private:
     QPoint toImage(QPoint widgetPt) const;
     void updateMoveCursor(QMouseEvent* event);
 
+    // Cross-cutting mouse handlers (not tool-specific)
     void handlePanningPress(QMouseEvent* event);
     bool handlePickingColorPress(QMouseEvent* event);
-    bool handleSelectPress(const QPoint& pos);
-    bool handleEraserPress(const QPoint& pos);
-    bool handleNumberedPress(const QPoint& pos);
-    bool handleTextPress(const QPoint& pos);
-    bool handleExistingAnnotationPress(const QPoint& pos);
-    void startDrawingAnnotation(const QPoint& pos);
-
     void handleMovePan(QMouseEvent* event);
-    void handleMoveSelect(QMouseEvent* event);
-    void updateDrawingStroke(QMouseEvent* event);
 
+    // Text editing keyboard handlers (stays on event handler due to
+    // tight coupling with key event dispatch chain)
     bool handleTextEditingKey(QKeyEvent* event);
     bool handleTextConfirmCancel(QKeyEvent* event, Annotation& textAnn, int editIdx);
     bool handleTextCtrlShortcuts(QKeyEvent* event, Annotation& textAnn, int editIdx);
@@ -79,19 +77,19 @@ private:
     bool handleTextInput(QKeyEvent* event, Annotation& textAnn, int editIdx);
     void finishTextEditing();
 
-    void handleAnnotationDeleteKey();
-    void handleDuplicateKey();
-    void handleLayerReorderKey(int direction);
-    void handleNudgeKey(int key);
-    void handleFontSizeChange(int delta);
-    void handleZoomFit();
-
     // Key event sub-handlers
     bool handleEscapeKey(QKeyEvent* event);
     bool handleDeleteKey(QKeyEvent* event);
     bool handleCtrlShortcuts(QKeyEvent* event);
     bool handleToolShortcuts(QKeyEvent* event);
     bool handleNudgeOrFontSize(QKeyEvent* event);
+
+    void handleAnnotationDeleteKey();
+    void handleDuplicateKey();
+    void handleLayerReorderKey(int direction);
+    void handleNudgeKey(int key);
+    void handleFontSizeChange(int delta);
+    void handleZoomFit();
 
     // Context menu helpers
     struct ContextMenuActions {
@@ -112,6 +110,10 @@ private:
     void clearContextSelection();
     void buildContextMenu(QMenu& menu, ContextMenuActions& actions);
     void executeContextAction(QAction* action, ContextMenuActions& actions);
+
+    // Tool dispatch table
+    IToolHandler* handlerFor(AnnotationTool tool) const;
+    std::unordered_map<AnnotationTool, std::unique_ptr<IToolHandler>> toolHandlers_;
 
     AnnotationCanvas& canvas_;
     AnnotationToolManager& toolManager_;

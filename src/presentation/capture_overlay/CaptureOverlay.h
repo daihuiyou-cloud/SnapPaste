@@ -37,7 +37,6 @@ signals:
     void copyRequested(const QRect& region);
     void pinRequested(const QRect& region);
     void saveRequested(const QRect& region);
-    void editRequested(const QRect& region);
     void cancelled();
     void hiddenAfterAction();
 

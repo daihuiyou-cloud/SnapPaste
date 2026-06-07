@@ -21,7 +21,6 @@ signals:
     void copyRequested();
     void pinRequested();
     void saveRequested();
-    void editRequested();
     void cancelRequested();
 
 private:
