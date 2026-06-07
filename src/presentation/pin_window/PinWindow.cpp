@@ -1,4 +1,4 @@
-#include "presentation/pin_window/PinWindow.h"
+﻿#include "presentation/pin_window/PinWindow.h"
 #include "presentation/pin_window/EditToolbarWidget.h"
 
 #include <QApplication>
@@ -1590,7 +1590,7 @@ void PinWindow::invalidateRenderedCache()
 void PinWindow::toggleEditMode()
 {
     if (editing_) {
-        // Cancel edit — discard annotations, restore original state
+        // Cancel edit -- discard annotations, restore original state
         editing_ = false;
         editToolbar_->hide();
         editToolManager_.clearAnnotations();

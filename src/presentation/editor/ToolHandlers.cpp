@@ -1,4 +1,4 @@
-#include "presentation/editor/ToolHandlers.h"
+﻿#include "presentation/editor/ToolHandlers.h"
 
 #include "presentation/editor/AnnotationCanvas.h"
 #include "presentation/editor/AnnotationRenderer.h"
@@ -55,7 +55,7 @@ bool SelectToolHandler::onMousePress(const QPoint& imagePos, QMouseEvent* event)
             }
         }
     }
-    // annotation body hit test → start moving
+    // annotation body hit test -> start moving
     for (int i = toolManager_.annotationCount() - 1; i >= 0; --i) {
         if (AnnotationRenderer::hitTestAnnotation(toolManager_.annotationAt(i), imagePos)) {
             toolManager_.pushUndo();
